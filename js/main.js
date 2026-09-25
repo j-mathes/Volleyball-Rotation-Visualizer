@@ -3,6 +3,7 @@ import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViol
 import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer } from './overlap.js';
+import { getPlayerLabels } from './playerLabels.js';
 
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
@@ -10,6 +11,10 @@ const overlapResultsEl = document.getElementById('overlapResults');
 const liberoSwapBtn = document.getElementById('liberoSwapBtn');
 const overlapGuideToggle = document.getElementById('overlapGuideToggle');
 const playerLinkToggle = document.getElementById('playerLinkToggle');
+
+// Custom per-role display labels (e.g. jersey numbers), set on the setup
+// page - read once at load, since they only change there.
+const playerLabels = getPlayerLabels();
 
 setViewBox(svg);
 drawBenchZone(svg);
@@ -45,12 +50,12 @@ let selectedRole = null;
 const playersByRole = {};
 for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
   const { x, y } = ZONE_POSITIONS[zone];
-  playersByRole[role] = new Player(svg, role, role, x, y, handleDragEnd, handleDragMove);
+  playersByRole[role] = new Player(svg, role, playerLabels[role], x, y, handleDragEnd, handleDragMove);
 }
 
 // The Libero doesn't rotate through the six zones; it waits on the
 // sideline and can be dragged onto the court to test a replacement.
-playersByRole.L = new Player(svg, 'L', 'L', BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd, handleDragMove);
+playersByRole.L = new Player(svg, 'L', playerLabels.L, BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd, handleDragMove);
 
 // Whichever role is currently on the bench: the Libero itself, unless it
 // has swapped in for someone, in which case that role is benched instead.
@@ -65,7 +70,7 @@ function isWithinCourt(x, y) {
 // The rotation number is based on the Setter's zone, independent of
 // whoever's currently serving from zone 1.
 function refreshRotationDisplay() {
-  serverZoneEl.textContent = rotationState.roleInZone(1);
+  serverZoneEl.textContent = playerLabels[rotationState.roleInZone(1)];
   rotationTrackerEl.textContent = `R${rotationState.rotationNumber}`;
 }
 
@@ -241,8 +246,8 @@ function runOverlapCheck() {
 
     const label = document.createElement('span');
     label.textContent = entry.ok
-      ? entry.role
-      : `${entry.role} \u2014 ${entry.violatingRoles.join(', ')}`;
+      ? playerLabels[entry.role]
+      : `${playerLabels[entry.role]} \u2014 ${entry.violatingRoles.map((role) => playerLabels[role]).join(', ')}`;
     item.appendChild(label);
 
     overlapResultsEl.appendChild(item);
@@ -284,7 +289,7 @@ function refreshLiberoButtonLabel() {
     return;
   }
   liberoSwapBtn.textContent = liberoState.replacedRole
-    ? `Swap Out Libero (for ${liberoState.replacedRole})`
+    ? `Swap Out Libero (for ${playerLabels[liberoState.replacedRole]})`
     : 'Swap In Libero';
 }
 

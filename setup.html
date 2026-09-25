@@ -40,11 +40,20 @@
       </div>
 
       <div class="panel-section">
-        <h2>Coming soon</h2>
-        <p class="hint">This page is a placeholder for future setup options
-          (custom rosters, rotation systems, colors, etc.).</p>
+        <h2>Player Names</h2>
+        <p class="hint">Customize what each player's on-court label shows
+          (e.g. a jersey number instead of the position code). Limited to 3
+          characters so it still fits inside the player circle. Saved labels
+          apply next time the visualizer page loads.</p>
+        <form id="playerLabelForm" class="player-label-form"></form>
+        <div class="button-row">
+          <button type="submit" form="playerLabelForm" class="full-width">Save</button>
+          <button type="button" id="resetPlayerLabels" class="full-width">Reset to Defaults</button>
+        </div>
       </div>
     </div>
   </div>
+
+  <script type="module" src="js/setup.js"></script>
 </body>
 </html>

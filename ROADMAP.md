@@ -10,7 +10,7 @@ All customization UI lives on `setup.html`, keeping the main visualizer
 *mechanism* — so they're safe to build before Phase 1/2, and won't need
 rework when the renderer changes later.
 
-- [ ] 0.1 Player display names — customizable per-role labels (e.g. jersey
+- [x] 0.1 Player display names — customizable per-role labels (e.g. jersey
       numbers instead of "S"/"OH1"), editable on the setup page.
 - [ ] 0.2 Save/load a court position setup — serialize player positions +
       rotation number + Libero state (JSON, localStorage and/or

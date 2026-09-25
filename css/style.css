@@ -184,6 +184,38 @@ select {
   line-height: 1.4;
 }
 
+.player-label-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.player-label-form + .button-row {
+  margin-top: 16px;
+}
+
+.player-label-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: bold;
+  min-width: 0;
+}
+
+.player-label-row input {
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .player {
   cursor: grab;
 }
