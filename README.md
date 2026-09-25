@@ -6,9 +6,9 @@ formation. It focuses on four mechanics:
 - **Rotation** — click a rotate button to cycle all six players through the
   court's six zones the way a real side-out rotation works.
 - **Free movement** — drag any player anywhere on the court.
-- **Overlap detection** — check the current formation against the FIVB
-  positional-fault rules (row order and front/back order) and see which
-  players are violating them.
+- **Overlap detection** — the current formation is continuously checked
+  against the FIVB positional-fault rules (row order and front/back order),
+  with no button to press.
 - **Libero swap** — replace a back-row player with the Libero, with
   automatic swap-out if that player would rotate to the front row.
 
@@ -24,6 +24,7 @@ in a browser, or serve the folder with any static file server.
 
 ```
 index.html          Page shell and layout
+setup.html           Placeholder page for future setup options (moved help text lives here)
 css/style.css        Styling for the court, panel, and players
 js/config.js         Court/zone coordinates and the starting lineup
 js/court.js          Draws the static court lines

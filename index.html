@@ -7,7 +7,10 @@
 </head>
 <body>
   <div class="app">
-    <h1>Volleyball Rotation Visualizer</h1>
+    <div class="app-header">
+      <h1>Volleyball Rotation Visualizer</h1>
+      <a href="setup.html" class="setup-link">Setup</a>
+    </div>
 
     <div class="layout">
       <svg id="court"></svg>
@@ -23,25 +26,13 @@
         </div>
 
         <div class="panel-section">
-          <h2>Libero Swap</h2>
           <button id="liberoSwapBtn" class="full-width">Swap In Libero</button>
           <p class="hint">Click, then click a highlighted back-row player to swap the Libero in for them.</p>
         </div>
 
         <div class="panel-section">
-          <h2>Overlap Check</h2>
-          <button id="checkOverlapBtn" class="full-width">Check Overlap</button>
+          <h2>Overlap Status</h2>
           <ul id="overlapResults" class="overlap-results"></ul>
-        </div>
-
-        <div class="panel-section">
-          <h2>Legend</h2>
-          <p class="hint">Drag any player anywhere on the court. Rotating snaps every
-            player to their zone's base position; dragging lets you test faults.
-            The Libero can only swap in for a back-row player, and is
-            automatically swapped out if that player would rotate to the
-            front row. If the bench turns red, you've dragged its occupant
-            onto a court that already has 6 players.</p>
         </div>
       </div>
     </div>

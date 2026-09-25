@@ -32,6 +32,22 @@ h1 {
   font-size: 1.4rem;
 }
 
+.app-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.setup-link {
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.setup-panel {
+  max-width: 700px;
+}
+
 .layout {
   display: flex;
   gap: 24px;

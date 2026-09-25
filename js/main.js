@@ -103,11 +103,8 @@ function runOverlapCheck() {
 }
 
 function handleDragEnd() {
-  // Dragging can introduce/resolve overlaps; refresh results if the panel
-  // is already showing some (keeps feedback live without being pushy).
-  if (overlapResultsEl.children.length > 0) {
-    runOverlapCheck();
-  }
+  // Dragging can introduce/resolve overlaps; overlap status is always live.
+  runOverlapCheck();
 }
 
 async function snapAllToZonePositions(duration = 600) {
@@ -128,6 +125,7 @@ async function snapAllToZonePositions(duration = 600) {
     animations.push(playersByRole.L.animateTo(BENCH_POSITION.x, BENCH_POSITION.y, duration));
   }
   await Promise.all(animations);
+  runOverlapCheck();
 }
 
 function refreshLiberoButtonLabel() {
@@ -160,6 +158,7 @@ async function swapLiberoOn(role) {
   await playersByRole.L.animateTo(x, y, 500);
   liberoState.replacedRole = role;
   refreshLiberoButtonLabel();
+  runOverlapCheck();
 }
 
 // Swaps the Libero off the court, returning the player it replaced. Also
@@ -175,6 +174,7 @@ async function swapLiberoOff() {
   await playersByRole[role].animateTo(x, y, 500);
   liberoState.replacedRole = null;
   refreshLiberoButtonLabel();
+  runOverlapCheck();
 }
 
 async function rotate(direction) {
@@ -204,7 +204,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   refreshLiberoButtonLabel();
   snapAllToZonePositions();
 });
-document.getElementById('checkOverlapBtn').addEventListener('click', runOverlapCheck);
 
 liberoSwapBtn.addEventListener('click', async () => {
   if (liberoState.replacedRole) {
@@ -236,3 +235,4 @@ for (const role of Object.keys(playersByRole)) {
 
 refreshRotationDisplay();
 refreshLiberoButtonLabel();
+runOverlapCheck();
