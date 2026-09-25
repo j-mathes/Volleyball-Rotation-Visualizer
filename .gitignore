@@ -1,0 +1,14 @@
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# Editor settings
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+
+# Node (in case tooling is added later)
+node_modules/

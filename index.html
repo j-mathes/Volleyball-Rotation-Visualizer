@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Volleyball Rotation Visualizer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <h1>Volleyball Rotation Visualizer</h1>
+
+    <div class="layout">
+      <svg id="court" viewBox="-60 -60 1020 1020" width="640" height="640"></svg>
+
+      <div class="panel">
+        <div class="panel-section">
+          <h2>Rotation</h2>
+          <div class="rotation-display">Serving: <span id="serverZone">S</span> (zone 1)</div>
+          <div class="button-row">
+            <button id="rotateCcw" title="Rotate counter-clockwise (undo)">&#8634; Rotate Back</button>
+            <button id="rotateCw" title="Rotate clockwise (standard side-out rotation)">Rotate &#8635;</button>
+          </div>
+          <button id="resetBtn" class="full-width">Reset to Base Positions</button>
+        </div>
+
+        <div class="panel-section">
+          <h2>Overlap Check</h2>
+          <button id="checkOverlapBtn" class="full-width">Check Overlap</button>
+          <ul id="overlapResults" class="overlap-results"></ul>
+        </div>
+
+        <div class="panel-section">
+          <h2>Legend</h2>
+          <p class="hint">Drag any player anywhere on the court. Rotating snaps every
+            player to their zone's base position; dragging lets you test faults.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
