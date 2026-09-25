@@ -21,6 +21,14 @@ export class RotationState {
     return Object.keys(this.zoneToRole).map(Number).find((zone) => this.zoneToRole[zone] === role);
   }
 
+  // Which zone a player currently in `zone` will end up in after rotating,
+  // without mutating state. Mirrors the mapping used by rotate().
+  zoneAfterRotation(zone, direction = 1) {
+    return direction === 1
+      ? (zone === 1 ? 6 : zone - 1)
+      : (zone % 6) + 1;
+  }
+
   // direction: 1 for a normal (clockwise) rotation, -1 to rotate back.
   rotate(direction = 1) {
     const next = {};

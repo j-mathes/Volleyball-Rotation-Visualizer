@@ -1,4 +1,4 @@
-import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, BENCH_WIDTH, BENCH_POSITION } from './config.js';
+import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, BENCH_WIDTH, BENCH_CENTER } from './config.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -21,12 +21,12 @@ export function setViewBox(svg) {
 }
 
 // Draws a subtle panel and dashed divider marking the sideline area where
-// the Libero waits when not substituted onto the court.
+// the Libero waits when not swapped onto the court.
 export function drawBenchZone(svg) {
   const panelHeight = 220;
   const panel = el('rect', {
     x: -(SIDE_MARGIN + BENCH_WIDTH),
-    y: BENCH_POSITION.y - panelHeight / 2,
+    y: BENCH_CENTER.y - panelHeight / 2,
     width: BENCH_WIDTH,
     height: panelHeight,
     rx: 12,
@@ -48,7 +48,7 @@ export function drawBenchZone(svg) {
 
   const label = el('text', {
     x: -(SIDE_MARGIN + BENCH_WIDTH / 2),
-    y: BENCH_POSITION.y - panelHeight / 2 - 16,
+    y: BENCH_CENTER.y - panelHeight / 2 - 16,
     fill: 'var(--line-colour)',
     'text-anchor': 'middle',
     'font-family': 'Verdana',

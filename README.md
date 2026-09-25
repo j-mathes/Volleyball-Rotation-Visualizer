@@ -1,14 +1,19 @@
 # Volleyball Rotation Visualizer
 
 An interactive, dependency-free SVG diagram of a volleyball team's on-court
-formation. It focuses on three mechanics:
+formation. It focuses on four mechanics:
 
 - **Rotation** — click a rotate button to cycle all six players through the
   court's six zones the way a real side-out rotation works.
 - **Free movement** — drag any player anywhere on the court.
-- **Overlap detection** — check the current formation against the standard
+- **Overlap detection** — check the current formation against the FIVB
   positional-fault rules (row order and front/back order) and see which
   players are violating them.
+- **Libero swap** — replace a back-row player with the Libero, with
+  automatic swap-out if that player would rotate to the front row.
+
+See [RULES.md](RULES.md) for the full rules/conventions reference this
+project is built against.
 
 ## Running it
 
@@ -32,13 +37,5 @@ reference/           Archived third-party source kept for reference only
 
 ## Notes on the overlap rules
 
-The six zones are numbered clockwise the way volleyball describes them
-(1 = back-right/server ... 6 = back-middle). The checker verifies:
-
-- left-to-right order is preserved within the front row (4-3-2) and back
-  row (5-6-1)
-- each front-row player stays nearer the net than their back-row counterpart
-  (4/5, 3/6, 2/1)
-
-This intentionally does not model libero substitutions or system-specific
-lineups (5-1, 6-2, etc.) — it's a generic 6-player formation check.
+See [RULES.md](RULES.md) for the full breakdown of the zone layout,
+starting lineup, overlap rules (FIVB 7.4), and Libero swap behavior.

@@ -19,12 +19,13 @@ function toSvgPoint(svg, clientX, clientY) {
 }
 
 export class Player {
-  constructor(svg, role, label, x, y, onDragEnd) {
+  constructor(svg, role, label, x, y, onDragEnd, onDragMove) {
     this.svg = svg;
     this.role = role;
     this.x = x;
     this.y = y;
     this.onDragEnd = onDragEnd;
+    this.onDragMove = onDragMove;
     this.dragging = false;
 
     this.group = el('g', { class: 'player' });
@@ -51,6 +52,17 @@ export class Player {
 
   setOverlapping(isOverlapping) {
     this.group.classList.toggle('overlapping', isOverlapping);
+  }
+
+  // Highlighted while a benched player is selectable as a Libero swap target.
+  setSelectable(isSelectable) {
+    this.group.classList.toggle('selectable', isSelectable);
+  }
+
+  // Highlighted when this (benched) player has been dragged onto the court,
+  // which would mean 7 players on court at once.
+  setBenchWarning(isWarning) {
+    this.group.classList.toggle('bench-warning', isWarning);
   }
 
   // Animates to (x, y) over `duration` ms, returning a Promise that
@@ -82,6 +94,9 @@ export class Player {
     const onPointerMove = (event) => {
       const point = toSvgPoint(this.svg, event.clientX, event.clientY);
       this.setPosition(point.x - offsetX, point.y - offsetY);
+      if (this.onDragMove) {
+        this.onDragMove(this);
+      }
     };
 
     const onPointerUp = (event) => {

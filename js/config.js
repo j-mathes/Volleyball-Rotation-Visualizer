@@ -10,7 +10,14 @@ export const ATTACK_LINE_Y = COURT_SIZE / 3;
 // rotating through the six zones.
 export const SIDE_MARGIN = 60;
 export const BENCH_WIDTH = 260;
-export const BENCH_POSITION = { x: -(SIDE_MARGIN + BENCH_WIDTH / 2), y: COURT_SIZE / 2 };
+export const BENCH_CENTER = { x: -(SIDE_MARGIN + BENCH_WIDTH / 2), y: COURT_SIZE / 2 };
+
+// Two distinct bench slots so the Libero and whichever player it replaced
+// never render on top of each other while swapping: the Libero rests in
+// the upper slot, the player it replaced waits in the lower one.
+const BENCH_SLOT_GAP = 110;
+export const BENCH_POSITION = { x: BENCH_CENTER.x, y: BENCH_CENTER.y - BENCH_SLOT_GAP / 2 };
+export const BENCH_POSITION_REPLACED = { x: BENCH_CENTER.x, y: BENCH_CENTER.y + BENCH_SLOT_GAP / 2 };
 
 // Base (legal, no-overlap) position for each zone.
 export const ZONE_POSITIONS = {
@@ -32,16 +39,17 @@ export const FRONT_BACK_PAIRS = [
   [2, 1],
 ]; // [frontZone, backZone]
 
-// Starting (Rotation 1) lineup: role assigned to each zone.
-// Setter and Opposite are opposite each other (3 zones apart), as are the
-// two Middles and the two Outsides - this mirrors a standard 5-1 lineup.
+// Starting (Rotation 1) lineup: role assigned to each zone, in counter-
+// clockwise zone order (1-6): S, OH1, MB2, OP, OH2, MB1. Setter and
+// Opposite are opposite each other (3 zones apart), as are the two
+// Middles and the two Outsides.
 export const INITIAL_ZONE_ROLES = {
   1: 'S',
-  2: 'MB1',
-  3: 'OH1',
+  2: 'OH1',
+  3: 'MB2',
   4: 'OP',
-  5: 'MB2',
-  6: 'OH2',
+  5: 'OH2',
+  6: 'MB1',
 };
 
 export const ROLE_LABELS = {

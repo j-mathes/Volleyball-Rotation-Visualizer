@@ -1,10 +1,11 @@
 :root {
-  --court-fill: #ffb591;
-  --court-bg: #63b6e0;
+  --court-fill: #e2836b;
+  --court-bg: #189a94;
   --line-colour: #ffffff;
   --player-fill: #efa581;
   --player-outline: #f5f5f5;
   --player-overlap: #e74c3c;
+  --player-selectable: #22c55e;
   --panel-bg: #f5f7fa;
   --accent: #2c3e50;
 }
@@ -92,6 +93,12 @@ button:hover {
   background: #3d5166;
 }
 
+button.active {
+  background: #f1c40f;
+  color: #2c3e50;
+}
+
+
 .full-width {
   width: 100%;
 }
@@ -150,6 +157,18 @@ select {
 
 .player.overlapping circle {
   fill: var(--player-overlap);
+}
+
+.player.bench-warning circle {
+  fill: var(--player-overlap);
+}
+
+.player.selectable circle {
+  stroke: var(--player-selectable);
+  stroke-width: 8;
+  stroke-dasharray: 14, 8;
+  cursor: pointer;
+  filter: drop-shadow(0 0 6px var(--player-selectable));
 }
 
 .player text {
