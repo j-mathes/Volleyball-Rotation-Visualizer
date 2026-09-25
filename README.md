@@ -17,6 +17,8 @@ formation. It focuses on four mechanics:
 - **Save/load court setups** — save the current on-court arrangement
   (positions, rotation, Libero swap) under a name, then load, export to a
   JSON file, import, or delete it from the setup page.
+- **Color customization** — every court/player/UI color is a CSS custom
+  property, editable on the setup page instead of hardcoded.
 
 See [RULES.md](RULES.md) for the full rules/conventions reference this
 project is built against, and [ROADMAP.md](ROADMAP.md) for planned future
@@ -39,6 +41,9 @@ uncluttered. Currently includes:
 - **Saved Court Setups** — manage setups saved from the visualizer's "Court
   Setups" panel: Load (opens the visualizer with that setup applied),
   Export (download as JSON), Import (from a JSON file), and Delete.
+- **Colors** — pick custom colors for the court, players, overlap/guide
+  lines, and panel UI, persisted in localStorage and shared with the main
+  visualizer.
 
 ## Project structure
 
@@ -53,6 +58,7 @@ js/rotation.js         Tracks which role occupies each zone and rotates them
 js/overlap.js          Positional-overlap rule checks
 js/playerLabels.js      Custom player-label persistence (shared by index.html/setup.html)
 js/courtSetups.js       Saved court setup persistence (shared by index.html/setup.html)
+js/colors.js            Custom color persistence (shared by index.html/setup.html)
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 reference/             Archived third-party source kept for reference only

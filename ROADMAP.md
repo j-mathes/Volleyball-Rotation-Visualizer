@@ -15,14 +15,15 @@ rework when the renderer changes later.
 - [x] 0.2 Save/load a court position setup — serialize player positions +
       rotation number + Libero state (JSON, localStorage and/or
       export/import), restorable later. Setup page hosts the save/load UI.
-- [ ] 0.3 Color customization — expose the existing CSS custom properties
+- [x] 0.3 Color customization — expose the existing CSS custom properties
       (court fill, player fill, overlap red, etc.) via a settings UI on
       the setup page instead of hardcoded `:root` values.
 - [ ] 0.4 Custom Libero-only color — scoped variant of 0.3, giving the
       Libero its own fill color independent of other players.
 - [ ] 0.5 Line thickness/color customization — move the currently
       hardcoded stroke-width/color literals in `drawSeparatorLine`/
-      `drawLinkLine` into a shared settings object, editable on the setup page.
+      `drawLinkLine`, plus the player circle's outline stroke-width in
+      `style.css`, into a shared settings object, editable on the setup page.
 - [ ] 0.6 Court position "playlist" — save multiple named setups (reusing
       0.2's serialization format as the list items) and animate through
       them in sequence, reusing the existing `Player.animateTo` tweening
@@ -36,6 +37,14 @@ rework when the renderer changes later.
       a chosen folder), not all-or-nothing. Also add a quick-recall
       affordance for jumping straight to a saved setup (e.g. a searchable
       dropdown) instead of always navigating to the setup page's full list.
+- [ ] 0.8 Font customization — expose the font family (and size) used for
+      player labels, the BENCH label, and the "R#" rotation tracker as a
+      setting, replacing the hardcoded `Verdana` literals in `court.js`,
+      `player.js`, and `style.css`.
+- [ ] 0.9 Glow/pulse effect tuning — expose the drop-shadow blur radius
+      used for selectable/guide-selected/locked player highlights, and the
+      `lock-pulse` animation's duration, as settings instead of the
+      hardcoded values in `style.css`.
 
 ## Phase 1 — 2D View Orientation Toggle
 

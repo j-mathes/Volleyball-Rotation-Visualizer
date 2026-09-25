@@ -1,12 +1,17 @@
 import { ROLE_LABELS } from './config.js';
 import { getPlayerLabels, savePlayerLabels, resetPlayerLabels } from './playerLabels.js';
 import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber } from './courtSetups.js';
+import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS } from './colors.js';
+
+applyColors();
 
 const form = document.getElementById('playerLabelForm');
 const resetBtn = document.getElementById('resetPlayerLabels');
 const savedSetupsListEl = document.getElementById('savedSetupsList');
 const importSetupBtn = document.getElementById('importSetupBtn');
 const importSetupInput = document.getElementById('importSetupInput');
+const colorForm = document.getElementById('colorForm');
+const resetColorsBtn = document.getElementById('resetColors');
 
 function renderForm() {
   const labels = getPlayerLabels();
@@ -136,3 +141,42 @@ importSetupInput.addEventListener('change', async () => {
 });
 
 renderSavedSetups();
+
+function renderColorForm() {
+  const colors = getColors();
+  colorForm.innerHTML = '';
+  for (const name of Object.keys(COLOR_LABELS)) {
+    const row = document.createElement('label');
+    row.className = 'color-row';
+
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.name = name;
+    input.value = colors[name];
+    row.appendChild(input);
+
+    const labelText = document.createElement('span');
+    labelText.textContent = COLOR_LABELS[name];
+    row.appendChild(labelText);
+
+    colorForm.appendChild(row);
+  }
+}
+
+colorForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const colors = {};
+  for (const name of Object.keys(COLOR_LABELS)) {
+    colors[name] = colorForm.elements.namedItem(name).value;
+  }
+  saveColors(colors);
+  applyColors();
+});
+
+resetColorsBtn.addEventListener('click', () => {
+  resetColors();
+  applyColors();
+  renderColorForm();
+});
+
+renderColorForm();

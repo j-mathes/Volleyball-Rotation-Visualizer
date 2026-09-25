@@ -5,6 +5,9 @@ import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
 import { saveSetup, takePendingSetup } from './courtSetups.js';
+import { applyColors } from './colors.js';
+
+applyColors();
 
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
