@@ -54,6 +54,11 @@ export class Player {
     this.group.classList.toggle('overlapping', isOverlapping);
   }
 
+  // Darkens this player's fill while it currently occupies a back-row zone.
+  setBackRow(isBackRow) {
+    this.group.classList.toggle('back-row', isBackRow);
+  }
+
   // Highlighted while a benched player is selectable as a Libero swap target.
   setSelectable(isSelectable) {
     this.group.classList.toggle('selectable', isSelectable);
@@ -62,6 +67,11 @@ export class Player {
   // Highlighted while this player is the one chosen to preview overlap guides.
   setGuideSelected(isSelected) {
     this.group.classList.toggle('guide-selected', isSelected);
+  }
+
+  // Pulses the selection highlight while the selection is locked to this player.
+  setSelectionLocked(isLocked) {
+    this.group.classList.toggle('locked', isLocked);
   }
 
   // Highlighted while this player is a neighbor whose guide line is

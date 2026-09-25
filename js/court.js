@@ -99,6 +99,15 @@ export function createViolationLinesLayer(svg) {
   return group;
 }
 
+// Group that holds thin solid green lines linking a selected player to its
+// corresponding players. Appended before any player icons so the links
+// always render underneath them. Returned so callers can clear/repopulate it.
+export function createLinkLinesLayer(svg) {
+  const group = el('g', { class: 'link-lines' });
+  svg.appendChild(group);
+  return group;
+}
+
 // Draws the static court lines (net, side/end lines, attack line) into the
 // given <svg> element and returns it for convenience.
 export function drawCourt(svg) {

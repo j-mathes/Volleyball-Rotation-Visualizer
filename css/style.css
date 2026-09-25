@@ -8,6 +8,7 @@
   --player-selectable: #22c55e;
   --guide-line: #000000;
   --guide-selected: #3498db;
+  --link-line: #16a34a;
   --panel-bg: #f5f7fa;
   --accent: #2c3e50;
 }
@@ -197,6 +198,10 @@ select {
   fill: var(--player-fill);
 }
 
+.player.back-row circle {
+  fill: color-mix(in srgb, var(--player-fill) 80%, black);
+}
+
 .player.overlapping circle {
   fill: var(--player-overlap);
 }
@@ -217,6 +222,21 @@ select {
   stroke: var(--guide-selected);
   stroke-width: 8;
   filter: drop-shadow(0 0 6px var(--guide-selected));
+}
+
+.player.guide-selected.locked circle {
+  animation: lock-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes lock-pulse {
+  0%, 100% {
+    stroke-opacity: 1;
+    filter: drop-shadow(0 0 6px #ffffff);
+  }
+  50% {
+    stroke-opacity: 0.4;
+    filter: drop-shadow(0 0 14px #ffffff);
+  }
 }
 
 .player.guide-related circle {
