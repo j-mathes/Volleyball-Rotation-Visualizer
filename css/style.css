@@ -12,6 +12,7 @@
   --panel-bg: #f5f7fa;
   --accent: #2c3e50;
   --libero-fill: #efa581;
+  --player-outline-width: 5;
 }
 
 * {
@@ -296,6 +297,36 @@ select {
   background: none;
 }
 
+.line-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: bold;
+  background: #ffffff;
+  border: 1px solid #dde2e8;
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+.line-setting-row span {
+  flex: 1 1 auto;
+  overflow-wrap: break-word;
+}
+
+.line-setting-row input[type="number"] {
+  flex-shrink: 0;
+  width: 56px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
 .player {
   cursor: grab;
 }
@@ -306,7 +337,7 @@ select {
 
 .player circle {
   stroke: var(--player-outline);
-  stroke-width: 5;
+  stroke-width: var(--player-outline-width);
   fill: var(--player-fill);
 }
 

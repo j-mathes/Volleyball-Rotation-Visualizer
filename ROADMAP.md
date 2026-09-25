@@ -20,7 +20,7 @@ rework when the renderer changes later.
       the setup page instead of hardcoded `:root` values.
 - [x] 0.4 Custom Libero-only color — scoped variant of 0.3, giving the
       Libero its own fill color independent of other players.
-- [ ] 0.5 Line thickness/color customization — move the currently
+- [x] 0.5 Line thickness/color customization — move the currently
       hardcoded stroke-width/color literals in `drawSeparatorLine`/
       `drawLinkLine`, plus the player circle's outline stroke-width in
       `style.css`, into a shared settings object, editable on the setup page.

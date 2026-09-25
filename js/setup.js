@@ -2,8 +2,10 @@ import { ROLE_LABELS } from './config.js';
 import { getPlayerLabels, savePlayerLabels, resetPlayerLabels } from './playerLabels.js';
 import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber } from './courtSetups.js';
 import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS } from './colors.js';
+import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings, LINE_SETTING_LABELS } from './lineSettings.js';
 
 applyColors();
+applyLineSettings();
 
 const form = document.getElementById('playerLabelForm');
 const resetBtn = document.getElementById('resetPlayerLabels');
@@ -12,6 +14,8 @@ const importSetupBtn = document.getElementById('importSetupBtn');
 const importSetupInput = document.getElementById('importSetupInput');
 const colorForm = document.getElementById('colorForm');
 const resetColorsBtn = document.getElementById('resetColors');
+const lineSettingsForm = document.getElementById('lineSettingsForm');
+const resetLineSettingsBtn = document.getElementById('resetLineSettings');
 
 function renderForm() {
   const labels = getPlayerLabels();
@@ -178,5 +182,50 @@ resetColorsBtn.addEventListener('click', () => {
   applyColors();
   renderColorForm();
 });
+
+renderColorForm();
+
+function renderLineSettingsForm() {
+  const settings = getLineSettings();
+  lineSettingsForm.innerHTML = '';
+  for (const name of Object.keys(LINE_SETTING_LABELS)) {
+    const row = document.createElement('label');
+    row.className = 'line-setting-row';
+
+    const labelText = document.createElement('span');
+    labelText.textContent = LINE_SETTING_LABELS[name];
+    row.appendChild(labelText);
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.name = name;
+    input.min = 1;
+    input.max = 20;
+    input.value = settings[name];
+    row.appendChild(input);
+
+    lineSettingsForm.appendChild(row);
+  }
+}
+
+lineSettingsForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const settings = {};
+  for (const name of Object.keys(LINE_SETTING_LABELS)) {
+    const value = Number(lineSettingsForm.elements.namedItem(name).value);
+    settings[name] = Number.isFinite(value) && value > 0 ? value : getLineSettings()[name];
+  }
+  saveLineSettings(settings);
+  applyLineSettings();
+  renderLineSettingsForm();
+});
+
+resetLineSettingsBtn.addEventListener('click', () => {
+  resetLineSettings();
+  applyLineSettings();
+  renderLineSettingsForm();
+});
+
+renderLineSettingsForm();
 
 renderColorForm();

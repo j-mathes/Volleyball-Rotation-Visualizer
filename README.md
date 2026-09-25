@@ -20,6 +20,9 @@ formation. It focuses on four mechanics:
 - **Color customization** — every court/player/UI color is a CSS custom
   property, editable on the setup page instead of hardcoded, including a
   separate fill color just for the Libero.
+- **Line thickness customization** — the player outline and
+  guide/violation/link line stroke widths are editable on the setup page
+  instead of hardcoded.
 
 See [RULES.md](RULES.md) for the full rules/conventions reference this
 project is built against, and [ROADMAP.md](ROADMAP.md) for planned future
@@ -45,6 +48,9 @@ uncluttered. Currently includes:
 - **Colors** — pick custom colors for the court, players, overlap/guide
   lines, and panel UI, persisted in localStorage and shared with the main
   visualizer.
+- **Line Thickness** — set the stroke width (px) of the player outline and
+  the guide/violation/link lines, persisted in localStorage and shared
+  with the main visualizer.
 
 ## Project structure
 
@@ -60,6 +66,7 @@ js/overlap.js          Positional-overlap rule checks
 js/playerLabels.js      Custom player-label persistence (shared by index.html/setup.html)
 js/courtSetups.js       Saved court setup persistence (shared by index.html/setup.html)
 js/colors.js            Custom color persistence (shared by index.html/setup.html)
+js/lineSettings.js      Custom line-thickness persistence (shared by index.html/setup.html)
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 reference/             Archived third-party source kept for reference only

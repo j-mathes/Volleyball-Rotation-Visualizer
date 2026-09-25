@@ -6,8 +6,10 @@ import { checkOverlap, summarizeByPlayer } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
 import { saveSetup, takePendingSetup } from './courtSetups.js';
 import { applyColors } from './colors.js';
+import { getLineSettings, applyLineSettings } from './lineSettings.js';
 
 applyColors();
+applyLineSettings();
 
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
@@ -21,6 +23,9 @@ const setupNameInput = document.getElementById('setupNameInput');
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
 const playerLabels = getPlayerLabels();
+// Custom guide/violation/link line thicknesses, set on the setup page -
+// read once at load, since they only change there.
+const lineSettings = getLineSettings();
 
 setViewBox(svg);
 drawBenchZone(svg);
@@ -129,7 +134,7 @@ function drawLinkLine(posA, posB, isBackRowTarget) {
   line.setAttribute('x2', posB.x);
   line.setAttribute('y2', posB.y);
   line.setAttribute('stroke', 'var(--link-line)');
-  line.setAttribute('stroke-width', 3);
+  line.setAttribute('stroke-width', lineSettings.linkLineWidth);
   if (isBackRowTarget) {
     line.setAttribute('stroke-dasharray', '4,5');
   }
@@ -178,7 +183,7 @@ function drawSeparatorLine(posA, posB, zoneA, zoneB, axis, isViolation, selected
     line.setAttribute('y2', y);
   }
   line.setAttribute('stroke', isViolation ? 'var(--player-overlap)' : 'var(--guide-line)');
-  line.setAttribute('stroke-width', isViolation ? 4 : 3);
+  line.setAttribute('stroke-width', isViolation ? lineSettings.violationLineWidth : lineSettings.guideLineWidth);
   line.setAttribute('stroke-dasharray', '10,8');
   violationLinesLayer.appendChild(line);
 }
