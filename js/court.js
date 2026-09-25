@@ -58,6 +58,39 @@ export function drawBenchZone(svg) {
   svg.appendChild(label);
 }
 
+// Creates the "R#" rotation-number tracker above the bench area and
+// returns the text element so callers can update it as rotations happen.
+export function createRotationTracker(svg) {
+  const boxWidth = 150;
+  const boxHeight = 90;
+  const boxTop = 0; // aligns with the top of the court (net line)
+  const centerY = boxTop + boxHeight / 2;
+
+  const box = el('rect', {
+    x: BENCH_CENTER.x - boxWidth / 2,
+    y: boxTop,
+    width: boxWidth,
+    height: boxHeight,
+    rx: 18,
+    fill: 'var(--accent)',
+  });
+  svg.appendChild(box);
+
+  const text = el('text', {
+    x: BENCH_CENTER.x,
+    y: centerY,
+    fill: 'var(--line-colour)',
+    'text-anchor': 'middle',
+    'dominant-baseline': 'central',
+    'font-family': 'Verdana',
+    'font-weight': 'bold',
+    'font-size': 56,
+  });
+  text.textContent = 'R1';
+  svg.appendChild(text);
+  return text;
+}
+
 // Draws the static court lines (net, side/end lines, attack line) into the
 // given <svg> element and returns it for convenience.
 export function drawCourt(svg) {

@@ -39,6 +39,11 @@ export const FRONT_BACK_PAIRS = [
   [2, 1],
 ]; // [frontZone, backZone]
 
+// The Setter's zone determines the "rotation number" (distinct from
+// whoever's currently serving from zone 1) - see RULES.md.
+export const SETTER_ROLE = 'S';
+export const ROTATION_NUMBER_BY_SETTER_ZONE = { 1: 1, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2 };
+
 // Starting (Rotation 1) lineup: role assigned to each zone, in counter-
 // clockwise zone order (1-6): S, OH1, MB2, OP, OH2, MB1. Setter and
 // Opposite are opposite each other (3 zones apart), as are the two

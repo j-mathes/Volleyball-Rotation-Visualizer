@@ -1,5 +1,5 @@
 import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COURT_SIZE } from './config.js';
-import { setViewBox, drawBenchZone, drawCourt } from './court.js';
+import { setViewBox, drawBenchZone, drawCourt, createRotationTracker } from './court.js';
 import { Player } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap } from './overlap.js';
@@ -12,6 +12,7 @@ const liberoSwapBtn = document.getElementById('liberoSwapBtn');
 setViewBox(svg);
 drawBenchZone(svg);
 drawCourt(svg);
+const rotationTrackerEl = createRotationTracker(svg);
 
 const rotationState = new RotationState();
 
@@ -43,6 +44,13 @@ function benchedRole() {
 
 function isWithinCourt(x, y) {
   return x >= 0 && x <= COURT_SIZE && y >= 0 && y <= COURT_SIZE;
+}
+
+// The rotation number is based on the Setter's zone, independent of
+// whoever's currently serving from zone 1.
+function refreshRotationDisplay() {
+  serverZoneEl.textContent = rotationState.roleInZone(1);
+  rotationTrackerEl.textContent = `R${rotationState.rotationNumber}`;
 }
 
 // Warns (in red) if the single benched player has been dragged onto a
@@ -182,7 +190,7 @@ async function rotate(direction) {
     }
   }
   rotationState.rotate(direction);
-  serverZoneEl.textContent = rotationState.roleInZone(1);
+  refreshRotationDisplay();
   await snapAllToZonePositions();
 }
 
@@ -192,7 +200,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   setAwaitingSelection(false);
   rotationState.reset();
   liberoState.replacedRole = null;
-  serverZoneEl.textContent = rotationState.roleInZone(1);
+  refreshRotationDisplay();
   refreshLiberoButtonLabel();
   snapAllToZonePositions();
 });
@@ -226,5 +234,5 @@ for (const role of Object.keys(playersByRole)) {
   });
 }
 
-serverZoneEl.textContent = rotationState.roleInZone(1);
+refreshRotationDisplay();
 refreshLiberoButtonLabel();

@@ -1,4 +1,4 @@
-import { INITIAL_ZONE_ROLES } from './config.js';
+import { INITIAL_ZONE_ROLES, SETTER_ROLE, ROTATION_NUMBER_BY_SETTER_ZONE } from './config.js';
 
 // Tracks which role currently occupies each zone (1-6) and applies the
 // standard clockwise volleyball rotation: the player in zone N moves to
@@ -10,6 +10,12 @@ export class RotationState {
 
   get serverZone() {
     return 1;
+  }
+
+  // The traditional volleyball "rotation number" - based on which zone
+  // the Setter occupies, not whoever's currently serving from zone 1.
+  get rotationNumber() {
+    return ROTATION_NUMBER_BY_SETTER_ZONE[this.zoneOfRole(SETTER_ROLE)];
   }
 
   roleInZone(zone) {
