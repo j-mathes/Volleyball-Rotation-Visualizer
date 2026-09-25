@@ -354,6 +354,16 @@ overlapGuideToggle.addEventListener('click', () => {
   runOverlapCheck();
 });
 
+// Clicking anywhere on the court that isn't a player deselects the
+// currently previewed player.
+svg.addEventListener('click', (event) => {
+  if (!guidesEnabled || !selectedRole || event.target.closest('.player')) {
+    return;
+  }
+  selectedRole = null;
+  runOverlapCheck();
+});
+
 refreshRotationDisplay();
 refreshLiberoButtonLabel();
 runOverlapCheck();
