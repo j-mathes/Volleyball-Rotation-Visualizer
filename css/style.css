@@ -131,6 +131,48 @@ select {
   margin-top: 4px;
 }
 
+.text-input {
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+.saved-setups-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.saved-setup-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.saved-setup-row + .saved-setup-row {
+  border-top: 1px solid #dde2e8;
+}
+
+.saved-setup-name {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.saved-setup-row button {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
 .overlap-results {
   list-style: none;
   margin: 8px 0 0;

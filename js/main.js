@@ -4,6 +4,7 @@ import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
+import { saveSetup, takePendingSetup } from './courtSetups.js';
 
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
@@ -11,6 +12,8 @@ const overlapResultsEl = document.getElementById('overlapResults');
 const liberoSwapBtn = document.getElementById('liberoSwapBtn');
 const overlapGuideToggle = document.getElementById('overlapGuideToggle');
 const playerLinkToggle = document.getElementById('playerLinkToggle');
+const saveSetupBtn = document.getElementById('saveSetupBtn');
+const setupNameInput = document.getElementById('setupNameInput');
 
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
@@ -262,6 +265,41 @@ function handleDragEnd() {
   runOverlapCheck();
 }
 
+// Snapshot of everything a saved setup needs to restore later: which role
+// is in which zone, the Libero swap, and every player's exact (possibly
+// dragged-off-zone) position.
+function captureCurrentState() {
+  const positions = {};
+  for (const [role, player] of Object.entries(playersByRole)) {
+    positions[role] = { x: player.x, y: player.y };
+  }
+  return {
+    version: 1,
+    zoneToRole: { ...rotationState.zoneToRole },
+    liberoReplacedRole: liberoState.replacedRole,
+    positions,
+  };
+}
+
+// Restores a previously captured (or imported) state, snapping every
+// player straight to its saved position (no tweening - this only runs on
+// load or an explicit "Load" from the setup page).
+function applyState(state) {
+  setAwaitingSelection(false);
+  rotationState.zoneToRole = { ...state.zoneToRole };
+  liberoState.replacedRole = state.liberoReplacedRole || null;
+  for (const [role, player] of Object.entries(playersByRole)) {
+    const pos = state.positions[role];
+    if (pos) {
+      player.setPosition(pos.x, pos.y);
+    }
+  }
+  refreshRotationDisplay();
+  refreshLiberoButtonLabel();
+  clearHighlights();
+  runOverlapCheck();
+}
+
 async function snapAllToZonePositions(duration = 600) {
   clearHighlights();
   const animations = [];
@@ -450,6 +488,27 @@ svg.addEventListener('click', (event) => {
   runOverlapCheck();
 });
 
+saveSetupBtn.addEventListener('click', () => {
+  const name = setupNameInput.value.trim();
+  if (!name) {
+    setupNameInput.focus();
+    return;
+  }
+  saveSetup(name, captureCurrentState());
+  setupNameInput.value = '';
+  const originalLabel = saveSetupBtn.textContent;
+  saveSetupBtn.textContent = 'Saved!';
+  setTimeout(() => { saveSetupBtn.textContent = originalLabel; }, 1200);
+});
+
 refreshRotationDisplay();
 refreshLiberoButtonLabel();
-runOverlapCheck();
+
+// A saved setup chosen on the setup page is queued here and applied once,
+// on this first load, instead of the default base positions.
+const pendingSetup = takePendingSetup();
+if (pendingSetup) {
+  applyState(pendingSetup);
+} else {
+  runOverlapCheck();
+}

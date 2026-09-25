@@ -12,7 +12,7 @@ rework when the renderer changes later.
 
 - [x] 0.1 Player display names — customizable per-role labels (e.g. jersey
       numbers instead of "S"/"OH1"), editable on the setup page.
-- [ ] 0.2 Save/load a court position setup — serialize player positions +
+- [x] 0.2 Save/load a court position setup — serialize player positions +
       rotation number + Libero state (JSON, localStorage and/or
       export/import), restorable later. Setup page hosts the save/load UI.
 - [ ] 0.3 Color customization — expose the existing CSS custom properties

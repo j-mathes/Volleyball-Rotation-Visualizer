@@ -51,6 +51,19 @@
           <button type="button" id="resetPlayerLabels" class="full-width">Reset to Defaults</button>
         </div>
       </div>
+
+      <div class="panel-section">
+        <h2>Saved Court Setups</h2>
+        <p class="hint">Save the current on-court arrangement from the
+          "Court Setups" section of the visualizer, then load, export, or
+          delete it here. Loading opens the visualizer with that setup
+          applied.</p>
+        <ul id="savedSetupsList" class="saved-setups-list"></ul>
+        <div class="button-row">
+          <button type="button" id="importSetupBtn" class="full-width">Import Setup&hellip;</button>
+        </div>
+        <input type="file" id="importSetupInput" accept="application/json" hidden>
+      </div>
     </div>
   </div>
 

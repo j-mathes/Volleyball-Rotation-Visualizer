@@ -14,6 +14,9 @@ formation. It focuses on four mechanics:
   selection so you can move other players without losing it.
 - **Libero swap** — replace a back-row player with the Libero, with
   automatic swap-out if that player would rotate to the front row.
+- **Save/load court setups** — save the current on-court arrangement
+  (positions, rotation, Libero swap) under a name, then load, export to a
+  JSON file, import, or delete it from the setup page.
 
 See [RULES.md](RULES.md) for the full rules/conventions reference this
 project is built against, and [ROADMAP.md](ROADMAP.md) for planned future
@@ -33,6 +36,9 @@ uncluttered. Currently includes:
 - **Player Names** — customize each player's on-court label (e.g. a jersey
   number instead of the position code, up to 3 characters), persisted in
   localStorage and shared with the main visualizer.
+- **Saved Court Setups** — manage setups saved from the visualizer's "Court
+  Setups" panel: Load (opens the visualizer with that setup applied),
+  Export (download as JSON), Import (from a JSON file), and Delete.
 
 ## Project structure
 
@@ -46,6 +52,7 @@ js/player.js           Draggable, animatable player SVG element
 js/rotation.js         Tracks which role occupies each zone and rotates them
 js/overlap.js          Positional-overlap rule checks
 js/playerLabels.js      Custom player-label persistence (shared by index.html/setup.html)
+js/courtSetups.js       Saved court setup persistence (shared by index.html/setup.html)
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 reference/             Archived third-party source kept for reference only
