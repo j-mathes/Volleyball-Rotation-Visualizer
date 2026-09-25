@@ -18,7 +18,8 @@ formation. It focuses on four mechanics:
   (positions, rotation, Libero swap) under a name, then load, export to a
   JSON file, import, or delete it from the setup page.
 - **Color customization** — every court/player/UI color is a CSS custom
-  property, editable on the setup page instead of hardcoded.
+  property, editable on the setup page instead of hardcoded, including a
+  separate fill color just for the Libero.
 
 See [RULES.md](RULES.md) for the full rules/conventions reference this
 project is built against, and [ROADMAP.md](ROADMAP.md) for planned future

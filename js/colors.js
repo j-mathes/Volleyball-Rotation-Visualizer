@@ -16,6 +16,7 @@ export const DEFAULT_COLORS = {
   'link-line': '#16a34a',
   'panel-bg': '#f5f7fa',
   accent: '#2c3e50',
+  'libero-fill': '#efa581',
 };
 
 // Human-readable labels for the settings UI, in display order.
@@ -32,6 +33,7 @@ export const COLOR_LABELS = {
   'link-line': 'Player Link Line',
   'panel-bg': 'Side Panel Background',
   accent: 'Accent',
+  'libero-fill': 'Libero',
 };
 
 export function getColors() {

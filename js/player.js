@@ -28,7 +28,7 @@ export class Player {
     this.onDragMove = onDragMove;
     this.dragging = false;
 
-    this.group = el('g', { class: 'player' });
+    this.group = el('g', { class: role === 'L' ? 'player libero' : 'player' });
     this.circle = el('circle', { cx: 0, cy: 0, r: PLAYER_RADIUS });
     this.text = el('text', { x: 0, y: 2 });
     this.text.textContent = label;

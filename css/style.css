@@ -11,6 +11,7 @@
   --link-line: #16a34a;
   --panel-bg: #f5f7fa;
   --accent: #2c3e50;
+  --libero-fill: #efa581;
 }
 
 * {
@@ -309,8 +310,16 @@ select {
   fill: var(--player-fill);
 }
 
+.player.libero circle {
+  fill: var(--libero-fill);
+}
+
 .player.back-row circle {
   fill: color-mix(in srgb, var(--player-fill) 80%, black);
+}
+
+.player.libero.back-row circle {
+  fill: color-mix(in srgb, var(--libero-fill) 80%, black);
 }
 
 .player.overlapping circle {

@@ -18,7 +18,7 @@ rework when the renderer changes later.
 - [x] 0.3 Color customization — expose the existing CSS custom properties
       (court fill, player fill, overlap red, etc.) via a settings UI on
       the setup page instead of hardcoded `:root` values.
-- [ ] 0.4 Custom Libero-only color — scoped variant of 0.3, giving the
+- [x] 0.4 Custom Libero-only color — scoped variant of 0.3, giving the
       Libero its own fill color independent of other players.
 - [ ] 0.5 Line thickness/color customization — move the currently
       hardcoded stroke-width/color literals in `drawSeparatorLine`/
