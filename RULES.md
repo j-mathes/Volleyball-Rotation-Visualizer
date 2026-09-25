@@ -33,10 +33,16 @@ Setter and Opposite are opposite each other (3 zones apart: 1&4, 2&5,
 - 7.4.2.2: front-row and back-row players must each keep their row's
   left-to-right order (4-3-2 and 5-6-1).
 - 7.4.3: "level with" (tied) positions are legal - ties are not faults.
-- Implemented in [js/overlap.js](js/overlap.js), run via the "Check
-  Overlap" button. This is grounded directly in the rule text above, not
-  derived from the archived reference site (`reference/`), which testing
-  showed to be inaccurate.
+  Rule 7.4.3 judges position by foot contact, not a single center point;
+  since our player icons have no feet, we treat each circle's edge as its
+  foot boundary. A player is only in violation once its entire circle has
+  moved completely past the other player's circle - partial overlap
+  (even of the centers) is still legal. This means the tolerance used is
+  a full player diameter, not a near-zero epsilon.
+- Implemented in [js/overlap.js](js/overlap.js) and runs automatically
+  (no button) any time a player moves. This is grounded directly in the
+  rule text above, not derived from the archived reference site
+  (`reference/`), which testing showed to be inaccurate.
 
 ## Libero rules
 

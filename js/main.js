@@ -1,8 +1,8 @@
 import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COURT_SIZE } from './config.js';
-import { setViewBox, drawBenchZone, drawCourt, createRotationTracker } from './court.js';
-import { Player } from './player.js';
+import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer } from './court.js';
+import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
-import { summarizeByPlayer } from './overlap.js';
+import { checkOverlap, summarizeByPlayer } from './overlap.js';
 
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
@@ -13,6 +13,7 @@ setViewBox(svg);
 drawBenchZone(svg);
 drawCourt(svg);
 const rotationTrackerEl = createRotationTracker(svg);
+const violationLinesLayer = createViolationLinesLayer(svg);
 
 const rotationState = new RotationState();
 
@@ -82,13 +83,57 @@ function clearHighlights() {
     player.setBenchWarning(false);
   });
   overlapResultsEl.innerHTML = '';
+  violationLinesLayer.innerHTML = '';
+}
+
+// Draws a dashed line marking the fault: a horizontal (left/right) rule
+// violation is shown as a vertical line, and vice versa. The line anchors
+// on the edge of whichever of the two players is closer to its own zone's
+// base position (the one that stayed put), facing the other player - not
+// a fixed posA/posB choice, since either one could be the one that moved.
+function drawViolationLine(posA, posB, zoneA, zoneB, axis) {
+  const displacement = (pos, zone) => {
+    const base = ZONE_POSITIONS[zone];
+    return (pos.x - base.x) ** 2 + (pos.y - base.y) ** 2;
+  };
+  const anchorIsA = displacement(posA, zoneA) <= displacement(posB, zoneB);
+
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  if (axis === 'horizontal') {
+    const x = anchorIsA ? posA.x - PLAYER_RADIUS : posB.x + PLAYER_RADIUS;
+    const [nearPos, farPos] = posA.y <= posB.y ? [posA, posB] : [posB, posA];
+    line.setAttribute('x1', x);
+    line.setAttribute('x2', x);
+    line.setAttribute('y1', nearPos.y + PLAYER_RADIUS);
+    line.setAttribute('y2', farPos.y - PLAYER_RADIUS);
+  } else {
+    const y = anchorIsA ? posA.y - PLAYER_RADIUS : posB.y + PLAYER_RADIUS;
+    const [nearPos, farPos] = posA.x <= posB.x ? [posA, posB] : [posB, posA];
+    line.setAttribute('x1', nearPos.x + PLAYER_RADIUS);
+    line.setAttribute('x2', farPos.x - PLAYER_RADIUS);
+    line.setAttribute('y1', y);
+    line.setAttribute('y2', y);
+  }
+  line.setAttribute('stroke', 'var(--player-overlap)');
+  line.setAttribute('stroke-width', 4);
+  line.setAttribute('stroke-dasharray', '10,8');
+  violationLinesLayer.appendChild(line);
 }
 
 function runOverlapCheck() {
-  const summary = summarizeByPlayer(currentPositionsByZone());
+  const positions = currentPositionsByZone();
+  const pairwiseResults = checkOverlap(positions);
+  const summary = summarizeByPlayer(pairwiseResults, positions);
   overlapResultsEl.innerHTML = '';
+  violationLinesLayer.innerHTML = '';
 
   Object.values(playersByRole).forEach((player) => player.setOverlapping(false));
+
+  for (const result of pairwiseResults) {
+    if (!result.ok) {
+      drawViolationLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis);
+    }
+  }
 
   for (const entry of summary) {
     const item = document.createElement('li');

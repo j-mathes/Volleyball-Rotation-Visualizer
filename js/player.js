@@ -1,5 +1,5 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const PLAYER_RADIUS = 45;
+export const PLAYER_RADIUS = 45;
 
 function el(tag, attrs) {
   const node = document.createElementNS(SVG_NS, tag);

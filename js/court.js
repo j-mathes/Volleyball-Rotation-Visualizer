@@ -91,6 +91,14 @@ export function createRotationTracker(svg) {
   return text;
 }
 
+// Group that holds dashed red lines marking the specific gap between two
+// players in violation. Returned so callers can clear/repopulate it.
+export function createViolationLinesLayer(svg) {
+  const group = el('g', { class: 'violation-lines' });
+  svg.appendChild(group);
+  return group;
+}
+
 // Draws the static court lines (net, side/end lines, attack line) into the
 // given <svg> element and returns it for convenience.
 export function drawCourt(svg) {
