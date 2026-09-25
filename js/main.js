@@ -157,6 +157,7 @@ function runOverlapCheck() {
   Object.values(playersByRole).forEach((player) => {
     player.setOverlapping(false);
     player.setGuideSelected(guidesEnabled && player.role === selectedRole);
+    player.setGuideRelated(false);
   });
 
   const selectedZone = guidesEnabled && selectedRole ? findZoneForRole(positions, selectedRole) : null;
@@ -171,6 +172,8 @@ function runOverlapCheck() {
     for (const result of pairwiseResults) {
       if (result.ok && (result.zoneA === selectedZone || result.zoneB === selectedZone)) {
         drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, false, selectedZone);
+        const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
+        playersByRole[positions[neighborZone].role].setGuideRelated(true);
       }
     }
   }

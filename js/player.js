@@ -64,6 +64,12 @@ export class Player {
     this.group.classList.toggle('guide-selected', isSelected);
   }
 
+  // Highlighted while this player is a neighbor whose guide line is
+  // currently shown against the selected player.
+  setGuideRelated(isRelated) {
+    this.group.classList.toggle('guide-related', isRelated);
+  }
+
   // Highlighted when this (benched) player has been dragged onto the court,
   // which would mean 7 players on court at once.
   setBenchWarning(isWarning) {

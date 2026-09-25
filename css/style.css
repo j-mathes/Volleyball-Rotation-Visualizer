@@ -219,6 +219,11 @@ select {
   filter: drop-shadow(0 0 6px var(--guide-selected));
 }
 
+.player.guide-related circle {
+  stroke: #000000;
+  stroke-width: 8;
+}
+
 .player text {
   fill: var(--player-outline);
   stroke: var(--player-outline);
