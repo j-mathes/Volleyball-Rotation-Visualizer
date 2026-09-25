@@ -59,6 +59,11 @@ export class Player {
     this.group.classList.toggle('selectable', isSelectable);
   }
 
+  // Highlighted while this player is the one chosen to preview overlap guides.
+  setGuideSelected(isSelected) {
+    this.group.classList.toggle('guide-selected', isSelected);
+  }
+
   // Highlighted when this (benched) player has been dragged onto the court,
   // which would mean 7 players on court at once.
   setBenchWarning(isWarning) {
@@ -90,6 +95,10 @@ export class Player {
   _attachDragHandlers() {
     let offsetX = 0;
     let offsetY = 0;
+    let downPoint = null;
+    // How far (in SVG units) the pointer moved during the last press, so
+    // click handlers can tell a real drag apart from a plain tap.
+    this.lastMoveDistance = 0;
 
     const onPointerMove = (event) => {
       const point = toSvgPoint(this.svg, event.clientX, event.clientY);
@@ -105,6 +114,15 @@ export class Player {
       this.group.releasePointerCapture(event.pointerId);
       this.group.removeEventListener('pointermove', onPointerMove);
       this.group.removeEventListener('pointerup', onPointerUp);
+      const upPoint = toSvgPoint(this.svg, event.clientX, event.clientY);
+      this.lastMoveDistance = Math.hypot(upPoint.x - downPoint.x, upPoint.y - downPoint.y);
+      // Bring this player to the front of the paint order, so that once two
+      // overlapping circles are both on screen, grabbing/clicking this one
+      // again keeps hitting it instead of whichever player happens to sit
+      // on top by default DOM order. Deferred until after this event
+      // finishes, since reordering the node beforehand suppresses the
+      // browser's synthesized 'click' event.
+      setTimeout(() => this.group.parentNode.appendChild(this.group), 0);
       if (this.onDragEnd) {
         this.onDragEnd(this);
       }
@@ -115,6 +133,7 @@ export class Player {
       this.group.classList.add('dragging');
       this.group.setPointerCapture(event.pointerId);
       const point = toSvgPoint(this.svg, event.clientX, event.clientY);
+      downPoint = point;
       offsetX = point.x - this.x;
       offsetY = point.y - this.y;
       this.group.addEventListener('pointermove', onPointerMove);

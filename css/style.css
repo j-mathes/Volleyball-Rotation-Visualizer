@@ -6,6 +6,8 @@
   --player-outline: #f5f5f5;
   --player-overlap: #e74c3c;
   --player-selectable: #22c55e;
+  --guide-line: #000000;
+  --guide-selected: #3498db;
   --panel-bg: #f5f7fa;
   --accent: #2c3e50;
 }
@@ -209,6 +211,12 @@ select {
   stroke-dasharray: 14, 8;
   cursor: pointer;
   filter: drop-shadow(0 0 6px var(--player-selectable));
+}
+
+.player.guide-selected circle {
+  stroke: var(--guide-selected);
+  stroke-width: 8;
+  filter: drop-shadow(0 0 6px var(--guide-selected));
 }
 
 .player text {

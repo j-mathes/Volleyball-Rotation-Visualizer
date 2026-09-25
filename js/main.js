@@ -8,6 +8,7 @@ const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
 const overlapResultsEl = document.getElementById('overlapResults');
 const liberoSwapBtn = document.getElementById('liberoSwapBtn');
+const overlapGuideToggle = document.getElementById('overlapGuideToggle');
 
 setViewBox(svg);
 drawBenchZone(svg);
@@ -24,6 +25,11 @@ const liberoState = { replacedRole: null };
 // True while the swap button is waiting for the user to click a back-row
 // player to complete a swap-in.
 let awaitingSelection = false;
+
+// True while the "Show Overlap Guides" toggle is on, and the role of the
+// player currently selected to preview its overlap boundaries (if any).
+let guidesEnabled = false;
+let selectedRole = null;
 
 // One Player instance per role, created once and repositioned/relabeled
 // as rotations happen (rather than recreating DOM nodes each time).
@@ -86,38 +92,59 @@ function clearHighlights() {
   violationLinesLayer.innerHTML = '';
 }
 
-// Draws a dashed line marking the fault: a horizontal (left/right) rule
-// violation is shown as a vertical line, and vice versa. The line anchors
-// on the edge of whichever of the two players is closer to its own zone's
-// base position (the one that stayed put), facing the other player - not
-// a fixed posA/posB choice, since either one could be the one that moved.
-function drawViolationLine(posA, posB, zoneA, zoneB, axis) {
+// Draws a dashed line marking a positional boundary, spanning the full
+// court from end line to end line: a horizontal (left/right) rule is shown
+// as a vertical line, and vice versa. Red marks an actual violation, gray
+// marks a guide preview of a still-legal boundary - same line, same anchor
+// logic, only the color differs. The line anchors on the edge of whichever
+// of the two players is closer to its own zone's base position (the one
+// that stayed put), facing the other player - not a fixed posA/posB
+// choice, since either one could be the one that moved. When neither has
+// moved (a tie, e.g. right after a reset), `selectedZone` breaks the tie
+// in favor of anchoring on the OTHER (non-selected) player.
+function drawSeparatorLine(posA, posB, zoneA, zoneB, axis, isViolation, selectedZone) {
   const displacement = (pos, zone) => {
     const base = ZONE_POSITIONS[zone];
     return (pos.x - base.x) ** 2 + (pos.y - base.y) ** 2;
   };
-  const anchorIsA = displacement(posA, zoneA) <= displacement(posB, zoneB);
+  const dispA = displacement(posA, zoneA);
+  const dispB = displacement(posB, zoneB);
+  let anchorIsA;
+  if (dispA !== dispB) {
+    anchorIsA = dispA < dispB;
+  } else {
+    anchorIsA = selectedZone !== zoneA;
+  }
 
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   if (axis === 'horizontal') {
     const x = anchorIsA ? posA.x - PLAYER_RADIUS : posB.x + PLAYER_RADIUS;
-    const [nearPos, farPos] = posA.y <= posB.y ? [posA, posB] : [posB, posA];
     line.setAttribute('x1', x);
     line.setAttribute('x2', x);
-    line.setAttribute('y1', nearPos.y + PLAYER_RADIUS);
-    line.setAttribute('y2', farPos.y - PLAYER_RADIUS);
+    line.setAttribute('y1', 0);
+    line.setAttribute('y2', COURT_SIZE);
   } else {
     const y = anchorIsA ? posA.y - PLAYER_RADIUS : posB.y + PLAYER_RADIUS;
-    const [nearPos, farPos] = posA.x <= posB.x ? [posA, posB] : [posB, posA];
-    line.setAttribute('x1', nearPos.x + PLAYER_RADIUS);
-    line.setAttribute('x2', farPos.x - PLAYER_RADIUS);
+    line.setAttribute('x1', 0);
+    line.setAttribute('x2', COURT_SIZE);
     line.setAttribute('y1', y);
     line.setAttribute('y2', y);
   }
-  line.setAttribute('stroke', 'var(--player-overlap)');
-  line.setAttribute('stroke-width', 4);
+  line.setAttribute('stroke', isViolation ? 'var(--player-overlap)' : 'var(--guide-line)');
+  line.setAttribute('stroke-width', isViolation ? 4 : 3);
   line.setAttribute('stroke-dasharray', '10,8');
   violationLinesLayer.appendChild(line);
+}
+
+// Finds which zone (if any) a role currently occupies on court - a
+// benched role (e.g. replaced by the Libero) isn't in `positionsByZone`.
+function findZoneForRole(positionsByZone, role) {
+  for (const [zone, pos] of Object.entries(positionsByZone)) {
+    if (pos.role === role) {
+      return Number(zone);
+    }
+  }
+  return null;
 }
 
 function runOverlapCheck() {
@@ -127,11 +154,24 @@ function runOverlapCheck() {
   overlapResultsEl.innerHTML = '';
   violationLinesLayer.innerHTML = '';
 
-  Object.values(playersByRole).forEach((player) => player.setOverlapping(false));
+  Object.values(playersByRole).forEach((player) => {
+    player.setOverlapping(false);
+    player.setGuideSelected(guidesEnabled && player.role === selectedRole);
+  });
+
+  const selectedZone = guidesEnabled && selectedRole ? findZoneForRole(positions, selectedRole) : null;
 
   for (const result of pairwiseResults) {
     if (!result.ok) {
-      drawViolationLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis);
+      drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, true, selectedZone);
+    }
+  }
+
+  if (selectedZone) {
+    for (const result of pairwiseResults) {
+      if (result.ok && (result.zoneA === selectedZone || result.zoneB === selectedZone)) {
+        drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, false, selectedZone);
+      }
     }
   }
 
@@ -287,6 +327,32 @@ for (const role of Object.keys(playersByRole)) {
     liberoSwapBtn.disabled = false;
   });
 }
+
+// Selects which player's overlap guides are previewed. A drag always
+// selects that player (so guides update live while moving it); a plain
+// tap (no real movement) instead toggles selection off if it was already
+// the selected player. Ignored mid-way through a Libero swap-in selection.
+const TAP_MOVE_THRESHOLD = 5;
+for (const role of Object.keys(playersByRole)) {
+  const player = playersByRole[role];
+  player.group.addEventListener('click', () => {
+    if (!guidesEnabled || awaitingSelection) {
+      return;
+    }
+    const wasTap = player.lastMoveDistance <= TAP_MOVE_THRESHOLD;
+    selectedRole = wasTap && selectedRole === role ? null : role;
+    runOverlapCheck();
+  });
+}
+
+overlapGuideToggle.addEventListener('click', () => {
+  guidesEnabled = !guidesEnabled;
+  overlapGuideToggle.classList.toggle('active', guidesEnabled);
+  if (!guidesEnabled) {
+    selectedRole = null;
+  }
+  runOverlapCheck();
+});
 
 refreshRotationDisplay();
 refreshLiberoButtonLabel();
