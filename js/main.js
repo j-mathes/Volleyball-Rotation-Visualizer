@@ -2,7 +2,7 @@ import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COUR
 import { setViewBox, drawBenchZone, drawCourt, createRotationTracker } from './court.js';
 import { Player } from './player.js';
 import { RotationState } from './rotation.js';
-import { checkOverlap } from './overlap.js';
+import { summarizeByPlayer } from './overlap.js';
 
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
@@ -85,19 +85,29 @@ function clearHighlights() {
 }
 
 function runOverlapCheck() {
-  const results = checkOverlap(currentPositionsByZone());
+  const summary = summarizeByPlayer(currentPositionsByZone());
   overlapResultsEl.innerHTML = '';
 
   Object.values(playersByRole).forEach((player) => player.setOverlapping(false));
 
-  for (const result of results) {
+  for (const entry of summary) {
     const item = document.createElement('li');
-    item.textContent = result.message;
-    item.className = result.ok ? 'ok' : 'violation';
+    item.className = entry.ok ? 'ok' : 'violation';
+
+    const icon = document.createElement('span');
+    icon.className = `status-icon ${entry.ok ? 'ok' : 'violation'}`;
+    icon.textContent = entry.ok ? '\u2713' : '\u2715';
+    item.appendChild(icon);
+
+    const label = document.createElement('span');
+    label.textContent = entry.ok
+      ? entry.role
+      : `${entry.role} \u2014 ${entry.violatingRoles.join(', ')}`;
+    item.appendChild(label);
+
     overlapResultsEl.appendChild(item);
-    if (!result.ok) {
-      playersByRole[result.roleA].setOverlapping(true);
-      playersByRole[result.roleB].setOverlapping(true);
+    if (!entry.ok) {
+      playersByRole[entry.role].setOverlapping(true);
     }
   }
 }

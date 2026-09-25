@@ -136,6 +136,9 @@ select {
 }
 
 .overlap-results li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 8px;
   border-radius: 4px;
   margin-bottom: 4px;
@@ -149,6 +152,27 @@ select {
 .overlap-results li.ok {
   background: #eafaf1;
   color: #1e8449;
+}
+
+.status-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+}
+
+.status-icon.ok {
+  background: #1e8449;
+}
+
+.status-icon.violation {
+  background: #c0392b;
 }
 
 .hint {

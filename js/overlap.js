@@ -64,3 +64,19 @@ export function checkOverlap(positionsByZone) {
   return results;
 }
 
+// Displays players, not zone-pair rules: one entry per on-court player,
+// ordered clockwise starting at zone 1 (1, 6, 5, 4, 3, 2). Each entry is
+// "ok" (no overlap) or lists which other player(s) it's violating with.
+export function summarizeByPlayer(positionsByZone) {
+  const pairwiseResults = checkOverlap(positionsByZone);
+  const clockwiseFromZone1 = [1, 6, 5, 4, 3, 2];
+
+  return clockwiseFromZone1.map((zone) => {
+    const { role } = positionsByZone[zone];
+    const violatingRoles = pairwiseResults
+      .filter((result) => !result.ok && (result.zoneA === zone || result.zoneB === zone))
+      .map((result) => (result.zoneA === zone ? result.roleB : result.roleA));
+    return { zone, role, ok: violatingRoles.length === 0, violatingRoles };
+  });
+}
+
