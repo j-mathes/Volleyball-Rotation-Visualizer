@@ -16,6 +16,11 @@ export class RotationState {
     return this.zoneToRole[zone];
   }
 
+  // Reverse lookup: which zone (1-6) a role currently occupies.
+  zoneOfRole(role) {
+    return Object.keys(this.zoneToRole).map(Number).find((zone) => this.zoneToRole[zone] === role);
+  }
+
   // direction: 1 for a normal (clockwise) rotation, -1 to rotate back.
   rotate(direction = 1) {
     const next = {};

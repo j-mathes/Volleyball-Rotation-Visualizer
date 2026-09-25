@@ -24,6 +24,12 @@
         </div>
 
         <div class="panel-section">
+          <h2>Libero Swap</h2>
+          <label for="liberoSwap" class="hint">Replace a back-row player:</label>
+          <select id="liberoSwap" class="full-width"></select>
+        </div>
+
+        <div class="panel-section">
           <h2>Overlap Check</h2>
           <button id="checkOverlapBtn" class="full-width">Check Overlap</button>
           <ul id="overlapResults" class="overlap-results"></ul>
@@ -33,8 +39,9 @@
           <h2>Legend</h2>
           <p class="hint">Drag any player anywhere on the court. Rotating snaps every
             player to their zone's base position; dragging lets you test faults.
-            The Libero waits on the bench and isn't part of the automatic
-            rotation or overlap check, but can be dragged onto the court.</p>
+            The Libero can only swap in for a back-row player and is not
+            counted in the overlap check until it's on court - the player it
+            replaces sits out on the bench.</p>
         </div>
       </div>
     </div>

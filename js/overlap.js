@@ -12,12 +12,19 @@ function pairs(row) {
 
 const LEFT_RIGHT_CHECKS = [...pairs(FRONT_ROW), ...pairs(BACK_ROW)];
 
-// Runs the standard volleyball positional-overlap rules against the
-// current on-court positions:
-//  - within a row, left-to-right zone order must be preserved
-//  - each front-row player must be nearer the net than their back-row pair
+// Implements FIVB Rule 7.4 (positional overlap), not the reference site's
+// per-system logic which testing showed to be inaccurate:
+//  - 7.4.1: zones 4/3/2 are the front row, 5/6/1 are the back row
+//  - 7.4.2.1 (front/back): each back-row player must stay further from the
+//    net than the front-row player in the same column (4/5, 3/6, 2/1)
+//  - 7.4.2.2 (left/right): front-row and back-row players must each keep
+//    their row's left-to-right order (4-3-2 and 5-6-1)
+//  - 7.4.3 clarifies "level with" (i.e. tied) positions are legal, which is
+//    why every comparison below is <=, not <, within a small tolerance.
 //
-// `positionsByZone` is `{ zone: { x, y, role } }` for the current layout.
+// `positionsByZone` is `{ zone: { x, y, role } }` for the current on-court
+// layout only - callers should exclude any benched player (e.g. someone
+// replaced by the Libero) before calling this.
 // Returns an array of { zoneA, zoneB, roleA, roleB, ok, message }.
 export function checkOverlap(positionsByZone) {
   const results = [];
@@ -56,3 +63,4 @@ export function checkOverlap(positionsByZone) {
 
   return results;
 }
+
