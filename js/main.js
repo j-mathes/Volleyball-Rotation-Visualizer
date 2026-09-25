@@ -1,5 +1,5 @@
-import { ZONE_POSITIONS } from './config.js';
-import { drawCourt } from './court.js';
+import { ZONE_POSITIONS, BENCH_POSITION } from './config.js';
+import { setViewBox, drawBenchZone, drawCourt } from './court.js';
 import { Player } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap } from './overlap.js';
@@ -8,6 +8,8 @@ const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
 const overlapResultsEl = document.getElementById('overlapResults');
 
+setViewBox(svg);
+drawBenchZone(svg);
 drawCourt(svg);
 
 const rotationState = new RotationState();
@@ -19,6 +21,10 @@ for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
   const { x, y } = ZONE_POSITIONS[zone];
   playersByRole[role] = new Player(svg, role, role, x, y, handleDragEnd);
 }
+
+// The Libero doesn't rotate through the six zones; it waits on the
+// sideline and can be dragged onto the court to test a substitution.
+playersByRole.L = new Player(svg, 'L', 'L', BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd);
 
 function currentPositionsByZone() {
   const positions = {};
@@ -69,6 +75,7 @@ async function snapAllToZonePositions(duration = 600) {
     const { x, y } = ZONE_POSITIONS[zone];
     animations.push(playersByRole[role].animateTo(x, y, duration));
   }
+  animations.push(playersByRole.L.animateTo(BENCH_POSITION.x, BENCH_POSITION.y, duration));
   await Promise.all(animations);
 }
 

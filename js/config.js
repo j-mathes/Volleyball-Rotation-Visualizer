@@ -5,6 +5,13 @@
 export const COURT_SIZE = 900;
 export const ATTACK_LINE_Y = COURT_SIZE / 3;
 
+// Blue padding drawn around the court on every side, and an extra strip on
+// the left reserved for the Libero, who sits on the sideline rather than
+// rotating through the six zones.
+export const SIDE_MARGIN = 60;
+export const BENCH_WIDTH = 260;
+export const BENCH_POSITION = { x: -(SIDE_MARGIN + BENCH_WIDTH / 2), y: COURT_SIZE / 2 };
+
 // Base (legal, no-overlap) position for each zone.
 export const ZONE_POSITIONS = {
   1: { x: 750, y: 750 }, // back right (server)
@@ -44,4 +51,5 @@ export const ROLE_LABELS = {
   OH2: 'OH2',
   MB1: 'MB1',
   MB2: 'MB2',
+  L: 'L',
 };

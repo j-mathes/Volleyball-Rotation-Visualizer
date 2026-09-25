@@ -42,6 +42,10 @@ h1 {
   background: var(--court-bg);
   border-radius: 8px;
   touch-action: none;
+  width: 100%;
+  max-width: 780px;
+  height: auto;
+  display: block;
 }
 
 .panel {
