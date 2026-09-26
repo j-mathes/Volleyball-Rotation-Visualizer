@@ -1,7 +1,7 @@
 import { ROLE_LABELS } from './config.js';
 import { getPlayerLabels, savePlayerLabels, resetPlayerLabels } from './playerLabels.js';
 import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber, getFolderNames, setSetupFolder, renameFolder } from './courtSetups.js';
-import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS } from './colors.js';
+import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS, PRESET_SWATCHES } from './colors.js';
 import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings, LINE_SETTING_LABELS } from './lineSettings.js';
 import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings, DEFAULT_FONT_SETTINGS, FONT_SETTING_LABELS, FONT_FAMILY_OPTIONS } from './fontSettings.js';
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
@@ -270,32 +270,122 @@ renderSavedSetups();
 // hex color, so they need a number input instead of a color swatch.
 const NUMERIC_COLOR_SETTINGS = ['bench-fill-opacity'];
 
+// Closes every open color popover - called before opening a new one, and
+// on any click outside a `.color-picker` (see the document listener
+// below, attached once rather than per-render).
+function closeAllColorPopovers() {
+  colorForm.querySelectorAll('.color-popover:not([hidden])').forEach((popover) => {
+    popover.hidden = true;
+  });
+}
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.color-picker')) {
+    closeAllColorPopovers();
+  }
+});
+
 function renderColorForm() {
   const colors = getColors();
   colorForm.innerHTML = '';
   for (const name of Object.keys(COLOR_LABELS)) {
-    const row = document.createElement('label');
+    const isNumeric = NUMERIC_COLOR_SETTINGS.includes(name);
+    const row = document.createElement('div');
     row.className = 'color-row';
 
-    const input = document.createElement('input');
-    if (NUMERIC_COLOR_SETTINGS.includes(name)) {
+    const header = document.createElement('div');
+    header.className = 'color-row-header';
+
+    if (isNumeric) {
+      const input = document.createElement('input');
       input.type = 'number';
       input.min = 0;
       input.max = 1;
       input.step = 0.01;
+      input.name = name;
+      input.value = colors[name];
+      header.appendChild(input);
     } else {
-      input.type = 'color';
+      header.appendChild(createColorPicker(name, colors[name]));
     }
-    input.name = name;
-    input.value = colors[name];
-    row.appendChild(input);
 
     const labelText = document.createElement('span');
     labelText.textContent = COLOR_LABELS[name];
-    row.appendChild(labelText);
+    header.appendChild(labelText);
 
+    row.appendChild(header);
     colorForm.appendChild(row);
   }
+}
+
+// Builds a swatch button showing the current color, which toggles a
+// popover (a preset quick-pick grid + a "Custom…" option that opens the
+// browser's native color picker) - the classic "click the swatch, get a
+// palette" pattern. The native `<input type="color">` stays in the form
+// (so `colorForm.elements` submission still works) but is visually
+// hidden; it's only shown to the OS picker when "Custom…" is clicked.
+function createColorPicker(name, initialValue) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'color-picker';
+
+  const current = document.createElement('button');
+  current.type = 'button';
+  current.className = 'color-swatch-current';
+  current.style.backgroundColor = initialValue;
+  current.setAttribute('aria-label', 'Choose color');
+
+  const nativeInput = document.createElement('input');
+  nativeInput.type = 'color';
+  nativeInput.name = name;
+  nativeInput.value = initialValue;
+  nativeInput.className = 'color-native-input';
+  nativeInput.tabIndex = -1;
+  nativeInput.addEventListener('input', () => {
+    current.style.backgroundColor = nativeInput.value;
+  });
+
+  const popover = document.createElement('div');
+  popover.className = 'color-popover';
+  popover.hidden = true;
+
+  const swatchGrid = document.createElement('div');
+  swatchGrid.className = 'color-swatches';
+  for (const preset of PRESET_SWATCHES) {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'color-swatch';
+    swatch.style.backgroundColor = preset;
+    swatch.title = preset;
+    swatch.setAttribute('aria-label', preset);
+    swatch.addEventListener('click', () => {
+      nativeInput.value = preset;
+      current.style.backgroundColor = preset;
+      popover.hidden = true;
+    });
+    swatchGrid.appendChild(swatch);
+  }
+  popover.appendChild(swatchGrid);
+
+  const customBtn = document.createElement('button');
+  customBtn.type = 'button';
+  customBtn.className = 'color-custom-btn';
+  customBtn.textContent = 'Custom…';
+  customBtn.addEventListener('click', () => {
+    popover.hidden = true;
+    nativeInput.click();
+  });
+  popover.appendChild(customBtn);
+
+  current.addEventListener('click', () => {
+    const wasOpen = !popover.hidden;
+    closeAllColorPopovers();
+    popover.hidden = wasOpen;
+  });
+
+  wrapper.appendChild(current);
+  wrapper.appendChild(popover);
+  wrapper.appendChild(nativeInput);
+  return wrapper;
 }
 
 colorForm.addEventListener('submit', (event) => {

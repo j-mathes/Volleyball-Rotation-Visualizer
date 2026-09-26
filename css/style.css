@@ -336,14 +336,14 @@ select {
 
 .color-form {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 10px;
   margin-top: 10px;
 }
 
 .color-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
   font-size: 0.8rem;
   color: var(--accent);
@@ -355,11 +355,18 @@ select {
   min-width: 0;
 }
 
-.color-row span {
+.color-row-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.color-row-header span {
   overflow-wrap: break-word;
 }
 
-.color-row input[type="color"] {
+.color-row-header input[type="color"] {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
@@ -368,6 +375,88 @@ select {
   border-radius: 6px;
   cursor: pointer;
   background: none;
+}
+
+.color-row-header input[type="number"] {
+  width: 70px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.color-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.color-swatch-current {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: none;
+}
+
+/* Kept in the form for submission, but only shown to the OS color-picker
+   dialog via nativeInput.click() when "Custom…" is chosen - never
+   interactive/visible on its own. */
+.color-native-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.color-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  background: #ffffff;
+  border: 1px solid #dde2e8;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  padding: 10px;
+  width: 176px;
+}
+
+.color-popover .color-swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.color-popover .color-swatch {
+  width: 28px;
+  height: 28px;
+}
+
+.color-custom-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 0.8rem;
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.color-swatch:hover {
+  border-color: var(--accent);
+  transform: scale(1.1);
 }
 
 .line-setting-row {

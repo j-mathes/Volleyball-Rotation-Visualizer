@@ -54,7 +54,7 @@ rework when the renderer changes later.
 - [x] 1.2 Counter-rotate all text elements (BENCH label, "R#" tracker,
       player labels) so they stay upright at any angle.
 - [x] 1.3 Add a UI toggle (segmented control) wired to a `viewMode` state.
-- [ ] 1.4 Extract a thin rendering interface (`createPlayer`,
+- [x] 1.4 Extract a thin rendering interface (`createPlayer`,
       `drawSeparatorLine`, `drawLinkLine`, `setRotationTrackerText`, etc.)
       so `main.js` stops talking to SVG-specifics directly — this is what
       lets Phase 2 plug in without another refactor.

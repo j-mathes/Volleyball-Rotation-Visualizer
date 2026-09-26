@@ -114,6 +114,17 @@ export class Player {
     this.text.setAttribute('transform', `rotate(${-angle}, 0, 2)`);
   }
 
+  // Registers a click/double-click handler on this player's icon, so
+  // callers never need to reach into the private `.group` SVG element
+  // directly.
+  onClick(handler) {
+    this.group.addEventListener('click', handler);
+  }
+
+  onDoubleClick(handler) {
+    this.group.addEventListener('dblclick', handler);
+  }
+
   setOverlapping(isOverlapping) {
     this.group.classList.toggle('overlapping', isOverlapping);
   }

@@ -90,8 +90,13 @@ index.html            Page shell and layout
 setup.html             Help text and customization options (see "Setup page" above)
 css/style.css          Styling for the court, panel, and players
 js/config.js           Court/zone coordinates and the starting lineup
-js/court.js            Draws the static court lines
+js/court.js            Draws the static court lines and bench layouts (SVG primitives)
 js/player.js           Draggable, animatable player SVG element
+js/renderer.js          Thin 2D (SVG) rendering interface - the only module
+                        main.js uses for anything rendering-related (create/
+                        move players, draw guide/link lines, view-angle
+                        switching); a future alternate renderer (e.g. 3D)
+                        would implement the same interface
 js/rotation.js         Tracks which role occupies each zone and rotates them
 js/overlap.js          Positional-overlap rule checks
 js/playerLabels.js      Custom player-label persistence (shared by index.html/setup.html)

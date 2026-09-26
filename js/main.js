@@ -1,12 +1,11 @@
-import { ZONE_POSITIONS, BENCH_POSITION_CLASSIC, BENCH_POSITION_REPLACED_CLASSIC, BENCH_POSITION_TOP_RIGHT, BENCH_POSITION_REPLACED_TOP_RIGHT, BENCH_POSITION_TOP_LEFT, BENCH_POSITION_REPLACED_TOP_LEFT, BENCH_CENTER_TOP_RIGHT, BENCH_CENTER_TOP_LEFT, BACK_ROW, COURT_SIZE } from './config.js';
-import { setViewBox, drawCourt, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, setViewportRotation, createClassicBenchLayer, createTopBenchLayer } from './court.js';
-import { Player, PLAYER_RADIUS } from './player.js';
+import { ZONE_POSITIONS, BACK_ROW, COURT_SIZE } from './config.js';
+import { createCourtRenderer } from './renderer.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer, getClampBounds } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
 import { saveSetup, takePendingSetup, getSavedSetups } from './courtSetups.js';
 import { applyColors } from './colors.js';
-import { getLineSettings, applyLineSettings } from './lineSettings.js';
+import { applyLineSettings } from './lineSettings.js';
 import { applyFontSettings } from './fontSettings.js';
 import { applyEffectSettings } from './effectSettings.js';
 import { getPlaylist, getPlaylistDelay } from './playlist.js';
@@ -40,56 +39,16 @@ const viewAngleLeftBtn = document.getElementById('viewAngleLeft');
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
 const playerLabels = getPlayerLabels();
-// Custom guide/violation/link line thicknesses, set on the setup page -
-// read once at load, since they only change there.
-const lineSettings = getLineSettings();
 
 // Net-orientation view angle: 0 (net-top), 90 (net-right), -90 (net-left).
 // Persisted across reloads; changed live via the View Orientation toggle.
-// Only the court/players (in `viewport`) rotate with it. The bench panel
-// and "R#" tracker use one of three fixed (non-rotating) layouts
-// depending on the angle: `classicBench` (bench-left, tracker-top-left)
-// at 0 deg, matching the original pre-toggle design, or `topBenchRight`/
-// `topBenchLeft` (bench/tracker fixed above the court, mirrored bench
-// position, same tracker position) at +90/-90 deg respectively.
-let viewAngle = getViewAngle();
-
-setViewBox(svg, viewAngle);
-const viewport = createViewport(svg);
-setViewportRotation(viewport, viewAngle);
-drawCourt(viewport);
-const violationLinesLayer = createViolationLinesLayer(viewport);
-const linkLinesLayer = createLinkLinesLayer(viewport);
-const clampLinesLayer = createClampLinesLayer(viewport);
-// Appended after the viewport (i.e. painted on top of the court floor),
-// so a player mid-swap-animation - still positioned over the court while
-// reparented into a bench layer - stays visible instead of disappearing
-// behind the floor.
-const classicBench = createClassicBenchLayer(svg);
-const topBenchRight = createTopBenchLayer(svg, BENCH_CENTER_TOP_RIGHT);
-const topBenchLeft = createTopBenchLayer(svg, BENCH_CENTER_TOP_LEFT);
-
-// Whichever bench layout is currently active, and the matching bench-slot
-// positions within it - see the comment above `viewAngle`.
-function currentBenchLayer() {
-  if (viewAngle === 0) return classicBench.layer;
-  return viewAngle === 90 ? topBenchRight.layer : topBenchLeft.layer;
-}
-function currentBenchPosition() {
-  if (viewAngle === 0) return BENCH_POSITION_CLASSIC;
-  return viewAngle === 90 ? BENCH_POSITION_TOP_RIGHT : BENCH_POSITION_TOP_LEFT;
-}
-function currentBenchPositionReplaced() {
-  if (viewAngle === 0) return BENCH_POSITION_REPLACED_CLASSIC;
-  return viewAngle === 90 ? BENCH_POSITION_REPLACED_TOP_RIGHT : BENCH_POSITION_REPLACED_TOP_LEFT;
-}
-// Only one of the three bench layouts is visible at a time.
-function refreshBenchLayerVisibility() {
-  classicBench.layer.style.display = viewAngle === 0 ? '' : 'none';
-  topBenchRight.layer.style.display = viewAngle === 90 ? '' : 'none';
-  topBenchLeft.layer.style.display = viewAngle === -90 ? '' : 'none';
-}
-refreshBenchLayerVisibility();
+// The renderer owns everything about how each angle actually looks (which
+// bench layout is visible, viewBox, viewport rotation, player creation/
+// placement) - see renderer.js. main.js only talks to `renderer`'s
+// interface, never to court.js/player.js/raw SVG directly, so a future
+// alternate renderer (e.g. a 3D mode) could implement the same interface
+// without main.js changing.
+const renderer = createCourtRenderer(svg, getViewAngle());
 
 const rotationState = new RotationState();
 
@@ -124,14 +83,14 @@ let selectedRole = null;
 const playersByRole = {};
 for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
   const { x, y } = ZONE_POSITIONS[zone];
-  playersByRole[role] = new Player(svg, viewport, role, playerLabels[role], x, y, handleDragEnd, handleDragMove, viewAngle);
+  playersByRole[role] = renderer.createCourtPlayer(role, playerLabels[role], x, y, handleDragEnd, handleDragMove);
 }
 
 // The Libero doesn't rotate through the six zones; it waits on the
-// sideline (in the currently active bench layer, upright at angle 0) and
-// can be dragged onto the court to test a replacement.
-const initialBenchPos = currentBenchPosition();
-playersByRole.L = new Player(svg, currentBenchLayer(), 'L', playerLabels.L, initialBenchPos.x, initialBenchPos.y, handleDragEnd, handleDragMove, 0);
+// sideline (in the currently active bench layout, upright) and can be
+// dragged onto the court to test a replacement.
+const initialBenchPos = renderer.benchPosition();
+playersByRole.L = renderer.createBenchPlayer('L', playerLabels.L, initialBenchPos.x, initialBenchPos.y, handleDragEnd, handleDragMove);
 
 // Whichever role is currently on the bench: the Libero itself, unless it
 // has swapped in for someone, in which case that role is benched instead.
@@ -147,10 +106,7 @@ function isWithinCourt(x, y) {
 // whoever's currently serving from zone 1.
 function refreshRotationDisplay() {
   serverZoneEl.textContent = playerLabels[rotationState.roleInZone(1)];
-  const text = `R${rotationState.rotationNumber}`;
-  classicBench.trackerText.textContent = text;
-  topBenchRight.trackerText.textContent = text;
-  topBenchLeft.trackerText.textContent = text;
+  renderer.setRotationTrackerText(`R${rotationState.rotationNumber}`);
 }
 
 // Warns (in red) if the single benched player has been dragged onto a
@@ -202,14 +158,14 @@ function clampToLegalPosition(player) {
   const clampedX = Math.min(Math.max(rawX, bounds.minX), bounds.maxX);
   const clampedY = Math.min(Math.max(rawY, bounds.minY), bounds.maxY);
 
-  clampLinesLayer.innerHTML = '';
+  renderer.clearClampLines();
   if (clampedX !== rawX) {
     const [zoneA, zoneB] = clampedX === bounds.maxX ? bounds.maxXPair : bounds.minXPair;
-    drawSeparatorLine(positions[zoneA], positions[zoneB], zoneA, zoneB, 'horizontal', false, zone, clampLinesLayer);
+    renderer.drawSeparatorLine(positions[zoneA], positions[zoneB], zoneA, zoneB, 'horizontal', false, zone, 'clamp');
   }
   if (clampedY !== rawY) {
     const [zoneA, zoneB] = clampedY === bounds.maxY ? bounds.maxYPair : bounds.minYPair;
-    drawSeparatorLine(positions[zoneA], positions[zoneB], zoneA, zoneB, 'vertical', false, zone, clampLinesLayer);
+    renderer.drawSeparatorLine(positions[zoneA], positions[zoneB], zoneA, zoneB, 'vertical', false, zone, 'clamp');
   }
 
   if (clampedX !== rawX || clampedY !== rawY) {
@@ -223,74 +179,9 @@ function clearHighlights() {
     player.setBenchWarning(false);
   });
   overlapResultsEl.innerHTML = '';
-  violationLinesLayer.innerHTML = '';
-  linkLinesLayer.innerHTML = '';
-  clampLinesLayer.innerHTML = '';
-}
-
-// Draws a thin green line connecting the centers of two players -
-// visualizes which players correspond to the selected one, independent of
-// whether they're actually in violation. Solid for a front-row target,
-// dotted for a back-row one.
-function drawLinkLine(posA, posB, isBackRowTarget) {
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  line.setAttribute('x1', posA.x);
-  line.setAttribute('y1', posA.y);
-  line.setAttribute('x2', posB.x);
-  line.setAttribute('y2', posB.y);
-  line.setAttribute('stroke', 'var(--link-line)');
-  line.setAttribute('stroke-width', lineSettings.linkLineWidth);
-  if (isBackRowTarget) {
-    line.setAttribute('stroke-dasharray', '4,5');
-  }
-  linkLinesLayer.appendChild(line);
-}
-
-// Draws a dashed line marking a positional boundary, spanning the full
-// court from end line to end line: a horizontal (left/right) rule is shown
-// as a vertical line, and vice versa. Red marks an actual violation, gray
-// marks a guide preview of a still-legal boundary - same line, same anchor
-// logic, only the color differs. When one of the two players is the
-// currently selected one, the line always anchors on the OTHER (non-
-// selected) player - that's the deliberate reference point while
-// previewing a selection, regardless of tiny incidental drift in either
-// player's position. Otherwise (no selection involved in this pair), the
-// anchor falls back to whichever player is closer to its own zone's base
-// position (the one that stayed put), since either could be the one that moved.
-function drawSeparatorLine(posA, posB, zoneA, zoneB, axis, isViolation, selectedZone, layer = violationLinesLayer) {
-  let anchorIsA;
-  if (selectedZone === zoneA) {
-    anchorIsA = false;
-  } else if (selectedZone === zoneB) {
-    anchorIsA = true;
-  } else {
-    const displacement = (pos, zone) => {
-      const base = ZONE_POSITIONS[zone];
-      return (pos.x - base.x) ** 2 + (pos.y - base.y) ** 2;
-    };
-    const dispA = displacement(posA, zoneA);
-    const dispB = displacement(posB, zoneB);
-    anchorIsA = dispA <= dispB;
-  }
-
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  if (axis === 'horizontal') {
-    const x = anchorIsA ? posA.x - PLAYER_RADIUS : posB.x + PLAYER_RADIUS;
-    line.setAttribute('x1', x);
-    line.setAttribute('x2', x);
-    line.setAttribute('y1', 0);
-    line.setAttribute('y2', COURT_SIZE);
-  } else {
-    const y = anchorIsA ? posA.y - PLAYER_RADIUS : posB.y + PLAYER_RADIUS;
-    line.setAttribute('x1', 0);
-    line.setAttribute('x2', COURT_SIZE);
-    line.setAttribute('y1', y);
-    line.setAttribute('y2', y);
-  }
-  line.setAttribute('stroke', isViolation ? 'var(--player-overlap)' : 'var(--guide-line)');
-  line.setAttribute('stroke-width', isViolation ? lineSettings.violationLineWidth : lineSettings.guideLineWidth);
-  line.setAttribute('stroke-dasharray', '10,8');
-  layer.appendChild(line);
+  renderer.clearViolationLines();
+  renderer.clearLinkLines();
+  renderer.clearClampLines();
 }
 
 // Finds which zone (if any) a role currently occupies on court - a
@@ -309,8 +200,8 @@ function runOverlapCheck() {
   const pairwiseResults = checkOverlap(positions);
   const summary = summarizeByPlayer(pairwiseResults, positions);
   overlapResultsEl.innerHTML = '';
-  violationLinesLayer.innerHTML = '';
-  linkLinesLayer.innerHTML = '';
+  renderer.clearViolationLines();
+  renderer.clearLinkLines();
 
   const violationCount = summary.filter((entry) => !entry.ok).length;
   overlapResultsSummaryEl.textContent = violationCount === 0
@@ -333,14 +224,14 @@ function runOverlapCheck() {
 
   for (const result of pairwiseResults) {
     if (!result.ok) {
-      drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, true, selectedZone);
+      renderer.drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, true, selectedZone);
     }
   }
 
   if (guidesEnabled && selectedZone) {
     for (const result of pairwiseResults) {
       if (result.ok && (result.zoneA === selectedZone || result.zoneB === selectedZone)) {
-        drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, false, selectedZone);
+        renderer.drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, false, selectedZone);
         const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
         playersByRole[positions[neighborZone].role].setGuideRelated(true);
       }
@@ -351,7 +242,7 @@ function runOverlapCheck() {
     for (const result of pairwiseResults) {
       if (result.zoneA === selectedZone || result.zoneB === selectedZone) {
         const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
-        drawLinkLine(positions[selectedZone], positions[neighborZone], BACK_ROW.includes(neighborZone));
+        renderer.drawLinkLine(positions[selectedZone], positions[neighborZone], BACK_ROW.includes(neighborZone));
       }
     }
   }
@@ -382,7 +273,7 @@ function handleDragEnd(player) {
   // The clamp-boundary line only makes sense while actively pressed
   // against it mid-drag; clear it once the drag is complete.
   if (player.role !== benchedRole()) {
-    clampLinesLayer.innerHTML = '';
+    renderer.clearClampLines();
   }
   // Dragging can introduce/resolve overlaps; overlap status is always live.
   runOverlapCheck();
@@ -419,7 +310,11 @@ async function applyState(state, { animate = false, duration = 600 } = {}) {
     if (!pos) {
       continue;
     }
-    player.setContainer(role === benched ? currentBenchLayer() : viewport, role === benched ? 0 : viewAngle);
+    if (role === benched) {
+      renderer.moveToBench(player);
+    } else {
+      renderer.moveToCourt(player);
+    }
     if (animate) {
       animations.push(player.animateTo(pos.x, pos.y, duration));
     } else {
@@ -444,14 +339,14 @@ async function snapAllToZonePositions(duration = 600) {
     if (liberoState.replacedRole === role) {
       // The Libero takes this zone; the player it replaced waits in its own bench slot.
       animations.push(playersByRole.L.animateTo(x, y, duration));
-      const replacedPos = currentBenchPositionReplaced();
+      const replacedPos = renderer.benchPositionReplaced();
       animations.push(playersByRole[role].animateTo(replacedPos.x, replacedPos.y, duration));
     } else {
       animations.push(playersByRole[role].animateTo(x, y, duration));
     }
   }
   if (!liberoState.replacedRole) {
-    const benchPos = currentBenchPosition();
+    const benchPos = renderer.benchPosition();
     animations.push(playersByRole.L.animateTo(benchPos.x, benchPos.y, duration));
   }
   await Promise.all(animations);
@@ -484,10 +379,10 @@ function setAwaitingSelection(active) {
 async function swapLiberoOn(role) {
   clearHighlights();
   const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
-  const replacedPos = currentBenchPositionReplaced();
-  playersByRole[role].setContainer(currentBenchLayer(), 0);
+  const replacedPos = renderer.benchPositionReplaced();
+  renderer.moveToBench(playersByRole[role]);
   await playersByRole[role].animateTo(replacedPos.x, replacedPos.y, 500);
-  playersByRole.L.setContainer(viewport, viewAngle);
+  renderer.moveToCourt(playersByRole.L);
   await playersByRole.L.animateTo(x, y, 500);
   liberoState.replacedRole = role;
   refreshLiberoButtonLabel();
@@ -503,10 +398,10 @@ async function swapLiberoOff() {
   }
   clearHighlights();
   const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
-  const benchPos = currentBenchPosition();
-  playersByRole.L.setContainer(currentBenchLayer(), 0);
+  const benchPos = renderer.benchPosition();
+  renderer.moveToBench(playersByRole.L);
   await playersByRole.L.animateTo(benchPos.x, benchPos.y, 500);
-  playersByRole[role].setContainer(viewport, viewAngle);
+  renderer.moveToCourt(playersByRole[role]);
   await playersByRole[role].animateTo(x, y, 500);
   liberoState.replacedRole = null;
   refreshLiberoButtonLabel();
@@ -552,7 +447,7 @@ liberoSwapBtn.addEventListener('click', async () => {
 // Clicking a highlighted back-row player while awaiting selection completes
 // the swap-in for that player.
 for (const role of Object.keys(playersByRole)) {
-  playersByRole[role].group.addEventListener('click', async () => {
+  playersByRole[role].onClick(async () => {
     if (!awaitingSelection) {
       return;
     }
@@ -575,7 +470,7 @@ for (const role of Object.keys(playersByRole)) {
 const TAP_MOVE_THRESHOLD = 5;
 for (const role of Object.keys(playersByRole)) {
   const player = playersByRole[role];
-  player.group.addEventListener('click', () => {
+  player.onClick(() => {
     if ((!guidesEnabled && !linksEnabled) || awaitingSelection || selectionLocked) {
       return;
     }
@@ -587,7 +482,7 @@ for (const role of Object.keys(playersByRole)) {
   // Double-clicking toggles the selection lock: double-clicking the
   // already-locked selected player unlocks it, double-clicking any other
   // player locks the selection onto that player instead.
-  player.group.addEventListener('dblclick', () => {
+  player.onDoubleClick(() => {
     if ((!guidesEnabled && !linksEnabled) || awaitingSelection) {
       return;
     }
@@ -637,33 +532,29 @@ clampToggle.addEventListener('click', () => {
 });
 
 // Re-applies the viewBox/viewport rotation for the new view angle, snaps
-// the benched player into the newly active bench layout (classic vs top -
-// see currentBenchLayer), and re-applies every on-court player's counter-
-// rotated label, without recreating any DOM nodes (rotation/Libero state
-// is untouched).
+// the benched player into the newly active bench layout, and re-applies
+// every on-court player's counter-rotated label, without recreating any
+// DOM nodes (rotation/Libero state is untouched).
 function applyViewAngle(angle) {
-  viewAngle = angle;
-  saveViewAngle(viewAngle);
-  setViewBox(svg, viewAngle);
-  setViewportRotation(viewport, viewAngle);
-  refreshBenchLayerVisibility();
+  renderer.setViewAngle(angle);
+  saveViewAngle(angle);
   const benched = benchedRole();
   for (const [role, player] of Object.entries(playersByRole)) {
     if (role === benched) {
-      const pos = role === 'L' ? currentBenchPosition() : currentBenchPositionReplaced();
-      player.setContainer(currentBenchLayer(), 0);
+      const pos = role === 'L' ? renderer.benchPosition() : renderer.benchPositionReplaced();
+      renderer.moveToBench(player);
       player.setPosition(pos.x, pos.y);
     } else {
-      player.setViewAngle(viewAngle);
+      player.setViewAngle(angle);
     }
   }
   refreshViewAngleButtons();
 }
 
 function refreshViewAngleButtons() {
-  viewAngleTopBtn.classList.toggle('active', viewAngle === 0);
-  viewAngleRightBtn.classList.toggle('active', viewAngle === 90);
-  viewAngleLeftBtn.classList.toggle('active', viewAngle === -90);
+  viewAngleTopBtn.classList.toggle('active', renderer.viewAngle === 0);
+  viewAngleRightBtn.classList.toggle('active', renderer.viewAngle === 90);
+  viewAngleLeftBtn.classList.toggle('active', renderer.viewAngle === -90);
 }
 
 viewAngleTopBtn.addEventListener('click', () => applyViewAngle(0));
@@ -673,8 +564,8 @@ refreshViewAngleButtons();
 
 // Clicking anywhere on the court that isn't a player deselects the
 // currently previewed player.
-svg.addEventListener('click', (event) => {
-  if ((!guidesEnabled && !linksEnabled) || !selectedRole || selectionLocked || event.target.closest('.player')) {
+renderer.onBackgroundClick(() => {
+  if ((!guidesEnabled && !linksEnabled) || !selectedRole || selectionLocked) {
     return;
   }
   selectedRole = null;

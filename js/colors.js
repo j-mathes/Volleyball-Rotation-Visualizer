@@ -40,6 +40,16 @@ export const COLOR_LABELS = {
   'bench-fill-opacity': 'Bench Area Opacity (0-1)',
 };
 
+// Common preset swatches shown as a quick-pick grid next to each color
+// picker in setup.html - the native `<input type="color">` next to them
+// still covers any other RGB/hex value.
+export const PRESET_SWATCHES = [
+  '#ffffff', '#f5f5f5', '#cccccc', '#888888', '#444444', '#000000',
+  '#e74c3c', '#e2836b', '#f39c12', '#f1c40f', '#2ecc71', '#22c55e',
+  '#16a34a', '#189a94', '#3498db', '#2980b9', '#2c3e50', '#8e44ad',
+  '#e84393', '#efa581',
+];
+
 export function getColors() {
   return { ...DEFAULT_COLORS, ...readSavedColors() };
 }
