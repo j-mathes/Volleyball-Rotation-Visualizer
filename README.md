@@ -112,7 +112,8 @@ js/viewSettings.js      Net-orientation view-angle persistence (shared by index.
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 js/scene3d.js           Phase 2 3D scene (Three.js, loaded from a CDN ES module
-                        URL - court plane, lighting, camera) for scene3d.html
+                        URL - court plane, lighting, camera, draggable
+                        player pucks via raycasting) for scene3d.html
 js/benchSideSettings.js Bench/Libero side persistence for the 3D scene only
                         (shared by scene3d.html/setup.html)
 ```

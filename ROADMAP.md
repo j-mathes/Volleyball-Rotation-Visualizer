@@ -69,7 +69,7 @@ rework when the renderer changes later.
       top-right / top-left layouts), but a true 3D scene has no such
       built-in "which side" derivation, so it needs its own explicit
       setting.
-- [ ] 2.3 Player representation (disc/cylinder or sprite) + drag via
+- [x] 2.3 Player representation (disc/cylinder or sprite) + drag via
       raycasting onto the court plane.
 - [ ] 2.4 Guide/violation/link lines as 3D geometry — "fat line" technique
       for thickness, `LineDashedMaterial` for dashed styles.
