@@ -73,7 +73,7 @@ rework when the renderer changes later.
       raycasting onto the court plane.
 - [x] 2.4 Guide/violation/link lines as 3D geometry — "fat line" technique
       for thickness, `LineDashedMaterial` for dashed styles.
-- [ ] 2.5 Line-thickness settings in 3D — wire `lineSettings.js`'s
+- [x] 2.5 Line-thickness settings in 3D — wire `lineSettings.js`'s
       guide/violation/link width settings into the 3D fat lines'
       `linewidth`, which are currently hardcoded (10/6/6) instead of
       reading the same customizable settings 2D uses.

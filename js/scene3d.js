@@ -14,6 +14,7 @@ import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS, BACK_ROW } from
 import { PLAYER_RADIUS } from './player.js';
 import { checkOverlap } from './overlap.js';
 import { applyColors } from './colors.js';
+import { getLineSettings } from './lineSettings.js';
 import { getBenchSide3D } from './benchSideSettings.js';
 
 applyColors();
@@ -193,6 +194,10 @@ createPlayerPuck(benchX, COURT_SIZE / 2, liberoFill);
 const linkColor = cssColor('--link-line', '#16a34a');
 const guideColor = cssColor('--guide-line', '#000000');
 const violationColor = cssColor('--player-overlap', '#e74c3c');
+// Same customizable widths as the 2D renderer (SVG stroke-width units,
+// numerically compatible with the 3D world since worldUnits:true and both
+// use COURT_SIZE=900 for the same real-world court scale).
+const lineSettings = getLineSettings();
 const overlayLines = [];
 
 function clearOverlayLines() {
@@ -284,7 +289,7 @@ function refreshOverlayLines() {
       violatingZones.add(result.zoneA);
       violatingZones.add(result.zoneB);
       const anchor = boundaryAnchor(positions, result.zoneA, result.zoneB, result.axis, selectedZone);
-      addFatLine(boundaryLinePoints(result.axis, anchor), violationColor, { dashed: true, linewidth: 10 });
+      addFatLine(boundaryLinePoints(result.axis, anchor), violationColor, { dashed: true, linewidth: lineSettings.violationLineWidth });
     }
   }
 
@@ -292,7 +297,7 @@ function refreshOverlayLines() {
     for (const result of results) {
       if (result.ok && (result.zoneA === selectedZone || result.zoneB === selectedZone)) {
         const anchor = boundaryAnchor(positions, result.zoneA, result.zoneB, result.axis, selectedZone);
-        addFatLine(boundaryLinePoints(result.axis, anchor), guideColor, { dashed: true, linewidth: 6 });
+        addFatLine(boundaryLinePoints(result.axis, anchor), guideColor, { dashed: true, linewidth: lineSettings.guideLineWidth });
         const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
         relatedZones.add(neighborZone);
       }
@@ -303,7 +308,7 @@ function refreshOverlayLines() {
         addFatLine(
           [new THREE.Vector3(a.x, PUCK_HEIGHT / 2, a.y), new THREE.Vector3(b.x, PUCK_HEIGHT / 2, b.y)],
           linkColor,
-          { dashed: BACK_ROW.includes(neighborZone), linewidth: 6 },
+          { dashed: BACK_ROW.includes(neighborZone), linewidth: lineSettings.linkLineWidth },
         );
       }
     }
