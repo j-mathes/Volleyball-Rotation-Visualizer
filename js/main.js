@@ -10,7 +10,6 @@ import { applyLineSettings } from './lineSettings.js';
 import { applyFontSettings } from './fontSettings.js';
 import { applyEffectSettings } from './effectSettings.js';
 import { getPlaylist, getPlaylistDelay } from './playlist.js';
-import { getViewAngle, saveViewAngle } from './viewSettings.js';
 import { getViewMode, saveViewMode } from './viewModeSettings.js';
 import { getBenchSide3D } from './benchSideSettings.js';
 
@@ -37,10 +36,6 @@ const quickLoadOptionsEl = document.getElementById('quickLoadOptions');
 const playlistPlayBtn = document.getElementById('playlistPlayBtn');
 const playlistStepBtn = document.getElementById('playlistStepBtn');
 const playlistStatusEl = document.getElementById('playlistStatus');
-const viewAngleTopBtn = document.getElementById('viewAngleTop');
-const viewAngleRightBtn = document.getElementById('viewAngleRight');
-const viewAngleLeftBtn = document.getElementById('viewAngleLeft');
-const viewOrientationSection = document.getElementById('viewOrientationSection');
 const viewMode2DBtn = document.getElementById('viewMode2DBtn');
 const viewMode3DBtn = document.getElementById('viewMode3DBtn');
 const benchSide3DSection = document.getElementById('benchSide3DSection');
@@ -63,13 +58,9 @@ let viewMode = getViewMode();
 function createRendererForMode(mode) {
   return mode === '3d'
     ? createCourtRenderer3D(scene3dMount, viewCubeWrap)
-    : createCourtRenderer(svg, getViewAngle());
+    : createCourtRenderer(svg);
 }
 
-// Net-orientation view angle: 0 (net-top), 90 (net-right), -90 (net-left).
-// Only meaningful in 2D mode (3D's free-orbit camera + ViewCube supersede
-// it - see Phase 2.12) - the "View Orientation" panel section is hidden
-// entirely while 3D is active.
 let renderer = createRendererForMode(viewMode);
 
 const rotationState = new RotationState();
@@ -570,42 +561,10 @@ clampToggle.addEventListener('click', () => {
   }
 });
 
-// Re-applies the viewBox/viewport rotation for the new view angle, snaps
-// the benched player into the newly active bench layout, and re-applies
-// every on-court player's counter-rotated label, without recreating any
-// DOM nodes (rotation/Libero state is untouched).
-function applyViewAngle(angle) {
-  renderer.setViewAngle(angle);
-  saveViewAngle(angle);
-  const benched = benchedRole();
-  for (const [role, player] of Object.entries(playersByRole)) {
-    if (role === benched) {
-      const pos = role === 'L' ? renderer.benchPosition() : renderer.benchPositionReplaced();
-      renderer.moveToBench(player);
-      player.setPosition(pos.x, pos.y);
-    } else {
-      player.setViewAngle(angle);
-    }
-  }
-  refreshViewAngleButtons();
-}
-
-function refreshViewAngleButtons() {
-  viewAngleTopBtn.classList.toggle('active', renderer.viewAngle === 0);
-  viewAngleRightBtn.classList.toggle('active', renderer.viewAngle === 90);
-  viewAngleLeftBtn.classList.toggle('active', renderer.viewAngle === -90);
-}
-
-viewAngleTopBtn.addEventListener('click', () => applyViewAngle(0));
-viewAngleRightBtn.addEventListener('click', () => applyViewAngle(90));
-viewAngleLeftBtn.addEventListener('click', () => applyViewAngle(-90));
-refreshViewAngleButtons();
-
 // Bench Side (3D-only - the 2D view already places the bench
-// automatically per net orientation). `renderer.setBenchSide` only
-// exists on the 3D renderer; these buttons are hidden (so unclickable)
-// whenever 2D is active, but each handler still guards against `viewMode`
-// just in case.
+// automatically). `renderer.setBenchSide` only exists on the 3D
+// renderer; these buttons are hidden (so unclickable) whenever 2D is
+// active, but each handler still guards against `viewMode` just in case.
 function refreshBenchSide3DButtons() {
   const side = getBenchSide3D();
   benchSide3DLeftBtn.classList.toggle('active', side === 'left');
@@ -650,7 +609,6 @@ function wireRendererEvents() {
 function refreshViewModeButtons() {
   viewMode2DBtn.classList.toggle('active', viewMode === '2d');
   viewMode3DBtn.classList.toggle('active', viewMode === '3d');
-  viewOrientationSection.hidden = viewMode !== '2d';
   benchSide3DSection.hidden = viewMode !== '3d';
   svg.style.display = viewMode === '2d' ? '' : 'none';
   scene3dMount.hidden = viewMode !== '3d';
@@ -681,8 +639,6 @@ async function switchViewMode(mode) {
   state.positions[benchedBeforeSwitch] = { x: newBenchPos.x, y: newBenchPos.y };
   if (mode === '3d') {
     refreshBenchSide3DButtons();
-  } else {
-    refreshViewAngleButtons();
   }
   await applyState(state);
 }

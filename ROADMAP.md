@@ -46,7 +46,7 @@ rework when the renderer changes later.
       `lock-pulse` animation's duration, as settings instead of the
       hardcoded values in `style.css`.
 
-## Phase 1 — 2D View Orientation Toggle
+## Phase 1 — 2D View Orientation Toggle (REMOVED, see note below)
 
 - [x] 1.1 Generalize the court rotation into a parameterized angle
       (0°/net-top, 90°/net-right, -90°/net-left) with matching viewBox
@@ -59,7 +59,20 @@ rework when the renderer changes later.
       so `main.js` stops talking to SVG-specifics directly — this is what
       lets Phase 2 plug in without another refactor.
 
+**Removed** (post-2.13, per explicit user request): once 3D View's free-
+orbit camera + ViewCube existed as a real alternative way to look at the
+court from any angle, the "Net Left"/"Net Right" 2D view-orientation
+options no longer earned their keep - only "Net Top" (angle 0) is left,
+and the whole angle-parameterization system (viewBox swapping, the
+rotating viewport, the second "top-of-court" bench layout, per-player
+counter-rotation) was deleted along with it as dead weight. See the
+"View Orientation removal" note in repo memory for the full list of what
+was deleted. Phase 1.4's thin rendering interface (the actual point of
+this phase) remains fully intact and is what let 3D plug in cleanly in
+the first place - only the angle-specific PARTS of 1.1-1.3 were removed.
+
 ## Phase 2 — 3D True Rendering Mode
+
 
 - [x] 2.1 Add Three.js; build the scene (court plane, lighting, camera).
 - [x] 2.2 Configurable Libero bench side — a selectable setting for the

@@ -5,10 +5,6 @@ formation. It focuses on four mechanics:
 
 - **Rotation** — click a rotate button to cycle all six players through the
   court's six zones the way a real side-out rotation works.
-- **View orientation** — a "Net Top/Right/Left" segmented control rotates
-  the whole court 90° at a time; all text (BENCH label, rotation tracker,
-  player labels) stays upright regardless of orientation. Persists across
-  reloads.
 - **Free movement** — drag any player anywhere on the court. An optional
   "Lock to Legal Positions" toggle clamps dragging so a player can't be
   moved past the fault line against its current row/column neighbors,
@@ -120,7 +116,7 @@ js/player3d.js          3D analog of player.js - a duck-typed drop-in with the
                         SAME public shape, backed by a Three.js puck instead
                         of an SVG element
 js/renderer.js          Thin 2D (SVG) rendering interface - create/move
-                        players, draw guide/link lines, view-angle switching
+                        players, draw guide/link lines
 js/renderer3d.js        Thin 3D (Three.js) rendering interface implementing
                         the SAME shape as renderer.js, plus the 3D-only
                         extras with no 2D equivalent (ViewCube navigation,
@@ -136,7 +132,6 @@ js/colors.js            Custom color persistence (shared by index.html/setup.htm
 js/lineSettings.js      Custom line-thickness persistence (shared by index.html/setup.html)
 js/fontSettings.js      Custom font persistence (shared by index.html/setup.html)
 js/effectSettings.js    Custom glow/pulse effect persistence (shared by index.html/setup.html)
-js/viewSettings.js      Net-orientation view-angle persistence (2D-only, shared by index.html/setup.html)
 js/viewModeSettings.js  2D-vs-3D view mode persistence (shared by index.html/scene3d.html's redirect)
 js/benchSideSettings.js Bench/Libero side persistence for 3D View only
                         (shared by index.html/setup.html)

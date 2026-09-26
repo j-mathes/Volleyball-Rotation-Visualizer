@@ -1,5 +1,3 @@
-import { COURT_SIZE } from './config.js';
-
 const SVG_NS = 'http://www.w3.org/2000/svg';
 export const PLAYER_RADIUS = 45;
 
@@ -14,9 +12,8 @@ function el(tag, attrs) {
 // Converts a pointer event's client coordinates into the user-space
 // coordinates of `target` (the element whose local coordinate system a
 // child's transform="translate(x,y)" is interpreted in) - not always the
-// root <svg>, since a player's parent may currently be the rotated court
-// viewport (see main.js's createViewport/setContainer), whose own
-// rotation must be undone too or dragging would move on the wrong axis.
+// root <svg>, since a player's parent may currently be the court viewport
+// (see court.js's createViewport) rather than the root directly.
 function toSvgPoint(svg, target, clientX, clientY) {
   const point = svg.createSVGPoint();
   point.x = clientX;
@@ -24,49 +21,23 @@ function toSvgPoint(svg, target, clientX, clientY) {
   return point.matrixTransform(target.getScreenCTM().inverse());
 }
 
-// Rotates (x, y) by `deltaDeg` around the court's center point - used by
-// setContainer to compensate for a change in the player's containing
-// group's rotation (e.g. moving between the +-90 deg rotated viewport and
-// a fixed, non-rotating bench layer), so its on-screen position doesn't
-// visibly jump the instant it's reparented.
-function rotateAroundCourtCenter(x, y, deltaDeg) {
-  if (deltaDeg === 0) {
-    return { x, y };
-  }
-  const center = COURT_SIZE / 2;
-  const rad = (deltaDeg * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  const dx = x - center;
-  const dy = y - center;
-  return {
-    x: center + dx * cos - dy * sin,
-    y: center + dx * sin + dy * cos,
-  };
-}
-
 export class Player {
   // `root` is the actual <svg> element (needed for pointer-to-user-space
-  // coordinate math); `container` is where this player's group is appended
-  // - normally the rotatable viewport group (see court.js's createViewport)
-  // rather than `root` directly. `angle` counter-rotates the label text so
-  // it stays upright regardless of the viewport's rotation.
-  constructor(root, container, role, label, x, y, onDragEnd, onDragMove, angle = 0) {
+  // coordinate math); `container` is where this player's group is
+  // appended - normally the court viewport (see court.js's
+  // createViewport) rather than `root` directly.
+  constructor(root, container, role, label, x, y, onDragEnd, onDragMove) {
     this.svg = root;
     this.role = role;
     this.x = x;
     this.y = y;
-    // Rotation (deg) of whatever group this.group currently lives in -
-    // kept in sync by setViewAngle/setContainer, so setContainer can
-    // compensate for a change in rotation when reparenting.
-    this.containerAngle = angle;
     this.onDragEnd = onDragEnd;
     this.onDragMove = onDragMove;
     this.dragging = false;
 
     this.group = el('g', { class: role === 'L' ? 'player libero' : 'player' });
     this.circle = el('circle', { cx: 0, cy: 0, r: PLAYER_RADIUS });
-    this.text = el('text', { x: 0, y: 2, transform: `rotate(${-angle}, 0, 2)` });
+    this.text = el('text', { x: 0, y: 2 });
     this.text.textContent = label;
     this.group.appendChild(this.circle);
     this.group.appendChild(this.text);
@@ -87,31 +58,10 @@ export class Player {
   }
 
   // Moves this player's SVG group into a different container - e.g.
-  // switching between the rotating court viewport and a fixed bench
-  // layer when swapping the Libero in/out - and updates the label's
-  // counter-rotation to match that container's angle (0 for a bench
-  // layer, which never rotates). Compensates position for any rotation
-  // difference between the old and new container so the player doesn't
-  // visibly jump the instant it's reparented (before any animateTo tween).
-  setContainer(container, angle) {
-    if (angle !== this.containerAngle) {
-      const compensated = rotateAroundCourtCenter(this.x, this.y, this.containerAngle - angle);
-      this.x = compensated.x;
-      this.y = compensated.y;
-      this._applyTransform();
-    }
+  // switching between the court viewport and the bench layer when
+  // swapping the Libero in/out.
+  setContainer(container) {
     container.appendChild(this.group);
-    this.setViewAngle(angle);
-  }
-
-  // Re-applies the label's counter-rotation after the view-angle toggle
-  // changes, so it stays upright regardless of the viewport's rotation.
-  // Also tracks the container's current angle for setContainer's rotation
-  // compensation, since a player can stay put while its container's own
-  // rotation changes (e.g. an on-court player during the view toggle).
-  setViewAngle(angle) {
-    this.containerAngle = angle;
-    this.text.setAttribute('transform', `rotate(${-angle}, 0, 2)`);
   }
 
   // Registers a click/double-click handler on this player's icon, so

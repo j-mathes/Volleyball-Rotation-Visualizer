@@ -1,4 +1,4 @@
-import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, BENCH_WIDTH, BENCH_STRIP_HEIGHT, BENCH_CENTER_CLASSIC, BENCH_PANEL_HEIGHT_CLASSIC, ROTATION_TRACKER_CENTER_X_CLASSIC, ROTATION_TRACKER_CENTER_X_TOP } from './config.js';
+import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, BENCH_WIDTH, BENCH_CENTER_CLASSIC, BENCH_PANEL_HEIGHT_CLASSIC, ROTATION_TRACKER_CENTER_X_CLASSIC } from './config.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -10,41 +10,31 @@ function el(tag, attrs) {
   return node;
 }
 
-// Sizes the SVG's viewBox. The width always matches the classic (bench-
-// on-the-left, Net Top) layout's total width, so the court renders at the
-// same on-screen size at every net-orientation view angle - a square's
-// axis-aligned bounding box is unchanged by a 90 deg turn, so only the
-// height needs to grow (to fit the fixed top-of-court bench strip - see
-// createTopBenchLayer) when the angle isn't 0.
-export function setViewBox(svg, angle = 0) {
+// Sizes the SVG's viewBox to fit the court + side margins + the bench
+// panel on the left.
+export function setViewBox(svg) {
   const minX = -(SIDE_MARGIN + BENCH_WIDTH);
   const width = COURT_SIZE + SIDE_MARGIN * 2 + BENCH_WIDTH;
-  const minY = angle === 0 ? -SIDE_MARGIN : -SIDE_MARGIN - BENCH_STRIP_HEIGHT;
-  const height = angle === 0 ? COURT_SIZE + SIDE_MARGIN * 2 : COURT_SIZE + SIDE_MARGIN * 2 + BENCH_STRIP_HEIGHT;
+  const minY = -SIDE_MARGIN;
+  const height = COURT_SIZE + SIDE_MARGIN * 2;
   svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
 }
 
 // Creates the group the court/overlap-line/player-related draw* functions
-// append into, so that content can be rotated as one unit via
-// setViewportRotation - the net-orientation toggle (0 deg/net-top,
-// 90 deg/net-right, -90 deg/net-left). The bench layers (see
-// createClassicBenchLayer/createTopBenchLayer) are deliberately NOT part
-// of this group, so they always stay upright regardless of the angle.
+// append into. The bench layer (see createClassicBenchLayer) is
+// deliberately NOT part of this group, so it never moves with the court.
 export function createViewport(svg) {
   const viewport = el('g', { class: 'viewport' });
   svg.appendChild(viewport);
   return viewport;
 }
 
-// Rotates the whole viewport around the court's center point.
-export function setViewportRotation(viewport, angle = 0) {
-  viewport.setAttribute('transform', `rotate(${angle}, ${COURT_SIZE / 2}, ${COURT_SIZE / 2})`);
-}
-
-// Classic (bench-on-the-left) layout, shown only at Net Top (angle 0) -
-// the original, pre-orientation-toggle design. Returns { layer,
-// trackerText } so callers can toggle its visibility and update the
-// tracker text as rotations happen.
+// The only bench layout (a vertical strip on the court's left side, with
+// the "R#" tracker above it near the net) - previously one of three used
+// across the (now-removed) Net Left/Top/Right view-orientation toggle,
+// kept as the single layout once that toggle was removed. Returns
+// { layer, trackerText } so callers can update the tracker text as
+// rotations happen.
 export function createClassicBenchLayer(svg) {
   const layer = el('g', { class: 'classic-bench-layer' });
   svg.appendChild(layer);
@@ -85,57 +75,6 @@ export function createClassicBenchLayer(svg) {
   layer.appendChild(label);
 
   const trackerText = drawRotationTrackerBox(layer, ROTATION_TRACKER_CENTER_X_CLASSIC, 45);
-  return { layer, trackerText };
-}
-
-// Top-of-court layout, shown only at Net Left/Right (+-90 deg) - a fixed,
-// non-rotating strip above the court, since the classic left-side bench
-// would otherwise swing to a different screen side depending on rotation
-// direction. `benchCenter` (config.js's BENCH_CENTER_TOP_RIGHT/LEFT)
-// positions the bench panel itself; the "R#" tracker always uses the
-// fixed ROTATION_TRACKER_CENTER_X_TOP regardless, so it never moves.
-// Returns { layer, trackerText }, same as createClassicBenchLayer.
-export function createTopBenchLayer(svg, benchCenter) {
-  const layer = el('g', { class: 'top-bench-layer' });
-  svg.appendChild(layer);
-
-  const panelY = -SIDE_MARGIN - BENCH_STRIP_HEIGHT + 10;
-  const panelHeight = BENCH_STRIP_HEIGHT - 20;
-  const panel = el('rect', {
-    x: benchCenter.x - BENCH_WIDTH / 2,
-    y: panelY,
-    width: BENCH_WIDTH,
-    height: panelHeight,
-    rx: 12,
-    fill: 'var(--bench-fill)',
-    'fill-opacity': 'var(--bench-fill-opacity)',
-  });
-  layer.appendChild(panel);
-
-  const divider = el('line', {
-    x1: -(SIDE_MARGIN + BENCH_WIDTH),
-    y1: -SIDE_MARGIN,
-    x2: COURT_SIZE + SIDE_MARGIN,
-    y2: -SIDE_MARGIN,
-    stroke: 'var(--line-colour)',
-    'stroke-width': 3,
-    'stroke-dasharray': '10,10',
-    opacity: 0.6,
-  });
-  layer.appendChild(divider);
-
-  const label = el('text', {
-    x: benchCenter.x,
-    y: panelY + 30,
-    fill: 'var(--line-colour)',
-    'text-anchor': 'middle',
-    'font-family': 'var(--diagram-font-family)',
-    'font-size': 'var(--bench-label-size)',
-  });
-  label.textContent = 'BENCH';
-  layer.appendChild(label);
-
-  const trackerText = drawRotationTrackerBox(layer, ROTATION_TRACKER_CENTER_X_TOP, benchCenter.y);
   return { layer, trackerText };
 }
 

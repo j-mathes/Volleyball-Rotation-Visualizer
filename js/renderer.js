@@ -2,12 +2,11 @@
 // court.js/player.js/raw SVG DOM specifics for the main visualizer.
 // main.js drives the app purely through the object createCourtRenderer()
 // returns (create/move players, draw guide/link lines, update the
-// rotation tracker text, switch view angle) without ever touching an SVG
-// element itself. A future Phase 2 3D renderer would implement this same
-// interface so main.js wouldn't need to change.
-import { setViewBox, drawCourt, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, setViewportRotation, createClassicBenchLayer, createTopBenchLayer } from './court.js';
+// rotation tracker text) without ever touching an SVG element itself.
+// js/renderer3d.js implements this same interface for the 3D view mode.
+import { setViewBox, drawCourt, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, createClassicBenchLayer } from './court.js';
 import { Player, PLAYER_RADIUS } from './player.js';
-import { BENCH_POSITION_CLASSIC, BENCH_POSITION_REPLACED_CLASSIC, BENCH_POSITION_TOP_RIGHT, BENCH_POSITION_REPLACED_TOP_RIGHT, BENCH_POSITION_TOP_LEFT, BENCH_POSITION_REPLACED_TOP_LEFT, BENCH_CENTER_TOP_RIGHT, BENCH_CENTER_TOP_LEFT, COURT_SIZE, ZONE_POSITIONS } from './config.js';
+import { BENCH_POSITION_CLASSIC, BENCH_POSITION_REPLACED_CLASSIC, COURT_SIZE, ZONE_POSITIONS } from './config.js';
 import { getLineSettings } from './lineSettings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -20,54 +19,36 @@ function svgLine(attrs) {
   return el;
 }
 
-// Builds the court/viewport, the 3 net-orientation bench layouts, and the
-// violation/link/clamp overlay-line layers into `svg`, then returns the
-// interface main.js uses for everything rendering-related.
-export function createCourtRenderer(svg, initialAngle) {
+// Builds the court/viewport, the bench layout, and the violation/link/
+// clamp overlay-line layers into `svg`, then returns the interface
+// main.js uses for everything rendering-related.
+export function createCourtRenderer(svg) {
   const lineSettings = getLineSettings();
-  let viewAngle = initialAngle;
 
-  setViewBox(svg, viewAngle);
+  setViewBox(svg);
   const viewport = createViewport(svg);
-  setViewportRotation(viewport, viewAngle);
   drawCourt(viewport);
   const violationLinesLayer = createViolationLinesLayer(viewport);
   const linkLinesLayer = createLinkLinesLayer(viewport);
   const clampLinesLayer = createClampLinesLayer(viewport);
   // Appended after the viewport (i.e. painted on top of the court floor),
   // so a player mid-swap-animation - still positioned over the court while
-  // reparented into a bench layer - stays visible instead of disappearing
-  // behind the floor.
+  // reparented into the bench layer - stays visible instead of
+  // disappearing behind the floor.
   const classicBench = createClassicBenchLayer(svg);
-  const topBenchRight = createTopBenchLayer(svg, BENCH_CENTER_TOP_RIGHT);
-  const topBenchLeft = createTopBenchLayer(svg, BENCH_CENTER_TOP_LEFT);
 
-  // Whichever bench layout is currently active, and the matching
-  // bench-slot positions within it - see setViewAngle.
   function benchLayer() {
-    if (viewAngle === 0) return classicBench.layer;
-    return viewAngle === 90 ? topBenchRight.layer : topBenchLeft.layer;
+    return classicBench.layer;
   }
   function benchPosition() {
-    if (viewAngle === 0) return BENCH_POSITION_CLASSIC;
-    return viewAngle === 90 ? BENCH_POSITION_TOP_RIGHT : BENCH_POSITION_TOP_LEFT;
+    return BENCH_POSITION_CLASSIC;
   }
   function benchPositionReplaced() {
-    if (viewAngle === 0) return BENCH_POSITION_REPLACED_CLASSIC;
-    return viewAngle === 90 ? BENCH_POSITION_REPLACED_TOP_RIGHT : BENCH_POSITION_REPLACED_TOP_LEFT;
+    return BENCH_POSITION_REPLACED_CLASSIC;
   }
-  // Only one of the three bench layouts is visible at a time.
-  function refreshBenchVisibility() {
-    classicBench.layer.style.display = viewAngle === 0 ? '' : 'none';
-    topBenchRight.layer.style.display = viewAngle === 90 ? '' : 'none';
-    topBenchLeft.layer.style.display = viewAngle === -90 ? '' : 'none';
-  }
-  refreshBenchVisibility();
 
   function setRotationTrackerText(text) {
     classicBench.trackerText.textContent = text;
-    topBenchRight.trackerText.textContent = text;
-    topBenchLeft.trackerText.textContent = text;
   }
 
   // Draws a dashed line marking a positional boundary, spanning the full
@@ -149,32 +130,19 @@ export function createCourtRenderer(svg, initialAngle) {
     clampLinesLayer.innerHTML = '';
   }
 
-  // Creates a player icon on the (currently rotated) court viewport.
+  // Creates a player icon on the court viewport.
   function createCourtPlayer(role, label, x, y, onDragEnd, onDragMove) {
-    return new Player(svg, viewport, role, label, x, y, onDragEnd, onDragMove, viewAngle);
+    return new Player(svg, viewport, role, label, x, y, onDragEnd, onDragMove);
   }
-  // Creates a player icon on the currently active (fixed, upright) bench layout.
+  // Creates a player icon on the (fixed, upright) bench layout.
   function createBenchPlayer(role, label, x, y, onDragEnd, onDragMove) {
-    return new Player(svg, benchLayer(), role, label, x, y, onDragEnd, onDragMove, 0);
+    return new Player(svg, benchLayer(), role, label, x, y, onDragEnd, onDragMove);
   }
   function moveToCourt(player) {
-    player.setContainer(viewport, viewAngle);
+    player.setContainer(viewport);
   }
   function moveToBench(player) {
-    player.setContainer(benchLayer(), 0);
-  }
-
-  // Re-applies the viewBox/viewport rotation and bench-layout visibility
-  // for the new view angle. Does NOT touch any player - main.js still
-  // owns deciding which players need to move/relabel for the new angle
-  // (moveToBench/moveToCourt for whichever is currently benched,
-  // player.setViewAngle for the rest), since that's app state, not
-  // rendering-surface state.
-  function setViewAngle(angle) {
-    viewAngle = angle;
-    setViewBox(svg, viewAngle);
-    setViewportRotation(viewport, viewAngle);
-    refreshBenchVisibility();
+    player.setContainer(benchLayer());
   }
 
   // Fires `handler` when the court background (not a player icon) is
@@ -199,9 +167,6 @@ export function createCourtRenderer(svg, initialAngle) {
   }
 
   return {
-    get viewAngle() {
-      return viewAngle;
-    },
     benchPosition,
     benchPositionReplaced,
     setRotationTrackerText,
@@ -214,7 +179,6 @@ export function createCourtRenderer(svg, initialAngle) {
     createBenchPlayer,
     moveToCourt,
     moveToBench,
-    setViewAngle,
     onBackgroundClick,
     destroy,
   };

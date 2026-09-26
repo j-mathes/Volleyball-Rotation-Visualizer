@@ -431,8 +431,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // by main.js's Bench Side panel buttons only while 3D is the active
   // renderer. Repositions the bench mesh immediately; repositioning
   // whichever player is currently benched to the new `benchPosition()`/
-  // `benchPositionReplaced()` is main.js's job (same division of
-  // responsibility as 2D's `applyViewAngle`).
+  // `benchPositionReplaced()` is main.js's job.
   function setBenchSide(side) {
     benchSide = side;
     saveBenchSide3D(side);
@@ -553,11 +552,6 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     // (index.html, updated directly by main.js) already covers this
     // regardless of which renderer is active - 3D doesn't need its own
     // separate in-scene copy.
-  }
-  function setViewAngle() {
-    // No-op: 3D has no net-orientation concept (superseded by free-orbit
-    // + the ViewCube, per Phase 2.12's decision) - the "View Orientation"
-    // panel section is hidden entirely while 3D is active instead.
   }
 
   // Hard sanity clamp (always active, independent of the optional "Lock
@@ -799,9 +793,6 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   }
 
   return {
-    get viewAngle() {
-      return 0;
-    },
     benchPosition,
     benchPositionReplaced,
     setBenchSide,
@@ -815,7 +806,6 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     createBenchPlayer,
     moveToCourt,
     moveToBench,
-    setViewAngle,
     onBackgroundClick,
     destroy,
   };
