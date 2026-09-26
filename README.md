@@ -5,6 +5,10 @@ formation. It focuses on four mechanics:
 
 - **Rotation** — click a rotate button to cycle all six players through the
   court's six zones the way a real side-out rotation works.
+- **View orientation** — a "Net Top/Right/Left" segmented control rotates
+  the whole court 90° at a time; all text (BENCH label, rotation tracker,
+  player labels) stays upright regardless of orientation. Persists across
+  reloads.
 - **Free movement** — drag any player anywhere on the court. An optional
   "Lock to Legal Positions" toggle clamps dragging so a player can't be
   moved past the fault line against its current row/column neighbors,
@@ -97,6 +101,7 @@ js/colors.js            Custom color persistence (shared by index.html/setup.htm
 js/lineSettings.js      Custom line-thickness persistence (shared by index.html/setup.html)
 js/fontSettings.js      Custom font persistence (shared by index.html/setup.html)
 js/effectSettings.js    Custom glow/pulse effect persistence (shared by index.html/setup.html)
+js/viewSettings.js      Net-orientation view-angle persistence (shared by index.html/setup.html)
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 reference/             Archived third-party source kept for reference only

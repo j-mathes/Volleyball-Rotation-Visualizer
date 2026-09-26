@@ -1,4 +1,4 @@
-import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, BENCH_WIDTH, BENCH_CENTER } from './config.js';
+import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, SIDE_PADDING, BENCH_WIDTH, BENCH_STRIP_HEIGHT, BENCH_CENTER, ROTATION_TRACKER_CENTER_X } from './config.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -10,65 +10,57 @@ function el(tag, attrs) {
   return node;
 }
 
-// Rotates (x, y) by `angle` degrees around (cx, cy) - used to compute the
-// rotated bounding box for setViewBox, matching setViewportRotation's
-// rotation of the actual content around the same center point.
-function rotatePoint(x, y, angle, cx, cy) {
-  const rad = (angle * Math.PI) / 180;
-  const dx = x - cx;
-  const dy = y - cy;
-  return {
-    x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
-    y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
-  };
+// Sizes the SVG's viewBox to fit the fixed bench/tracker strip plus the
+// court's own rotating bounding box below it, padded horizontally (see
+// SIDE_PADDING) to match the original layout's total width/scale. This is
+// constant regardless of the net-orientation view angle: only the court
+// (a square) rotates (see createViewport/setViewportRotation), and a
+// square's axis-aligned bounding box is unchanged by a 90 deg turn, so its
+// on-screen size never varies between orientations.
+export function setViewBox(svg) {
+  const minX = -SIDE_MARGIN - SIDE_PADDING;
+  const minY = -SIDE_MARGIN - BENCH_STRIP_HEIGHT;
+  const width = COURT_SIZE + SIDE_MARGIN * 2 + SIDE_PADDING * 2;
+  const height = COURT_SIZE + SIDE_MARGIN * 2 + BENCH_STRIP_HEIGHT;
+  svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
 }
 
-// Sizes the SVG's viewBox to fit the court plus its blue padding and the
-// sideline bench strip reserved for the Libero, rotated by `angle` degrees
-// around the court's center to match setViewportRotation - the bench
-// strip's extra width makes the un-rotated bounding box asymmetric, so the
-// rotated box is computed from its actual corners rather than assuming a
-// simple width/height swap.
-export function setViewBox(svg, angle = 0) {
-  const minX = -(SIDE_MARGIN + BENCH_WIDTH);
-  const minY = -SIDE_MARGIN;
-  const maxX = COURT_SIZE + SIDE_MARGIN;
-  const maxY = COURT_SIZE + SIDE_MARGIN;
-  const cx = COURT_SIZE / 2;
-  const cy = COURT_SIZE / 2;
-  const corners = [[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY]]
-    .map(([x, y]) => rotatePoint(x, y, angle, cx, cy));
-  const left = Math.min(...corners.map((p) => p.x));
-  const top = Math.min(...corners.map((p) => p.y));
-  const width = Math.max(...corners.map((p) => p.x)) - left;
-  const height = Math.max(...corners.map((p) => p.y)) - top;
-  svg.setAttribute('viewBox', `${left} ${top} ${width} ${height}`);
-}
-
-// Creates the group every other draw* function in this module appends
-// into, so the whole diagram (court, bench, tracker, players) can be
-// rotated as one unit via setViewportRotation - the net-orientation toggle
-// (0 deg/net-top, 90 deg/net-right, -90 deg/net-left).
+// Creates the group the court/overlap-line/player-related draw* functions
+// append into, so that content can be rotated as one unit via
+// setViewportRotation - the net-orientation toggle (0 deg/net-top,
+// 90 deg/net-right, -90 deg/net-left). The bench strip (see
+// createFixedLayer) is deliberately NOT part of this group, so it always
+// stays upright at the top of the screen regardless of the angle.
 export function createViewport(svg) {
   const viewport = el('g', { class: 'viewport' });
   svg.appendChild(viewport);
   return viewport;
 }
 
-// Rotates the whole diagram around the court's center point.
+// Rotates the whole viewport around the court's center point.
 export function setViewportRotation(viewport, angle = 0) {
   viewport.setAttribute('transform', `rotate(${angle}, ${COURT_SIZE / 2}, ${COURT_SIZE / 2})`);
 }
 
-// Draws a subtle panel and dashed divider marking the sideline area where
-// the Libero waits when not swapped onto the court. `angle` counter-
-// rotates the BENCH label so it stays upright regardless of the viewport's
-// rotation - see setViewportRotation.
-export function drawBenchZone(container, angle = 0) {
-  const panelHeight = 220;
+// Creates a non-rotating group for the bench panel and rotation tracker,
+// appended before (i.e. visually under) the viewport so an on-court-bound
+// player mid-swap still paints on top of the bench panel it's leaving.
+export function createFixedLayer(svg) {
+  const layer = el('g', { class: 'fixed-layer' });
+  svg.appendChild(layer);
+  return layer;
+}
+
+// Draws the bench panel, its divider from the court below, and the
+// "BENCH" label into the fixed (non-rotating) layer - always at the top
+// of the screen regardless of the net-orientation view angle.
+export function drawBenchZone(container) {
+  const panelY = -SIDE_MARGIN - BENCH_STRIP_HEIGHT + 10;
+  const panelHeight = BENCH_STRIP_HEIGHT - 20;
+
   const panel = el('rect', {
-    x: -(SIDE_MARGIN + BENCH_WIDTH),
-    y: BENCH_CENTER.y - panelHeight / 2,
+    x: BENCH_CENTER.x - BENCH_WIDTH / 2,
+    y: panelY,
     width: BENCH_WIDTH,
     height: panelHeight,
     rx: 12,
@@ -77,10 +69,10 @@ export function drawBenchZone(container, angle = 0) {
   container.appendChild(panel);
 
   const divider = el('line', {
-    x1: -SIDE_MARGIN,
+    x1: -SIDE_MARGIN - SIDE_PADDING,
     y1: -SIDE_MARGIN,
-    x2: -SIDE_MARGIN,
-    y2: COURT_SIZE + SIDE_MARGIN,
+    x2: COURT_SIZE + SIDE_MARGIN + SIDE_PADDING,
+    y2: -SIDE_MARGIN,
     stroke: 'var(--line-colour)',
     'stroke-width': 3,
     'stroke-dasharray': '10,10',
@@ -88,33 +80,32 @@ export function drawBenchZone(container, angle = 0) {
   });
   container.appendChild(divider);
 
-  const labelX = -(SIDE_MARGIN + BENCH_WIDTH / 2);
-  const labelY = BENCH_CENTER.y - panelHeight / 2 - 16;
   const label = el('text', {
-    x: labelX,
-    y: labelY,
+    x: BENCH_CENTER.x,
+    y: panelY + 30,
     fill: 'var(--line-colour)',
     'text-anchor': 'middle',
     'font-family': 'var(--diagram-font-family)',
     'font-size': 'var(--bench-label-size)',
-    transform: `rotate(${-angle}, ${labelX}, ${labelY})`,
   });
   label.textContent = 'BENCH';
   container.appendChild(label);
 }
 
-// Creates the "R#" rotation-number tracker above the bench area and
+// Creates the "R#" rotation-number tracker in the fixed bench strip and
 // returns the text element so callers can update it as rotations happen.
-// `angle` counter-rotates the text so it stays upright - see drawBenchZone.
-export function createRotationTracker(container, angle = 0) {
+// Always upright, since the fixed layer never rotates.
+export function createRotationTracker(container) {
   const boxWidth = 150;
   const boxHeight = 90;
-  const boxTop = 0; // aligns with the top of the court (net line)
-  const centerY = boxTop + boxHeight / 2;
+  const centerX = ROTATION_TRACKER_CENTER_X;
+  const centerY = BENCH_CENTER.y; // vertically centered in the strip, same as the bench panel
+  const boxX = centerX - boxWidth / 2;
+  const boxY = centerY - boxHeight / 2;
 
   const box = el('rect', {
-    x: BENCH_CENTER.x - boxWidth / 2,
-    y: boxTop,
+    x: boxX,
+    y: boxY,
     width: boxWidth,
     height: boxHeight,
     rx: 18,
@@ -123,7 +114,7 @@ export function createRotationTracker(container, angle = 0) {
   container.appendChild(box);
 
   const text = el('text', {
-    x: BENCH_CENTER.x,
+    x: centerX,
     y: centerY,
     fill: 'var(--line-colour)',
     'text-anchor': 'middle',
@@ -131,7 +122,6 @@ export function createRotationTracker(container, angle = 0) {
     'font-family': 'var(--diagram-font-family)',
     'font-weight': 'bold',
     'font-size': 'var(--rotation-tracker-size)',
-    transform: `rotate(${-angle}, ${BENCH_CENTER.x}, ${centerY})`,
   });
   text.textContent = 'R1';
   container.appendChild(text);

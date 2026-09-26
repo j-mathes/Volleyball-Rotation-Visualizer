@@ -1,5 +1,5 @@
 import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COURT_SIZE } from './config.js';
-import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, setViewportRotation } from './court.js';
+import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, setViewportRotation, createFixedLayer } from './court.js';
 import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer, getClampBounds } from './overlap.js';
@@ -10,6 +10,7 @@ import { getLineSettings, applyLineSettings } from './lineSettings.js';
 import { applyFontSettings } from './fontSettings.js';
 import { applyEffectSettings } from './effectSettings.js';
 import { getPlaylist, getPlaylistDelay } from './playlist.js';
+import { getViewAngle, saveViewAngle } from './viewSettings.js';
 
 applyColors();
 applyLineSettings();
@@ -32,6 +33,9 @@ const quickLoadOptionsEl = document.getElementById('quickLoadOptions');
 const playlistPlayBtn = document.getElementById('playlistPlayBtn');
 const playlistStepBtn = document.getElementById('playlistStepBtn');
 const playlistStatusEl = document.getElementById('playlistStatus');
+const viewAngleTopBtn = document.getElementById('viewAngleTop');
+const viewAngleRightBtn = document.getElementById('viewAngleRight');
+const viewAngleLeftBtn = document.getElementById('viewAngleLeft');
 
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
@@ -41,16 +45,18 @@ const playerLabels = getPlayerLabels();
 const lineSettings = getLineSettings();
 
 // Net-orientation view angle: 0 (net-top), 90 (net-right), -90 (net-left).
-// Not yet wired to a UI control (see ROADMAP.md Phase 1) - hardcoded to
-// the default orientation for now.
-const viewAngle = 0;
+// Persisted across reloads; changed live via the View Orientation toggle.
+// Only the court/players (in `viewport`) rotate with it - the bench strip
+// (in `fixedLayer`) always stays upright at the top of the screen.
+let viewAngle = getViewAngle();
 
-setViewBox(svg, viewAngle);
+setViewBox(svg);
+const fixedLayer = createFixedLayer(svg);
+drawBenchZone(fixedLayer);
+const rotationTrackerEl = createRotationTracker(fixedLayer);
 const viewport = createViewport(svg);
 setViewportRotation(viewport, viewAngle);
-drawBenchZone(viewport, viewAngle);
 drawCourt(viewport);
-const rotationTrackerEl = createRotationTracker(viewport, viewAngle);
 const violationLinesLayer = createViolationLinesLayer(viewport);
 const linkLinesLayer = createLinkLinesLayer(viewport);
 const clampLinesLayer = createClampLinesLayer(viewport);
@@ -92,8 +98,9 @@ for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
 }
 
 // The Libero doesn't rotate through the six zones; it waits on the
-// sideline and can be dragged onto the court to test a replacement.
-playersByRole.L = new Player(svg, viewport, 'L', playerLabels.L, BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd, handleDragMove, viewAngle);
+// sideline (in the fixed bench strip, upright at angle 0) and can be
+// dragged onto the court to test a replacement.
+playersByRole.L = new Player(svg, fixedLayer, 'L', playerLabels.L, BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd, handleDragMove, 0);
 
 // Whichever role is currently on the bench: the Libero itself, unless it
 // has swapped in for someone, in which case that role is benched instead.
@@ -371,12 +378,14 @@ async function applyState(state, { animate = false, duration = 600 } = {}) {
   setAwaitingSelection(false);
   rotationState.zoneToRole = { ...state.zoneToRole };
   liberoState.replacedRole = state.liberoReplacedRole || null;
+  const benched = benchedRole();
   const animations = [];
   for (const [role, player] of Object.entries(playersByRole)) {
     const pos = state.positions[role];
     if (!pos) {
       continue;
     }
+    player.setContainer(role === benched ? fixedLayer : viewport, role === benched ? 0 : viewAngle);
     if (animate) {
       animations.push(player.animateTo(pos.x, pos.y, duration));
     } else {
@@ -439,7 +448,9 @@ function setAwaitingSelection(active) {
 async function swapLiberoOn(role) {
   clearHighlights();
   const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
+  playersByRole[role].setContainer(fixedLayer, 0);
   await playersByRole[role].animateTo(BENCH_POSITION_REPLACED.x, BENCH_POSITION_REPLACED.y, 500);
+  playersByRole.L.setContainer(viewport, viewAngle);
   await playersByRole.L.animateTo(x, y, 500);
   liberoState.replacedRole = role;
   refreshLiberoButtonLabel();
@@ -455,7 +466,9 @@ async function swapLiberoOff() {
   }
   clearHighlights();
   const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
+  playersByRole.L.setContainer(fixedLayer, 0);
   await playersByRole.L.animateTo(BENCH_POSITION.x, BENCH_POSITION.y, 500);
+  playersByRole[role].setContainer(viewport, viewAngle);
   await playersByRole[role].animateTo(x, y, 500);
   liberoState.replacedRole = null;
   refreshLiberoButtonLabel();
@@ -584,6 +597,35 @@ clampToggle.addEventListener('click', () => {
     runOverlapCheck();
   }
 });
+
+// Re-applies the rotating viewport's rotation and every on-court player's
+// counter-rotated label for the new view angle, without recreating any
+// DOM nodes (player positions/rotation/Libero state are untouched). The
+// viewBox never changes (see setViewBox) and the benched player stays at
+// angle 0, since the fixed bench strip never rotates.
+function applyViewAngle(angle) {
+  viewAngle = angle;
+  saveViewAngle(viewAngle);
+  setViewportRotation(viewport, viewAngle);
+  const benched = benchedRole();
+  for (const [role, player] of Object.entries(playersByRole)) {
+    if (role !== benched) {
+      player.setViewAngle(viewAngle);
+    }
+  }
+  refreshViewAngleButtons();
+}
+
+function refreshViewAngleButtons() {
+  viewAngleTopBtn.classList.toggle('active', viewAngle === 0);
+  viewAngleRightBtn.classList.toggle('active', viewAngle === 90);
+  viewAngleLeftBtn.classList.toggle('active', viewAngle === -90);
+}
+
+viewAngleTopBtn.addEventListener('click', () => applyViewAngle(0));
+viewAngleRightBtn.addEventListener('click', () => applyViewAngle(90));
+viewAngleLeftBtn.addEventListener('click', () => applyViewAngle(-90));
+refreshViewAngleButtons();
 
 // Clicking anywhere on the court that isn't a player deselects the
 // currently previewed player.

@@ -55,6 +55,22 @@ export class Player {
     this._applyTransform();
   }
 
+  // Moves this player's SVG group into a different container - e.g.
+  // switching between the rotating court viewport and the fixed bench
+  // strip when swapping the Libero in/out - and updates the label's
+  // counter-rotation to match that container's angle (0 for the fixed
+  // strip, which never rotates).
+  setContainer(container, angle) {
+    container.appendChild(this.group);
+    this.setViewAngle(angle);
+  }
+
+  // Re-applies the label's counter-rotation after the view-angle toggle
+  // changes, so it stays upright regardless of the viewport's rotation.
+  setViewAngle(angle) {
+    this.text.setAttribute('transform', `rotate(${-angle}, 0, 2)`);
+  }
+
   setOverlapping(isOverlapping) {
     this.group.classList.toggle('overlapping', isOverlapping);
   }
