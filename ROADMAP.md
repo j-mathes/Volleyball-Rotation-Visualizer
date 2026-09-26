@@ -73,8 +73,61 @@ rework when the renderer changes later.
       raycasting onto the court plane.
 - [x] 2.4 Guide/violation/link lines as 3D geometry — "fat line" technique
       for thickness, `LineDashedMaterial` for dashed styles.
-- [ ] 2.5 Billboarded text labels via `CSS2DRenderer`.
-- [ ] 2.6 Camera controls (orbit/tilt).
-- [ ] 2.7 Wire the 3D renderer in as the 4th `viewMode` option behind the
-      Phase 1 interface.
+- [ ] 2.5 Line-thickness settings in 3D — wire `lineSettings.js`'s
+      guide/violation/link width settings into the 3D fat lines'
+      `linewidth`, which are currently hardcoded (10/6/6) instead of
+      reading the same customizable settings 2D uses.
+- [ ] 2.6 "Lock to Legal Positions" drag clamp — port the 2D app's
+      off-roadmap clamp toggle (uses `overlap.js`'s `getClampBounds`) so
+      dragging a puck can be constrained from crossing a fault line
+      against its current row/column neighbors, same as 2D. Not yet in
+      the 3D scene - currently the only drag constraint there is the
+      net-crossing clamp (z >= 0).
+- [ ] 2.7 Bench-warning drag feedback — port the 2D app's check that
+      warns (red tint) when the benched/Libero puck is dragged onto a
+      court that already has its full 6 players, so it's never possible
+      to end up with 7. Not yet in the 3D scene at all.
+- [ ] 2.8 Billboarded text labels via `CSS2DRenderer`.
+- [ ] 2.9 Camera controls (orbit/tilt).
+- [ ] 2.10 Floating 3D control UI + dashboard — 2D's fixed side panel
+      doesn't work once the camera can move freely around the full 3D
+      scene (2.9), since it'd end up blocking the view or sitting far
+      from whatever's currently on screen. Needs a movable/floating panel
+      (draggable to reposition) and/or a right-click context menu (design
+      still open - pick whichever tests better) for toggles, plus a
+      floating "dashboard" readout for status info. Sub-items:
+      - [ ] "Show Overlap Guides" / "Show Player Links" independent
+            toggle buttons (3D currently always shows both together
+            whenever a puck is selected, unlike 2D's separate toggles).
+      - [ ] Selection lock (double-click a puck to lock the selection,
+            same as 2D - not in 3D yet).
+      - [ ] Surface the "Lock to Legal Positions" (2.6) and "3D Preview -
+            Bench Side" (2.2, currently setup.html-only) toggles here too.
+      - [ ] Dashboard readout: rotation number / server-zone (depends on
+            2.8's text labels existing first) + an overlap-results list
+            (3D currently has no on-screen equivalent of either).
+- [ ] 2.11 Glow/pulse effect settings analog for 3D — `effectSettings.js`
+      drives a CSS drop-shadow glow in 2D (selectable/guide-selected/
+      locked highlights); 3D has no equivalent yet (e.g. an emissive
+      material intensity pulse) - needs its own design, not a direct port.
+- [ ] 2.12 View Orientation toggle for 3D — TBD: reconsider once 2.9's
+      camera orbit controls exist, since free camera movement may already
+      cover what the 2D Net Left/Top/Right toggle is for; revisit before
+      committing to porting it as-is.
+- [ ] 2.13 Wire the 3D renderer in as the 4th `viewMode` option behind
+      the Phase 1 interface. Sub-items to verify while wiring (expected
+      to mostly fall out "for free" once the shared app state/rotation
+      logic drives the 3D renderer too via the same interface, but called
+      out explicitly so they don't get missed during testing):
+      - [ ] Rotation state + Rotate CW/CCW/Reset-to-Base actually rotate
+            the pucks (currently static placeholders, no rotation logic
+            wired in at all).
+      - [ ] Libero swap-in/out as real tracked state (not just a freely
+            draggable puck with no role-replacement semantics).
+      - [ ] Save/Load court setups + Playlist playback work against the
+            3D scene.
+      - [ ] Rotation number / server-zone display (see 2.10's dashboard;
+            depends on 2.8's text labels).
+      - [ ] Player display-name customization (jersey numbers) shows up
+            on the 3D labels too (same 2.8 dependency).
 
