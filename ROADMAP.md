@@ -30,7 +30,7 @@ rework when the renderer changes later.
       for the transitions between each saved setup. Setup page hosts
       building/reordering the list; playback controls (play/pause/step,
       per-step delay) live wherever makes sense once designed.
-- [ ] 0.7 Organize saved court setups into folders — group related saved
+- [x] 0.7 Organize saved court setups into folders — group related saved
       setups (e.g. per-rotation variants, different lineups) into named,
       possibly nested folders on the setup page's saved-setup list, rather
       than one flat list. Export/import stay scoped to a single setup (or

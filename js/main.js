@@ -20,6 +20,9 @@ const overlapGuideToggle = document.getElementById('overlapGuideToggle');
 const playerLinkToggle = document.getElementById('playerLinkToggle');
 const saveSetupBtn = document.getElementById('saveSetupBtn');
 const setupNameInput = document.getElementById('setupNameInput');
+const quickLoadInput = document.getElementById('quickLoadInput');
+const quickLoadBtn = document.getElementById('quickLoadBtn');
+const quickLoadOptionsEl = document.getElementById('quickLoadOptions');
 const playlistPlayBtn = document.getElementById('playlistPlayBtn');
 const playlistStepBtn = document.getElementById('playlistStepBtn');
 const playlistStatusEl = document.getElementById('playlistStatus');
@@ -518,10 +521,42 @@ saveSetupBtn.addEventListener('click', () => {
   }
   saveSetup(name, captureCurrentState());
   setupNameInput.value = '';
+  refreshQuickLoadOptions();
   const originalLabel = saveSetupBtn.textContent;
   saveSetupBtn.textContent = 'Saved!';
   setTimeout(() => { saveSetupBtn.textContent = originalLabel; }, 1200);
 });
+
+// Quick-recall: load a saved setup by name (or "Folder / name") straight
+// from the visualizer, without a trip to the setup page's full list.
+function refreshQuickLoadOptions() {
+  quickLoadOptionsEl.innerHTML = '';
+  for (const setup of getSavedSetups()) {
+    const option = document.createElement('option');
+    option.value = setup.folder ? `${setup.folder} / ${setup.name}` : setup.name;
+    quickLoadOptionsEl.appendChild(option);
+  }
+}
+
+quickLoadBtn.addEventListener('click', async () => {
+  const query = quickLoadInput.value.trim();
+  if (!query) {
+    return;
+  }
+  const setup = getSavedSetups().find((candidate) => {
+    const label = candidate.folder ? `${candidate.folder} / ${candidate.name}` : candidate.name;
+    return label === query;
+  });
+  if (!setup) {
+    return;
+  }
+  playlistPlaying = false;
+  clearTimeout(playlistTimer);
+  await applyState(setup.state, { animate: true });
+  quickLoadInput.value = '';
+});
+
+refreshQuickLoadOptions();
 
 refreshRotationDisplay();
 refreshLiberoButtonLabel();

@@ -20,6 +20,9 @@ formation. It focuses on four mechanics:
 - **Court position playlist** — build an ordered sequence of saved setups
   on the setup page, then animate through them automatically (or step
   through manually) from the visualizer, with a configurable per-step delay.
+- **Folders & quick-load** — group saved setups into named folders on the
+  setup page (export/import a whole folder at once), and quick-load any
+  saved setup by name directly from the visualizer via a searchable field.
 - **Color customization** — every court/player/UI color is a CSS custom
   property, editable on the setup page instead of hardcoded, including a
   separate fill color just for the Libero.
@@ -47,7 +50,9 @@ uncluttered. Currently includes:
   localStorage and shared with the main visualizer.
 - **Saved Court Setups** — manage setups saved from the visualizer's "Court
   Setups" panel: Load (opens the visualizer with that setup applied),
-  Export (download as JSON), Import (from a JSON file), and Delete.
+  Export (download as JSON), Import (from a JSON file), and Delete. Group
+  setups into named folders (edit a folder's name inline to rename it);
+  Export Folder bundles every setup in a folder into one file.
 - **Court Setup Playlist** — build/reorder an ordered list of saved setups
   to animate through; play/pause/step and the per-step delay are
   controlled from the visualizer's "Playlist Playback" panel.

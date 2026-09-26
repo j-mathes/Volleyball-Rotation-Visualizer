@@ -1,7 +1,8 @@
 // Named snapshots of the full on-court state (player positions, zone/role
 // mapping, Libero swap), persisted in localStorage and shared between
 // index.html (which captures/applies them - see main.js's
-// captureCurrentState/applyState) and setup.html (which manages the list).
+// captureCurrentState/applyState) and setup.html (which manages the list,
+// including grouping entries into folders via each entry's `folder` field).
 //
 // State shape: { version, zoneToRole: {1: 'S', ...}, liberoReplacedRole,
 // positions: { S: {x, y}, ... } }
@@ -39,9 +40,9 @@ function persist(setups) {
   localStorage.setItem(SETUPS_KEY, JSON.stringify(setups));
 }
 
-export function saveSetup(name, state) {
+export function saveSetup(name, state, folder = null) {
   const setups = getSavedSetups();
-  const entry = { id: crypto.randomUUID(), name, savedAt: Date.now(), state };
+  const entry = { id: crypto.randomUUID(), name, savedAt: Date.now(), state, folder: folder || null };
   setups.push(entry);
   persist(setups);
   return entry;
@@ -49,6 +50,23 @@ export function saveSetup(name, state) {
 
 export function deleteSetup(id) {
   persist(getSavedSetups().filter((setup) => setup.id !== id));
+}
+
+// Folders are just a `folder` string shared by whichever setups reference
+// it - there's no separate folder entity, so an empty folder simply stops
+// existing once nothing points to it anymore.
+export function getFolderNames() {
+  const names = new Set(getSavedSetups().map((setup) => setup.folder).filter(Boolean));
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
+export function setSetupFolder(id, folder) {
+  persist(getSavedSetups().map((setup) => (setup.id === id ? { ...setup, folder: folder || null } : setup)));
+}
+
+// Renames every setup currently in `oldName` to `newName` in one go.
+export function renameFolder(oldName, newName) {
+  persist(getSavedSetups().map((setup) => (setup.folder === oldName ? { ...setup, folder: newName || null } : setup)));
 }
 
 // Set by setup.html's "Load" button; read (and cleared) the next time

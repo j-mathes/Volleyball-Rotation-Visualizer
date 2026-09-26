@@ -1,6 +1,6 @@
 import { ROLE_LABELS } from './config.js';
 import { getPlayerLabels, savePlayerLabels, resetPlayerLabels } from './playerLabels.js';
-import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber } from './courtSetups.js';
+import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber, getFolderNames, setSetupFolder, renameFolder } from './courtSetups.js';
 import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS } from './colors.js';
 import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings, LINE_SETTING_LABELS } from './lineSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
@@ -22,6 +22,7 @@ const addToPlaylistSelect = document.getElementById('addToPlaylistSelect');
 const addToPlaylistBtn = document.getElementById('addToPlaylistBtn');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 const playlistDelayInput = document.getElementById('playlistDelayInput');
+const folderNamesListEl = document.getElementById('folderNamesList');
 
 function renderForm() {
   const labels = getPlayerLabels();
@@ -66,20 +67,58 @@ renderForm();
 // Turns a saved setup into a downloadable .json file so it can be shared
 // or backed up outside localStorage.
 function downloadSetup(setup) {
-  const blob = new Blob([JSON.stringify(setup, null, 2)], { type: 'application/json' });
+  const safeName = setup.name.replace(/[^a-z0-9-_]+/gi, '_') || 'setup';
+  const rotationNumber = getRotationNumber(setup.state);
+  const fileName = rotationNumber ? `${safeName}_R${rotationNumber}.json` : `${safeName}.json`;
+  downloadJson(setup, fileName);
+}
+
+// Bundles every setup in a folder into one downloadable .json file, so a
+// whole group can be exported/shared/re-imported together instead of one
+// setup at a time.
+function downloadFolder(folderName, setups) {
+  const bundle = { folder: folderName, setups };
+  const safeName = folderName.replace(/[^a-z0-9-_]+/gi, '_') || 'folder';
+  downloadJson(bundle, `${safeName}.json`);
+}
+
+function downloadJson(data, fileName) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  const safeName = setup.name.replace(/[^a-z0-9-_]+/gi, '_') || 'setup';
-  const rotationNumber = getRotationNumber(setup.state);
-  link.download = rotationNumber ? `${safeName}_R${rotationNumber}.json` : `${safeName}.json`;
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+// Groups saved setups by their `folder` field (see courtSetups.js) - null
+// goes in an "Ungrouped" bucket, shown first, followed by folders in
+// alphabetical order.
+function groupSetupsByFolder(setups) {
+  const groups = new Map([[null, []]]);
+  for (const name of getFolderNames()) {
+    groups.set(name, []);
+  }
+  for (const setup of setups) {
+    if (!groups.has(setup.folder)) {
+      groups.set(setup.folder, []);
+    }
+    groups.get(setup.folder).push(setup);
+  }
+  return groups;
 }
 
 function renderSavedSetups() {
   const setups = getSavedSetups();
   savedSetupsListEl.innerHTML = '';
+
+  folderNamesListEl.innerHTML = '';
+  for (const name of getFolderNames()) {
+    const option = document.createElement('option');
+    option.value = name;
+    folderNamesListEl.appendChild(option);
+  }
 
   if (setups.length === 0) {
     const empty = document.createElement('li');
@@ -89,41 +128,93 @@ function renderSavedSetups() {
     return;
   }
 
-  for (const setup of setups) {
-    const item = document.createElement('li');
-    item.className = 'saved-setup-row';
+  for (const [folderName, folderSetups] of groupSetupsByFolder(setups)) {
+    if (folderSetups.length === 0) {
+      continue;
+    }
 
-    const name = document.createElement('span');
-    name.className = 'saved-setup-name';
-    name.textContent = setup.name;
-    item.appendChild(name);
+    const header = document.createElement('li');
+    header.className = 'setup-folder-header';
 
-    const loadBtn = document.createElement('button');
-    loadBtn.type = 'button';
-    loadBtn.textContent = 'Load';
-    loadBtn.addEventListener('click', () => {
-      setPendingSetup(setup.state);
-      window.location.href = 'index.html';
-    });
-    item.appendChild(loadBtn);
+    if (folderName) {
+      const renameInput = document.createElement('input');
+      renameInput.type = 'text';
+      renameInput.className = 'folder-rename-input';
+      renameInput.value = folderName;
+      renameInput.addEventListener('change', () => {
+        const newName = renameInput.value.trim();
+        if (newName && newName !== folderName) {
+          renameFolder(folderName, newName);
+          renderSavedSetups();
+          renderPlaylist();
+        } else {
+          renameInput.value = folderName;
+        }
+      });
+      header.appendChild(renameInput);
 
-    const exportBtn = document.createElement('button');
-    exportBtn.type = 'button';
-    exportBtn.textContent = 'Export';
-    exportBtn.addEventListener('click', () => downloadSetup(setup));
-    item.appendChild(exportBtn);
+      const exportFolderBtn = document.createElement('button');
+      exportFolderBtn.type = 'button';
+      exportFolderBtn.textContent = 'Export Folder';
+      exportFolderBtn.addEventListener('click', () => downloadFolder(folderName, folderSetups));
+      header.appendChild(exportFolderBtn);
+    } else {
+      const headerName = document.createElement('span');
+      headerName.textContent = 'Ungrouped';
+      header.appendChild(headerName);
+    }
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.addEventListener('click', () => {
-      deleteSetup(setup.id);
-      renderSavedSetups();
-      renderPlaylist();
-    });
-    item.appendChild(deleteBtn);
+    savedSetupsListEl.appendChild(header);
 
-    savedSetupsListEl.appendChild(item);
+    for (const setup of folderSetups) {
+      const item = document.createElement('li');
+      item.className = 'saved-setup-row';
+
+      const name = document.createElement('span');
+      name.className = 'saved-setup-name';
+      name.textContent = setup.name;
+      item.appendChild(name);
+
+      const folderInput = document.createElement('input');
+      folderInput.type = 'text';
+      folderInput.className = 'folder-input';
+      folderInput.placeholder = 'Folder';
+      folderInput.setAttribute('list', 'folderNamesList');
+      folderInput.value = setup.folder || '';
+      folderInput.addEventListener('change', () => {
+        setSetupFolder(setup.id, folderInput.value.trim());
+        renderSavedSetups();
+        renderPlaylist();
+      });
+      item.appendChild(folderInput);
+
+      const loadBtn = document.createElement('button');
+      loadBtn.type = 'button';
+      loadBtn.textContent = 'Load';
+      loadBtn.addEventListener('click', () => {
+        setPendingSetup(setup.state);
+        window.location.href = 'index.html';
+      });
+      item.appendChild(loadBtn);
+
+      const exportBtn = document.createElement('button');
+      exportBtn.type = 'button';
+      exportBtn.textContent = 'Export';
+      exportBtn.addEventListener('click', () => downloadSetup(setup));
+      item.appendChild(exportBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => {
+        deleteSetup(setup.id);
+        renderSavedSetups();
+        renderPlaylist();
+      });
+      item.appendChild(deleteBtn);
+
+      savedSetupsListEl.appendChild(item);
+    }
   }
 }
 
@@ -136,17 +227,29 @@ importSetupInput.addEventListener('change', async () => {
   }
   try {
     const parsed = JSON.parse(await file.text());
-    // Accept either a full exported entry ({ name, state }) or a bare state object.
-    const state = isValidState(parsed.state) ? parsed.state : parsed;
-    if (!isValidState(state)) {
-      throw new Error('invalid setup file');
+    if (Array.isArray(parsed.setups)) {
+      // A folder bundle exported via "Export Folder": re-add every setup
+      // under its original name, tagged with the (possibly renamed-on-
+      // import-conflict) folder name.
+      const folderName = parsed.folder || file.name.replace(/\.json$/i, '');
+      for (const entry of parsed.setups) {
+        if (isValidState(entry.state)) {
+          saveSetup(entry.name || 'Setup', entry.state, folderName);
+        }
+      }
+    } else {
+      // Accept either a full exported entry ({ name, state }) or a bare state object.
+      const state = isValidState(parsed.state) ? parsed.state : parsed;
+      if (!isValidState(state)) {
+        throw new Error('invalid setup file');
+      }
+      const name = parsed.name || file.name.replace(/\.json$/i, '');
+      saveSetup(name, state, parsed.folder);
     }
-    const name = parsed.name || file.name.replace(/\.json$/i, '');
-    saveSetup(name, state);
     renderSavedSetups();
     renderPlaylist();
   } catch {
-    alert("Could not import that file — make sure it's a setup exported from this app.");
+    alert("Could not import that file — make sure it's a setup (or folder) exported from this app.");
   } finally {
     importSetupInput.value = '';
   }
@@ -240,13 +343,22 @@ function renderPlaylist() {
   const setups = getSavedSetups();
   const byId = Object.fromEntries(setups.map((setup) => [setup.id, setup]));
 
-  // Keep the "add" dropdown in sync with the current saved-setup list.
+  // Keep the "add" dropdown in sync with the current saved-setup list,
+  // grouped into <optgroup>s so folders stay visually distinct there too.
   addToPlaylistSelect.innerHTML = '';
-  for (const setup of setups) {
-    const option = document.createElement('option');
-    option.value = setup.id;
-    option.textContent = setup.name;
-    addToPlaylistSelect.appendChild(option);
+  for (const [folderName, folderSetups] of groupSetupsByFolder(setups)) {
+    if (folderSetups.length === 0) {
+      continue;
+    }
+    const group = document.createElement('optgroup');
+    group.label = folderName || 'Ungrouped';
+    for (const setup of folderSetups) {
+      const option = document.createElement('option');
+      option.value = setup.id;
+      option.textContent = setup.name;
+      group.appendChild(option);
+    }
+    addToPlaylistSelect.appendChild(group);
   }
 
   const items = getPlaylist();
