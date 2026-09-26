@@ -155,6 +155,17 @@ export function createLinkLinesLayer(container) {
   return group;
 }
 
+// Group that holds dashed black lines marking the fault-line boundary a
+// player is currently pressed up against while "Lock to Legal Positions"
+// is on. Kept separate from the violation-lines layer so it can be
+// updated on every drag move without interfering with that layer's own
+// clear/repopulate cycle. Returned so callers can clear/repopulate it.
+export function createClampLinesLayer(container) {
+  const group = el('g', { class: 'clamp-lines' });
+  container.appendChild(group);
+  return group;
+}
+
 // Draws the static court lines (net, side/end lines, attack line) into the
 // given container and returns it for convenience.
 export function drawCourt(container) {

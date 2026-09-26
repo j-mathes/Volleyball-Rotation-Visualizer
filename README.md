@@ -7,13 +7,16 @@ formation. It focuses on four mechanics:
   court's six zones the way a real side-out rotation works.
 - **Free movement** — drag any player anywhere on the court. An optional
   "Lock to Legal Positions" toggle clamps dragging so a player can't be
-  moved past the fault line against its current row/column neighbors.
+  moved past the fault line against its current row/column neighbors,
+  showing a dashed black boundary line live while it's pressed against one.
 - **Overlap detection** — the current formation is continuously checked
   against the FIVB positional-fault rules (row order and front/back order),
-  with no button to press. Optional "Show Overlap Guides" and "Show Player
-  Links" toggles let you select a player and preview its positional
-  boundaries/relationships with corresponding players, with a lockable
-  selection so you can move other players without losing it.
+  updating live while dragging (not just after you let go): violation
+  lines, red player highlighting, and the collapsible results
+  list/indicator all track in real time. Optional "Show Overlap Guides" and
+  "Show Player Links" toggles let you select a player and preview its
+  positional boundaries/relationships with corresponding players, with a
+  lockable selection so you can move other players without losing it.
 - **Libero swap** — replace a back-row player with the Libero, with
   automatic swap-out if that player would rotate to the front row.
 - **Save/load court setups** — save the current on-court arrangement

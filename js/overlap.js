@@ -84,23 +84,48 @@ export function checkOverlap(positionsByZone) {
 // "how far can this one player move" instead of "are these two ok".
 // Used to clamp dragging so a fault can't be created in the first place,
 // rather than only flagging it after the fact. Any side with no
-// constraint is left as +-Infinity.
+// constraint is left as +-Infinity. Also records the binding pair in its
+// canonical [leftZone, rightZone]/[frontZone, backZone] order (e.g.
+// `maxXPair`), so callers can draw a boundary line using the exact same
+// zoneA/zoneB order checkOverlap uses - anchoring it identically to a
+// guide-preview line for the same pair, instead of on the mirrored side.
 export function getClampBounds(zone, positionsByZone) {
-  const bounds = { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
+  const bounds = {
+    minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity,
+    minXPair: null, maxXPair: null, minYPair: null, maxYPair: null,
+  };
 
-  for (const [leftZone, rightZone] of LEFT_RIGHT_CHECKS) {
+  for (const pair of LEFT_RIGHT_CHECKS) {
+    const [leftZone, rightZone] = pair;
     if (zone === leftZone) {
-      bounds.maxX = Math.min(bounds.maxX, positionsByZone[rightZone].x + TOLERANCE);
+      const candidate = positionsByZone[rightZone].x + TOLERANCE;
+      if (candidate < bounds.maxX) {
+        bounds.maxX = candidate;
+        bounds.maxXPair = pair;
+      }
     } else if (zone === rightZone) {
-      bounds.minX = Math.max(bounds.minX, positionsByZone[leftZone].x - TOLERANCE);
+      const candidate = positionsByZone[leftZone].x - TOLERANCE;
+      if (candidate > bounds.minX) {
+        bounds.minX = candidate;
+        bounds.minXPair = pair;
+      }
     }
   }
 
-  for (const [frontZone, backZone] of FRONT_BACK_PAIRS) {
+  for (const pair of FRONT_BACK_PAIRS) {
+    const [frontZone, backZone] = pair;
     if (zone === frontZone) {
-      bounds.maxY = Math.min(bounds.maxY, positionsByZone[backZone].y + TOLERANCE);
+      const candidate = positionsByZone[backZone].y + TOLERANCE;
+      if (candidate < bounds.maxY) {
+        bounds.maxY = candidate;
+        bounds.maxYPair = pair;
+      }
     } else if (zone === backZone) {
-      bounds.minY = Math.max(bounds.minY, positionsByZone[frontZone].y - TOLERANCE);
+      const candidate = positionsByZone[frontZone].y - TOLERANCE;
+      if (candidate > bounds.minY) {
+        bounds.minY = candidate;
+        bounds.minYPair = pair;
+      }
     }
   }
 

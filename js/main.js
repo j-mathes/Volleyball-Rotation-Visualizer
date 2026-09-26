@@ -1,5 +1,5 @@
 import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COURT_SIZE } from './config.js';
-import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer, createViewport, setViewportRotation } from './court.js';
+import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, setViewportRotation } from './court.js';
 import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer, getClampBounds } from './overlap.js';
@@ -53,6 +53,7 @@ drawCourt(viewport);
 const rotationTrackerEl = createRotationTracker(viewport, viewAngle);
 const violationLinesLayer = createViolationLinesLayer(viewport);
 const linkLinesLayer = createLinkLinesLayer(viewport);
+const clampLinesLayer = createClampLinesLayer(viewport);
 
 const rotationState = new RotationState();
 
@@ -112,19 +113,18 @@ function refreshRotationDisplay() {
 }
 
 // Warns (in red) if the single benched player has been dragged onto a
-// court that already has its full 6 players. Also keeps the guide/link
-// previews tracking live while dragging any player - not just the
-// selected one, since dragging one of its linked/related players should
-// move that end of the line too.
+// court that already has its full 6 players. Also keeps overlap status
+// (violation lines, red player icons, results text) and the guide/link
+// previews live while dragging any player - not just the selected one,
+// since dragging one of its linked/related players should move that end
+// of the line too.
 function handleDragMove(player) {
   if (player.role === benchedRole()) {
     player.setBenchWarning(isWithinCourt(player.x, player.y));
   } else if (clampEnabled) {
     clampToLegalPosition(player);
   }
-  if (guidesEnabled || linksEnabled) {
-    runOverlapCheck();
-  }
+  runOverlapCheck();
 }
 
 // Only the on-court occupant of each zone counts toward the overlap check:
@@ -145,7 +145,10 @@ function currentPositionsByZone() {
 // column neighbors, so it can never actually be dragged into a fault -
 // only the 6 on-court zone occupants are constrained this way (checked via
 // findZoneForRole; a benched player isn't in `positions`, so this is a
-// no-op for it).
+// no-op for it). Redraws (or clears) a dashed boundary line for whichever
+// axis is actively being clamped this frame, reusing drawSeparatorLine in
+// the pair's canonical zoneA/zoneB order so it anchors identically to a
+// guide-preview line for the same pair (rather than the mirrored side).
 function clampToLegalPosition(player) {
   const positions = currentPositionsByZone();
   const zone = findZoneForRole(positions, player.role);
@@ -153,9 +156,22 @@ function clampToLegalPosition(player) {
     return;
   }
   const bounds = getClampBounds(zone, positions);
-  const clampedX = Math.min(Math.max(player.x, bounds.minX), bounds.maxX);
-  const clampedY = Math.min(Math.max(player.y, bounds.minY), bounds.maxY);
-  if (clampedX !== player.x || clampedY !== player.y) {
+  const rawX = player.x;
+  const rawY = player.y;
+  const clampedX = Math.min(Math.max(rawX, bounds.minX), bounds.maxX);
+  const clampedY = Math.min(Math.max(rawY, bounds.minY), bounds.maxY);
+
+  clampLinesLayer.innerHTML = '';
+  if (clampedX !== rawX) {
+    const [zoneA, zoneB] = clampedX === bounds.maxX ? bounds.maxXPair : bounds.minXPair;
+    drawSeparatorLine(positions[zoneA], positions[zoneB], zoneA, zoneB, 'horizontal', false, zone, clampLinesLayer);
+  }
+  if (clampedY !== rawY) {
+    const [zoneA, zoneB] = clampedY === bounds.maxY ? bounds.maxYPair : bounds.minYPair;
+    drawSeparatorLine(positions[zoneA], positions[zoneB], zoneA, zoneB, 'vertical', false, zone, clampLinesLayer);
+  }
+
+  if (clampedX !== rawX || clampedY !== rawY) {
     player.setPosition(clampedX, clampedY);
   }
 }
@@ -168,6 +184,7 @@ function clearHighlights() {
   overlapResultsEl.innerHTML = '';
   violationLinesLayer.innerHTML = '';
   linkLinesLayer.innerHTML = '';
+  clampLinesLayer.innerHTML = '';
 }
 
 // Draws a thin green line connecting the centers of two players -
@@ -199,7 +216,7 @@ function drawLinkLine(posA, posB, isBackRowTarget) {
 // player's position. Otherwise (no selection involved in this pair), the
 // anchor falls back to whichever player is closer to its own zone's base
 // position (the one that stayed put), since either could be the one that moved.
-function drawSeparatorLine(posA, posB, zoneA, zoneB, axis, isViolation, selectedZone) {
+function drawSeparatorLine(posA, posB, zoneA, zoneB, axis, isViolation, selectedZone, layer = violationLinesLayer) {
   let anchorIsA;
   if (selectedZone === zoneA) {
     anchorIsA = false;
@@ -232,7 +249,7 @@ function drawSeparatorLine(posA, posB, zoneA, zoneB, axis, isViolation, selected
   line.setAttribute('stroke', isViolation ? 'var(--player-overlap)' : 'var(--guide-line)');
   line.setAttribute('stroke-width', isViolation ? lineSettings.violationLineWidth : lineSettings.guideLineWidth);
   line.setAttribute('stroke-dasharray', '10,8');
-  violationLinesLayer.appendChild(line);
+  layer.appendChild(line);
 }
 
 // Finds which zone (if any) a role currently occupies on court - a
@@ -320,7 +337,12 @@ function runOverlapCheck() {
   }
 }
 
-function handleDragEnd() {
+function handleDragEnd(player) {
+  // The clamp-boundary line only makes sense while actively pressed
+  // against it mid-drag; clear it once the drag is complete.
+  if (player.role !== benchedRole()) {
+    clampLinesLayer.innerHTML = '';
+  }
   // Dragging can introduce/resolve overlaps; overlap status is always live.
   runOverlapCheck();
 }
