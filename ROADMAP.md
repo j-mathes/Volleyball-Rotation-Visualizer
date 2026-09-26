@@ -209,7 +209,96 @@ SAME shared elements the 2D view already had (no more duplicate UI); only
 genuinely 3D-only concepts (the ViewCube/camera, and the Bench Side
 toggle) remain 3D-specific, shown/hidden by the same "View Mode" section.
 
-## Phase 3 — Two-Team Support (planned, not started)
+## Phase 3 — Control Layout Overhaul, Quad-Menu, Referee/Net Viewpoints (planned, not started)
+
+Replaces the vertical right-side panel with a horizontal top bar (an
+operations row of action buttons + a status row of read-only info),
+freeing the space for a wider court/3D scene. Moves secondary settings
+into a 3ds-Max-inspired right-click quad-menu, adds a keyboard/mouse
+reference page, and adds selectable (not draggable) referee/net objects
+in 3D as camera viewpoints/orbit targets. Applies to both 2D and 3D, with
+only the applicable options shown per mode.
+
+- [x] 3.1 Top-bar layout - operations row (2D/3D toggle, Rotate CW/CCW,
+      Reset, Libero swap, Overlap Guide/Player Link/Lock toggles) +
+      status row (rotation/serving readout + per-player overlap-status
+      cards - role label on top, ok/violation status below - restyled
+      from the existing `#overlapResults` list, reusing `summarizeByPlayer`
+      unchanged). Court/`#scene3dMount` width expands into the freed
+      space.
+- [ ] 3.2 3D Alt-to-orbit remap - holding Alt temporarily turns
+      LEFT-click-drag into camera orbit (toggles
+      `controls.mouseButtons.LEFT` between `ROTATE`/`null` on Alt
+      keydown/keyup; puck select/drag no-ops while Alt is held). RIGHT
+      click becomes exclusively the quad-menu trigger (`contextmenu` +
+      `preventDefault()`). Anchor-repick (previously right-click) moves to
+      Alt+LEFT pointerdown, raycasting against pucks + the new net
+      viewpoint (net -> retarget to its center-top point; puck -> retarget
+      to it; empty space -> reset to default court center). Add
+      `onContextMenu(handler)` to both renderer.js and renderer3d.js
+      interfaces, mirroring the existing `onBackgroundClick` pattern.
+- [ ] 3.3 Quad-menu (new `js/quadMenu.js`) - simplified fixed layout (not
+      true cursor-quadrant flyouts), showing only as many of up to 4
+      sections as are applicable per view mode:
+      - View & Camera (3D-only): reset view, zoom extents, the 6 preset
+        views, ViewCube size (S/M/L), label scale mode.
+      - Scene Setup (3D-only): bench side (left/right).
+      - Court Setups & Playlist (both modes): save current setup, quick
+        load, play/pause, step - relocated off the old side panel.
+      - Keyboard & Mouse Shortcuts (both modes): clickable list (choosing
+        an entry executes it) + a link to the new reference page.
+      - Zone-label toggle (both modes, see 3.7).
+      Requires exposing `resetToDefaultView`, `snapToPresetView(label)`,
+      `zoomExtents`, and new live setters `setViewCubeSize(size)`/
+      `setLabelScaleMode(mode)` (mirroring `setBenchSide`'s existing live-
+      update pattern) on renderer3d.js's returned interface.
+- [ ] 3.4 Shared `js/shortcutsData.js` (canonical list tagged
+      `2d`/`3d`/`both`, covering Alt-orbit, right-click-menu, and the new
+      playlist shortcuts) + new `reference.html`/`js/reference.js` page
+      (setup.html-style chrome) listing keyboard shortcuts and mouse
+      options, linked from the app header.
+- [ ] 3.5 New 3D objects: net posts (at the sidelines, z=0) + a real
+      vertical net (canvas-textured grid plane, 2.43m tall, between the
+      posts - today's "net" is just a flat ground-level line marker with
+      no vertical mesh at all) + an R2 floor-referee puck (1.8m tall,
+      bench side, ~0.5m outside its post) + an R1 stand puck (3.2m tall,
+      opposite side, ~0.5m outside its post). R1/R2 are selectable via
+      plain LEFT-click (new `selectableViewpoints` raycast list, separate
+      from `draggablePlayers`) - selecting one tweens the camera (via the
+      existing `flyCameraTo`) to eye height at that object's position
+      looking at court center, and hides that object's mesh while active;
+      restoring hidden visibility is centralized at the top of
+      `flyCameraTo` so any other navigation action auto-restores it. The
+      net is selectable only via Alt+LEFT (see 3.2) and only retargets the
+      orbit anchor (COURT_SIZE/2, 243, 0) - camera position unchanged, no
+      hide/jump. Both R1/R2 reposition via the existing `setBenchSide`
+      mechanism, extended to also move them (not just the bench mesh).
+- [ ] 3.6 setup.html cleanup - rename the 3 "3D Preview" headings to
+      "3D View" and fix the 2 stale links to the retired `scene3d.html`
+      to point at `index.html` instead.
+- [ ] 3.7 Zone-label toggle (quad-menu item, in-memory only - not
+      persisted, same convention as the existing guide/link/clamp
+      toggles): when on, each on-court player's label gains a second line
+      showing its current zone, e.g. "MB1" / "(Z6)"; the benched player
+      shows none. New `setShowZone(zone|null)` method on both `Player`
+      (2D: extra `<tspan dy=...>`) and `Player3D` (3D: extra child in the
+      CSS2DObject's label div), updated on toggle-flip and on every
+      rotate/reset.
+- [ ] 3.8 Playlist keyboard shortcuts (main.js, guarded like
+      renderer3d.js's `onKeydown`): Space = play/pause, Right Arrow = step
+      forward, Left Arrow = step backward (new - `goToPlaylistStep`
+      already wraps negative indices correctly, so this is a trivial
+      addition).
+- [ ] 3.9 Label vertical-offset fix for low camera angles - CSS2DObject
+      labels are anchored at a fixed world-space height, which at
+      shallow/grazing camera pitch reads as "floating in front of" the
+      puck instead of "sitting on top". Fix: compute the camera's polar
+      angle once per frame and apply an interpolated extra Y-offset
+      (larger at grazing angles, ~0 extra at top-down angles) via a new
+      `updateLabelHeight(offsetY)` on `Player3D`, mirroring the existing
+      `updateLabelScale(scale)` pattern.
+
+## Phase 4 — Two-Team Support (planned, not started)
 
 Eventually show both teams on court at once (ours + an opponent on the
 mirrored far half of the net). Both renderers already draw the full
@@ -254,94 +343,5 @@ regressions):
   used both as the default orbit target and the empty-space anchor-reset
   target) should become a function of which team is currently active,
   rather than a fixed constant.
-
-## Phase 4 — Control Layout Overhaul, Quad-Menu, Referee/Net Viewpoints (planned, not started)
-
-Replaces the vertical right-side panel with a horizontal top bar (an
-operations row of action buttons + a status row of read-only info),
-freeing the space for a wider court/3D scene. Moves secondary settings
-into a 3ds-Max-inspired right-click quad-menu, adds a keyboard/mouse
-reference page, and adds selectable (not draggable) referee/net objects
-in 3D as camera viewpoints/orbit targets. Applies to both 2D and 3D, with
-only the applicable options shown per mode.
-
-- [ ] 4.1 Top-bar layout - operations row (2D/3D toggle, Rotate CW/CCW,
-      Reset, Libero swap, Overlap Guide/Player Link/Lock toggles) +
-      status row (rotation/serving readout + per-player overlap-status
-      cards - role label on top, ok/violation status below - restyled
-      from the existing `#overlapResults` list, reusing `summarizeByPlayer`
-      unchanged). Court/`#scene3dMount` width expands into the freed
-      space.
-- [ ] 4.2 3D Alt-to-orbit remap - holding Alt temporarily turns
-      LEFT-click-drag into camera orbit (toggles
-      `controls.mouseButtons.LEFT` between `ROTATE`/`null` on Alt
-      keydown/keyup; puck select/drag no-ops while Alt is held). RIGHT
-      click becomes exclusively the quad-menu trigger (`contextmenu` +
-      `preventDefault()`). Anchor-repick (previously right-click) moves to
-      Alt+LEFT pointerdown, raycasting against pucks + the new net
-      viewpoint (net -> retarget to its center-top point; puck -> retarget
-      to it; empty space -> reset to default court center). Add
-      `onContextMenu(handler)` to both renderer.js and renderer3d.js
-      interfaces, mirroring the existing `onBackgroundClick` pattern.
-- [ ] 4.3 Quad-menu (new `js/quadMenu.js`) - simplified fixed layout (not
-      true cursor-quadrant flyouts), showing only as many of up to 4
-      sections as are applicable per view mode:
-      - View & Camera (3D-only): reset view, zoom extents, the 6 preset
-        views, ViewCube size (S/M/L), label scale mode.
-      - Scene Setup (3D-only): bench side (left/right).
-      - Court Setups & Playlist (both modes): save current setup, quick
-        load, play/pause, step - relocated off the old side panel.
-      - Keyboard & Mouse Shortcuts (both modes): clickable list (choosing
-        an entry executes it) + a link to the new reference page.
-      - Zone-label toggle (both modes, see 4.7).
-      Requires exposing `resetToDefaultView`, `snapToPresetView(label)`,
-      `zoomExtents`, and new live setters `setViewCubeSize(size)`/
-      `setLabelScaleMode(mode)` (mirroring `setBenchSide`'s existing live-
-      update pattern) on renderer3d.js's returned interface.
-- [ ] 4.4 Shared `js/shortcutsData.js` (canonical list tagged
-      `2d`/`3d`/`both`, covering Alt-orbit, right-click-menu, and the new
-      playlist shortcuts) + new `reference.html`/`js/reference.js` page
-      (setup.html-style chrome) listing keyboard shortcuts and mouse
-      options, linked from the app header.
-- [ ] 4.5 New 3D objects: net posts (at the sidelines, z=0) + a real
-      vertical net (canvas-textured grid plane, 2.43m tall, between the
-      posts - today's "net" is just a flat ground-level line marker with
-      no vertical mesh at all) + an R2 floor-referee puck (1.8m tall,
-      bench side, ~0.5m outside its post) + an R1 stand puck (3.2m tall,
-      opposite side, ~0.5m outside its post). R1/R2 are selectable via
-      plain LEFT-click (new `selectableViewpoints` raycast list, separate
-      from `draggablePlayers`) - selecting one tweens the camera (via the
-      existing `flyCameraTo`) to eye height at that object's position
-      looking at court center, and hides that object's mesh while active;
-      restoring hidden visibility is centralized at the top of
-      `flyCameraTo` so any other navigation action auto-restores it. The
-      net is selectable only via Alt+LEFT (see 4.2) and only retargets the
-      orbit anchor (COURT_SIZE/2, 243, 0) - camera position unchanged, no
-      hide/jump. Both R1/R2 reposition via the existing `setBenchSide`
-      mechanism, extended to also move them (not just the bench mesh).
-- [ ] 4.6 setup.html cleanup - rename the 3 "3D Preview" headings to
-      "3D View" and fix the 2 stale links to the retired `scene3d.html`
-      to point at `index.html` instead.
-- [ ] 4.7 Zone-label toggle (quad-menu item, in-memory only - not
-      persisted, same convention as the existing guide/link/clamp
-      toggles): when on, each on-court player's label gains a second line
-      showing its current zone, e.g. "MB1" / "(Z6)"; the benched player
-      shows none. New `setShowZone(zone|null)` method on both `Player`
-      (2D: extra `<tspan dy=...>`) and `Player3D` (3D: extra child in the
-      CSS2DObject's label div), updated on toggle-flip and on every
-      rotate/reset.
-- [ ] 4.8 Playlist keyboard shortcuts (main.js, guarded like
-      renderer3d.js's `onKeydown`): Space = play/pause, Right Arrow = step
-      forward, Left Arrow = step backward (new - `goToPlaylistStep`
-      already wraps negative indices correctly, so this is a trivial
-      addition).
-- [ ] 4.9 Label vertical-offset fix for low camera angles - CSS2DObject
-      labels are anchored at a fixed world-space height, which at
-      shallow/grazing camera pitch reads as "floating in front of" the
-      puck instead of "sitting on top". Fix: compute the camera's polar
-      angle once per frame and apply an interpolated extra Y-offset
-      (larger at grazing angles, ~0 extra at top-down angles) via a new
-      `updateLabelHeight(offsetY)` on `Player3D`, mirroring the existing
-      `updateLabelScale(scale)` pattern.
 
 

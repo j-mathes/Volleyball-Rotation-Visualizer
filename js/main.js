@@ -205,7 +205,10 @@ function clearHighlights() {
     player.setOverlapping(false);
     player.setBenchWarning(false);
   });
-  overlapResultsEl.innerHTML = '';
+  // Deliberately leaves #overlapResults alone - it's rebuilt wholesale by
+  // the runOverlapCheck() every caller runs right after (once positions
+  // settle), so clearing it here just makes the status row flash empty/
+  // shorter for the length of the in-between animation.
   renderer.clearViolationLines();
   renderer.clearLinkLines();
   renderer.clearClampLines();
@@ -276,18 +279,19 @@ function runOverlapCheck() {
 
   for (const entry of summary) {
     const item = document.createElement('li');
-    item.className = entry.ok ? 'ok' : 'violation';
+    item.className = `status-card ${entry.ok ? 'ok' : 'violation'}`;
 
-    const icon = document.createElement('span');
-    icon.className = `status-icon ${entry.ok ? 'ok' : 'violation'}`;
-    icon.textContent = entry.ok ? '\u2713' : '\u2715';
-    item.appendChild(icon);
+    const role = document.createElement('span');
+    role.className = 'status-card-role';
+    role.textContent = playerLabels[entry.role];
+    item.appendChild(role);
 
-    const label = document.createElement('span');
-    label.textContent = entry.ok
-      ? playerLabels[entry.role]
-      : `${playerLabels[entry.role]} \u2014 ${entry.violatingRoles.map((role) => playerLabels[role]).join(', ')}`;
-    item.appendChild(label);
+    const status = document.createElement('span');
+    status.className = 'status-card-status';
+    status.textContent = entry.ok
+      ? '\u2713 OK'
+      : `\u2715 ${entry.violatingRoles.map((role) => playerLabels[role]).join(', ')}`;
+    item.appendChild(status);
 
     overlapResultsEl.appendChild(item);
     if (!entry.ok) {
@@ -383,11 +387,13 @@ async function snapAllToZonePositions(duration = 600) {
 function refreshLiberoButtonLabel() {
   if (awaitingSelection) {
     liberoSwapBtn.textContent = 'Select a back-row player…';
-    return;
+  } else {
+    liberoSwapBtn.textContent = liberoState.replacedRole
+      ? `Swap Out Libero (for ${playerLabels[liberoState.replacedRole]})`
+      : 'Swap In Libero';
   }
-  liberoSwapBtn.textContent = liberoState.replacedRole
-    ? `Swap Out Libero (for ${playerLabels[liberoState.replacedRole]})`
-    : 'Swap In Libero';
+  // The button truncates with an ellipsis at this width - title shows the full text on hover.
+  liberoSwapBtn.title = liberoSwapBtn.textContent;
 }
 
 // Highlights (or un-highlights) the current back-row players as valid

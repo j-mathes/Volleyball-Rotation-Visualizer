@@ -56,8 +56,20 @@ development history and any remaining planned work.
 
 ## Running it
 
-No build step or dependencies — just open [index.html](index.html) directly
-in a browser, or serve the folder with any static file server.
+No build step or dependencies - but it must be served over `http://`,
+not opened directly as a `file://` URL. `js/main.js` and its imports are
+loaded as ES modules, which Chrome (and most Chromium-based browsers)
+refuses to load over `file://` due to CORS restrictions - opening
+[index.html](index.html) directly will show a blank court with no working
+buttons and a CORS error in the console. Serve the folder instead:
+- Easiest: double-click [start-server.bat](start-server.bat) (Windows) -
+  starts a local server and opens the app in your default browser. Close
+  its console window to stop the server.
+- VS Code's "Live Server" extension - right-click index.html, "Open with
+  Live Server".
+- `python -m http.server` from this folder, then visit
+  `http://localhost:8000/index.html`.
+- `npx serve` from this folder.
 
 ## Setup page
 

@@ -15,34 +15,59 @@
     </div>
 
     <div class="layout">
-      <svg id="court"></svg>
-      <div id="scene3dMount" class="scene3d-mount" hidden>
-        <div id="viewCubeWrap" class="view-cube-wrap">
-          <button type="button" class="view-cube-home" title="Reset to default view (Home / P)">&#8962;</button>
-          <div class="view-cube-scene">
-            <div class="view-cube"></div>
-            <div class="view-menu" hidden>
-              <button type="button" data-view="0,1,0">Top</button>
-              <button type="button" data-view="0,-1,0">Bottom</button>
-              <button type="button" data-view="0,0,1">Endline</button>
-              <button type="button" data-view="0,0,-1">Net</button>
-              <button type="button" data-view="-1,0,0">Left</button>
-              <button type="button" data-view="1,0,0">Right</button>
-              <button type="button" data-view="home">Home / Perspective</button>
+      <div class="top-bar">
+        <div class="top-bar-row op-row">
+          <div class="op-group">
+            <button id="viewMode2DBtn">2D View</button>
+            <button id="viewMode3DBtn">3D View</button>
+          </div>
+          <div class="op-group">
+            <button id="rotateCw" title="Rotate clockwise (standard side-out rotation)">Rotate &#8635;</button>
+            <button id="rotateCcw" title="Rotate counter-clockwise (undo)">&#8634; Rotate Back</button>
+            <button id="resetBtn">Reset to Base Positions</button>
+          </div>
+          <div class="op-group">
+            <button id="liberoSwapBtn">Swap In Libero</button>
+          </div>
+          <div class="op-group">
+            <button id="overlapGuideToggle">Show Overlap Guides</button>
+            <button id="playerLinkToggle">Show Player Links</button>
+            <button id="clampToggle" title="Prevents dragging a player past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
+          </div>
+        </div>
+
+        <div class="top-bar-row status-row">
+          <div class="status-summary">
+            <span class="rotation-display">Serving: <span id="serverZone">S</span> (zone 1)</span>
+            <span id="overlapResultsSummary">Overlap Results</span>
+          </div>
+          <ul id="overlapResults" class="status-cards"></ul>
+        </div>
+      </div>
+
+      <div class="stage">
+        <svg id="court"></svg>
+        <div id="scene3dMount" class="scene3d-mount" hidden>
+          <div id="viewCubeWrap" class="view-cube-wrap">
+            <button type="button" class="view-cube-home" title="Reset to default view (Home / P)">&#8962;</button>
+            <div class="view-cube-scene">
+              <div class="view-cube"></div>
+              <div class="view-menu" hidden>
+                <button type="button" data-view="0,1,0">Top</button>
+                <button type="button" data-view="0,-1,0">Bottom</button>
+                <button type="button" data-view="0,0,1">Endline</button>
+                <button type="button" data-view="0,0,-1">Net</button>
+                <button type="button" data-view="-1,0,0">Left</button>
+                <button type="button" data-view="1,0,0">Right</button>
+                <button type="button" data-view="home">Home / Perspective</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-section">
-          <h2>View Mode</h2>
-          <div class="button-row">
-            <button id="viewMode2DBtn" class="full-width">2D View</button>
-            <button id="viewMode3DBtn" class="full-width">3D View</button>
-          </div>
-        </div>
-
+      <!-- Temporary until ROADMAP Phase 3.3's quad-menu relocates these. -->
+      <div class="secondary-panel">
         <div class="panel-section" id="benchSide3DSection" hidden>
           <h2>Bench Side</h2>
           <p class="hint">Only applies in 3D View - the 2D view already
@@ -51,32 +76,6 @@
             <button id="benchSide3DLeft" class="full-width">Left</button>
             <button id="benchSide3DRight" class="full-width">Right</button>
           </div>
-        </div>
-
-        <div class="panel-section">
-          <div class="rotation-display">Serving: <span id="serverZone">S</span> (zone 1)</div>
-          <div class="button-row">
-            <button id="rotateCw" title="Rotate clockwise (standard side-out rotation)">Rotate &#8635;</button>
-            <button id="rotateCcw" title="Rotate counter-clockwise (undo)">&#8634; Rotate Back</button>
-          </div>
-          <button id="resetBtn" class="full-width">Reset to Base Positions</button>
-        </div>
-
-        <div class="panel-section">
-          <button id="liberoSwapBtn" class="full-width">Swap In Libero</button>
-        </div>
-
-        <div class="panel-section">
-          <h2>Overlap Status</h2>
-          <div class="button-row">
-            <button id="overlapGuideToggle" class="full-width">Show Overlap Guides</button>
-            <button id="playerLinkToggle" class="full-width">Show Player Links</button>
-          </div>
-          <button id="clampToggle" class="full-width" title="Prevents dragging a player past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
-          <details id="overlapResultsDetails" class="overlap-details">
-            <summary id="overlapResultsSummary">Overlap Results</summary>
-            <ul id="overlapResults" class="overlap-results"></ul>
-          </details>
         </div>
 
         <div class="panel-section">
