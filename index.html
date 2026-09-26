@@ -10,21 +10,55 @@
     <div class="app-header">
       <h1>Volleyball Rotation Visualizer</h1>
       <div class="header-links">
-        <a href="scene3d.html" class="setup-link">3D Preview</a>
         <a href="setup.html" class="setup-link">Setup</a>
       </div>
     </div>
 
     <div class="layout">
       <svg id="court"></svg>
+      <div id="scene3dMount" class="scene3d-mount" hidden>
+        <div id="viewCubeWrap" class="view-cube-wrap">
+          <button type="button" class="view-cube-home" title="Reset to default view (Home / P)">&#8962;</button>
+          <div class="view-cube-scene">
+            <div class="view-cube"></div>
+            <div class="view-menu" hidden>
+              <button type="button" data-view="0,1,0">Top</button>
+              <button type="button" data-view="0,-1,0">Bottom</button>
+              <button type="button" data-view="0,0,1">Endline</button>
+              <button type="button" data-view="0,0,-1">Net</button>
+              <button type="button" data-view="-1,0,0">Left</button>
+              <button type="button" data-view="1,0,0">Right</button>
+              <button type="button" data-view="home">Home / Perspective</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="panel">
         <div class="panel-section">
+          <h2>View Mode</h2>
+          <div class="button-row">
+            <button id="viewMode2DBtn" class="full-width">2D View</button>
+            <button id="viewMode3DBtn" class="full-width">3D View</button>
+          </div>
+        </div>
+
+        <div class="panel-section" id="viewOrientationSection">
           <h2>View Orientation</h2>
           <div class="button-row">
             <button id="viewAngleLeft" class="full-width" title="Net on the left">Net Left</button>
             <button id="viewAngleTop" class="full-width" title="Net at the top (default)">Net Top</button>
             <button id="viewAngleRight" class="full-width" title="Net on the right">Net Right</button>
+          </div>
+        </div>
+
+        <div class="panel-section" id="benchSide3DSection" hidden>
+          <h2>Bench Side</h2>
+          <p class="hint">Only applies in 3D View - the 2D view already
+            places the bench automatically for each net orientation.</p>
+          <div class="button-row">
+            <button id="benchSide3DLeft" class="full-width">Left</button>
+            <button id="benchSide3DRight" class="full-width">Right</button>
           </div>
         </div>
 
@@ -75,6 +109,14 @@
     </div>
   </div>
 
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

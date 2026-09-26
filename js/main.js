@@ -1,5 +1,6 @@
 import { ZONE_POSITIONS, BACK_ROW, COURT_SIZE } from './config.js';
 import { createCourtRenderer } from './renderer.js';
+import { createCourtRenderer3D } from './renderer3d.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer, getClampBounds } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
@@ -10,6 +11,8 @@ import { applyFontSettings } from './fontSettings.js';
 import { applyEffectSettings } from './effectSettings.js';
 import { getPlaylist, getPlaylistDelay } from './playlist.js';
 import { getViewAngle, saveViewAngle } from './viewSettings.js';
+import { getViewMode, saveViewMode } from './viewModeSettings.js';
+import { getBenchSide3D } from './benchSideSettings.js';
 
 applyColors();
 applyLineSettings();
@@ -17,6 +20,8 @@ applyFontSettings();
 applyEffectSettings();
 
 const svg = document.getElementById('court');
+const scene3dMount = document.getElementById('scene3dMount');
+const viewCubeWrap = document.getElementById('viewCubeWrap');
 const serverZoneEl = document.getElementById('serverZone');
 const overlapResultsEl = document.getElementById('overlapResults');
 const overlapResultsSummaryEl = document.getElementById('overlapResultsSummary');
@@ -35,20 +40,37 @@ const playlistStatusEl = document.getElementById('playlistStatus');
 const viewAngleTopBtn = document.getElementById('viewAngleTop');
 const viewAngleRightBtn = document.getElementById('viewAngleRight');
 const viewAngleLeftBtn = document.getElementById('viewAngleLeft');
+const viewOrientationSection = document.getElementById('viewOrientationSection');
+const viewMode2DBtn = document.getElementById('viewMode2DBtn');
+const viewMode3DBtn = document.getElementById('viewMode3DBtn');
+const benchSide3DSection = document.getElementById('benchSide3DSection');
+const benchSide3DLeftBtn = document.getElementById('benchSide3DLeft');
+const benchSide3DRightBtn = document.getElementById('benchSide3DRight');
 
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
 const playerLabels = getPlayerLabels();
 
+// Which rendering mode (2D SVG vs. 3D Three.js scene) is currently
+// active. Persisted across reloads; changed live via the View Mode
+// toggle. Both renderers implement the SAME interface (see renderer.js/
+// renderer3d.js's `createCourtRenderer`/`createCourtRenderer3D`) so all
+// the app logic below (rotation, Libero swap, overlap checking, save/
+// load, playlist) talks to whichever one is current via `renderer`
+// without ever knowing which it is.
+let viewMode = getViewMode();
+
+function createRendererForMode(mode) {
+  return mode === '3d'
+    ? createCourtRenderer3D(scene3dMount, viewCubeWrap)
+    : createCourtRenderer(svg, getViewAngle());
+}
+
 // Net-orientation view angle: 0 (net-top), 90 (net-right), -90 (net-left).
-// Persisted across reloads; changed live via the View Orientation toggle.
-// The renderer owns everything about how each angle actually looks (which
-// bench layout is visible, viewBox, viewport rotation, player creation/
-// placement) - see renderer.js. main.js only talks to `renderer`'s
-// interface, never to court.js/player.js/raw SVG directly, so a future
-// alternate renderer (e.g. a 3D mode) could implement the same interface
-// without main.js changing.
-const renderer = createCourtRenderer(svg, getViewAngle());
+// Only meaningful in 2D mode (3D's free-orbit camera + ViewCube supersede
+// it - see Phase 2.12) - the "View Orientation" panel section is hidden
+// entirely while 3D is active.
+let renderer = createRendererForMode(viewMode);
 
 const rotationState = new RotationState();
 
@@ -78,25 +100,39 @@ let clampEnabled = false;
 let selectionLocked = false;
 let selectedRole = null;
 
-// One Player instance per role, created once and repositioned/relabeled
-// as rotations happen (rather than recreating DOM nodes each time).
+// One Player instance per role, recreated whenever the renderer is
+// (mode switch) and otherwise repositioned/relabeled in place as
+// rotations happen (rather than recreating DOM nodes each time).
 const playersByRole = {};
-for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
-  const { x, y } = ZONE_POSITIONS[zone];
-  playersByRole[role] = renderer.createCourtPlayer(role, playerLabels[role], x, y, handleDragEnd, handleDragMove);
-}
 
-// The Libero doesn't rotate through the six zones; it waits on the
-// sideline (in the currently active bench layout, upright) and can be
-// dragged onto the court to test a replacement.
-const initialBenchPos = renderer.benchPosition();
-playersByRole.L = renderer.createBenchPlayer('L', playerLabels.L, initialBenchPos.x, initialBenchPos.y, handleDragEnd, handleDragMove);
+// (Re)creates every player against whichever renderer is currently
+// active, and wires their click/double-click handlers - called once at
+// load and again after every view-mode switch, since a fresh renderer
+// instance means fresh Player/Player3D objects (the old ones, and their
+// old event wiring, are discarded along with the old renderer).
+function createPlayers() {
+  for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
+    const { x, y } = ZONE_POSITIONS[zone];
+    playersByRole[role] = renderer.createCourtPlayer(role, playerLabels[role], x, y, handleDragEnd, handleDragMove);
+  }
+  // The Libero doesn't rotate through the six zones; it waits on the
+  // sideline (in the currently active bench layout, upright) and can be
+  // dragged onto the court to test a replacement.
+  const initialBenchPos = renderer.benchPosition();
+  playersByRole.L = renderer.createBenchPlayer('L', playerLabels.L, initialBenchPos.x, initialBenchPos.y, handleDragEnd, handleDragMove);
+  wirePlayerClickHandlers();
+}
 
 // Whichever role is currently on the bench: the Libero itself, unless it
 // has swapped in for someone, in which case that role is benched instead.
 function benchedRole() {
   return liberoState.replacedRole || 'L';
 }
+
+createPlayers();
+wireRendererEvents();
+refreshViewModeButtons();
+
 
 function isWithinCourt(x, y) {
   return x >= 0 && x <= COURT_SIZE && y >= 0 && y <= COURT_SIZE;
@@ -445,56 +481,59 @@ liberoSwapBtn.addEventListener('click', async () => {
 });
 
 // Clicking a highlighted back-row player while awaiting selection completes
-// the swap-in for that player.
-for (const role of Object.keys(playersByRole)) {
-  playersByRole[role].onClick(async () => {
-    if (!awaitingSelection) {
-      return;
-    }
-    const zone = rotationState.zoneOfRole(role);
-    if (!zone || !BACK_ROW.includes(zone)) {
-      return;
-    }
-    setAwaitingSelection(false);
-    liberoSwapBtn.disabled = true;
-    await swapLiberoOn(role);
-    liberoSwapBtn.disabled = false;
-  });
-}
-
-// Selects which player's overlap guides and/or links are previewed. A drag
-// always selects that player (so previews update live while moving it); a
-// plain tap (no real movement) instead toggles selection off if it was
-// already the selected player. Ignored mid-way through a Libero swap-in
-// selection, while neither preview toggle is on, or while selection is locked.
+// the swap-in for that player; otherwise (or once resolved) falls through
+// to the overlap-guide/link selection behavior below. A drag always
+// selects that player (so previews update live while moving it); a plain
+// tap (no real movement) instead toggles selection off if it was already
+// the selected player. Ignored while neither preview toggle is on or
+// while selection is locked. Each player gets exactly ONE `onClick`
+// registration (not two, like an earlier draft) - Player3D's `onClick`
+// only stores a single handler slot (there's no native DOM element to
+// `addEventListener` a second listener onto), so both flows have to share
+// one callback per player, for both renderers.
 const TAP_MOVE_THRESHOLD = 5;
-for (const role of Object.keys(playersByRole)) {
-  const player = playersByRole[role];
-  player.onClick(() => {
-    if ((!guidesEnabled && !linksEnabled) || awaitingSelection || selectionLocked) {
-      return;
-    }
-    const wasTap = player.lastMoveDistance <= TAP_MOVE_THRESHOLD;
-    selectedRole = wasTap && selectedRole === role ? null : role;
-    runOverlapCheck();
-  });
+function wirePlayerClickHandlers() {
+  for (const role of Object.keys(playersByRole)) {
+    const player = playersByRole[role];
 
-  // Double-clicking toggles the selection lock: double-clicking the
-  // already-locked selected player unlocks it, double-clicking any other
-  // player locks the selection onto that player instead.
-  player.onDoubleClick(() => {
-    if ((!guidesEnabled && !linksEnabled) || awaitingSelection) {
-      return;
-    }
-    if (selectionLocked && selectedRole === role) {
-      selectionLocked = false;
-    } else {
-      selectedRole = role;
-      selectionLocked = true;
-    }
-    runOverlapCheck();
-  });
+    player.onClick(async () => {
+      if (awaitingSelection) {
+        const zone = rotationState.zoneOfRole(role);
+        if (!zone || !BACK_ROW.includes(zone)) {
+          return;
+        }
+        setAwaitingSelection(false);
+        liberoSwapBtn.disabled = true;
+        await swapLiberoOn(role);
+        liberoSwapBtn.disabled = false;
+        return;
+      }
+      if ((!guidesEnabled && !linksEnabled) || selectionLocked) {
+        return;
+      }
+      const wasTap = player.lastMoveDistance <= TAP_MOVE_THRESHOLD;
+      selectedRole = wasTap && selectedRole === role ? null : role;
+      runOverlapCheck();
+    });
+
+    // Double-clicking toggles the selection lock: double-clicking the
+    // already-locked selected player unlocks it, double-clicking any
+    // other player locks the selection onto that player instead.
+    player.onDoubleClick(() => {
+      if ((!guidesEnabled && !linksEnabled) || awaitingSelection) {
+        return;
+      }
+      if (selectionLocked && selectedRole === role) {
+        selectionLocked = false;
+      } else {
+        selectedRole = role;
+        selectionLocked = true;
+      }
+      runOverlapCheck();
+    });
+  }
 }
+
 
 overlapGuideToggle.addEventListener('click', () => {
   guidesEnabled = !guidesEnabled;
@@ -562,15 +601,83 @@ viewAngleRightBtn.addEventListener('click', () => applyViewAngle(90));
 viewAngleLeftBtn.addEventListener('click', () => applyViewAngle(-90));
 refreshViewAngleButtons();
 
-// Clicking anywhere on the court that isn't a player deselects the
-// currently previewed player.
-renderer.onBackgroundClick(() => {
-  if ((!guidesEnabled && !linksEnabled) || !selectedRole || selectionLocked) {
+// Bench Side (3D-only - the 2D view already places the bench
+// automatically per net orientation). `renderer.setBenchSide` only
+// exists on the 3D renderer; these buttons are hidden (so unclickable)
+// whenever 2D is active, but each handler still guards against `viewMode`
+// just in case.
+function refreshBenchSide3DButtons() {
+  const side = getBenchSide3D();
+  benchSide3DLeftBtn.classList.toggle('active', side === 'left');
+  benchSide3DRightBtn.classList.toggle('active', side === 'right');
+}
+function applyBenchSide3D(side) {
+  if (viewMode !== '3d') {
     return;
   }
-  selectedRole = null;
-  runOverlapCheck();
-});
+  renderer.setBenchSide(side);
+  const benched = benchedRole();
+  const pos = benched === 'L' ? renderer.benchPosition() : renderer.benchPositionReplaced();
+  playersByRole[benched].setPosition(pos.x, pos.y);
+  refreshBenchSide3DButtons();
+}
+benchSide3DLeftBtn.addEventListener('click', () => applyBenchSide3D('left'));
+benchSide3DRightBtn.addEventListener('click', () => applyBenchSide3D('right'));
+
+// Clicking anywhere on the court that isn't a player deselects the
+// currently previewed player - re-registered on every renderer instance
+// (see switchViewMode), since a fresh 3D renderer needs its own listener
+// wired the same way a fresh 2D one would.
+function wireRendererEvents() {
+  renderer.onBackgroundClick(() => {
+    if ((!guidesEnabled && !linksEnabled) || !selectedRole || selectionLocked) {
+      return;
+    }
+    selectedRole = null;
+    runOverlapCheck();
+  });
+}
+
+// View Mode (Phase 2.13) - switches between the 2D SVG renderer and the
+// 3D Three.js one, preserving the exact current court setup (rotation,
+// every player's position, Libero swap state) via the same capture/apply
+// round-trip already used for save/load and playlist steps. The old
+// renderer is torn down first (`destroy()` only exists on the 3D one -
+// the 2D renderer has no teardown to do, its SVG elements just stay in
+// the DOM hidden) and every player is recreated against the new one,
+// since a Player/Player3D instance is tied to the renderer that created
+// it.
+function refreshViewModeButtons() {
+  viewMode2DBtn.classList.toggle('active', viewMode === '2d');
+  viewMode3DBtn.classList.toggle('active', viewMode === '3d');
+  viewOrientationSection.hidden = viewMode !== '2d';
+  benchSide3DSection.hidden = viewMode !== '3d';
+  svg.style.display = viewMode === '2d' ? '' : 'none';
+  scene3dMount.hidden = viewMode !== '3d';
+}
+
+async function switchViewMode(mode) {
+  if (mode === viewMode) {
+    return;
+  }
+  const state = captureCurrentState();
+  renderer.destroy?.();
+  viewMode = mode;
+  saveViewMode(mode);
+  refreshViewModeButtons();
+  renderer = createRendererForMode(mode);
+  wireRendererEvents();
+  createPlayers();
+  if (mode === '3d') {
+    refreshBenchSide3DButtons();
+  } else {
+    refreshViewAngleButtons();
+  }
+  await applyState(state);
+}
+
+viewMode2DBtn.addEventListener('click', () => switchViewMode('2d'));
+viewMode3DBtn.addEventListener('click', () => switchViewMode('3d'));
 
 saveSetupBtn.addEventListener('click', () => {
   const name = setupNameInput.value.trim();

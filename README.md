@@ -45,14 +45,18 @@ formation. It focuses on four mechanics:
   selectable/selected player highlights, and the lock-pulse animation's
   duration, are editable on the setup page.
 
-A separate, in-progress [3D Preview](scene3d.html) (linked from the main
-page's header) is being built out per [ROADMAP.md](ROADMAP.md)'s Phase 2 -
-a true Three.js scene with draggable player pucks and the same overlap
-detection, not yet wired into the main visualizer's `viewMode` toggle.
+A separate **3D View** mode (toggle at the top of the panel) renders the
+same court/state as a true Three.js scene instead of the flat SVG - free-
+orbit camera controls (right-click-drag; right-click a puck to orbit
+around it), a 3ds Max-style ViewCube for quick preset views, and the same
+drag/overlap-detection/Libero-swap/rotation/save-load/playlist behavior as
+2D, since both view modes share the exact same underlying app state and
+only differ in how they're drawn (see [ROADMAP.md](ROADMAP.md)'s Phase 2
+for how it was built up incrementally).
 
 See [RULES.md](RULES.md) for the full rules/conventions reference this
-project is built against, and [ROADMAP.md](ROADMAP.md) for planned future
-work (view-orientation toggle, 3D mode, and further customization options).
+project is built against, and [ROADMAP.md](ROADMAP.md) for the full
+development history and any remaining planned work.
 
 ## Running it
 
@@ -87,35 +91,42 @@ uncluttered. Currently includes:
 - **Glow & Pulse Effects** — set the glow blur radius for
   selectable/selected player highlights and the lock-pulse animation's
   duration/max blur; also drives the equivalent emissive-material glow/
-  pulse on the selected puck in the [3D Preview](scene3d.html).
-- **3D Preview — Bench Side** — choose which side of the court the
-  bench/Libero substitution area sits on in the [3D Preview](scene3d.html)
-  page specifically (the 2D visualizer already places it automatically
-  per net orientation, so it doesn't need this setting).
-- **3D Preview — Label Scaling** — choose whether player labels in the
-  [3D Preview](scene3d.html) shrink/grow with camera distance (matching
-  the pucks' own perspective scaling, the default) or stay a fixed screen
-  size regardless of distance.
-- **3D Preview — View Cube Size** — choose Small/Medium (default)/Large
-  for the ViewCube navigation widget's size in the
-  [3D Preview](scene3d.html) page's viewport corner.
+  pulse on the selected puck in 3D View.
+- **3D View — Bench Side** — choose which side of the court the
+  bench/Libero substitution area sits on in 3D View specifically (2D
+  already places it automatically per net orientation, so it doesn't need
+  this setting).
+- **3D View — Label Scaling** — choose whether player labels in 3D View
+  shrink/grow with camera distance (matching the pucks' own perspective
+  scaling, the default) or stay a fixed screen size regardless of distance.
+- **3D View — View Cube Size** — choose Small/Medium (default)/Large for
+  the ViewCube navigation widget's size in 3D View's viewport corner.
 
 ## Project structure
 
 ```
-index.html            Page shell and layout
+index.html            Page shell/layout for BOTH view modes (the 2D <svg>
+                      and the 3D mount/ViewCube live side by side, toggled
+                      via the "View Mode" panel section)
 setup.html             Help text and customization options (see "Setup page" above)
-scene3d.html            Phase 2 3D rendering preview (work in progress, not yet
-                        wired into the main index.html view-angle toggle)
-css/style.css          Styling for the court, panel, and players
+scene3d.html            Retired standalone 3D preview - now just redirects to
+                        index.html (forcing 3D View), kept for old bookmarks/links
+css/style.css          Styling for the court, panel, players, and the 3D
+                        mount/ViewCube widget
 js/config.js           Court/zone coordinates and the starting lineup
 js/court.js            Draws the static court lines and bench layouts (SVG primitives)
-js/player.js           Draggable, animatable player SVG element
-js/renderer.js          Thin 2D (SVG) rendering interface - the only module
-                        main.js uses for anything rendering-related (create/
-                        move players, draw guide/link lines, view-angle
-                        switching); a future alternate renderer (e.g. 3D)
-                        would implement the same interface
+js/player.js           Draggable, animatable 2D player SVG element
+js/player3d.js          3D analog of player.js - a duck-typed drop-in with the
+                        SAME public shape, backed by a Three.js puck instead
+                        of an SVG element
+js/renderer.js          Thin 2D (SVG) rendering interface - create/move
+                        players, draw guide/link lines, view-angle switching
+js/renderer3d.js        Thin 3D (Three.js) rendering interface implementing
+                        the SAME shape as renderer.js, plus the 3D-only
+                        extras with no 2D equivalent (ViewCube navigation,
+                        OrbitControls, bench-side, glow/pulse, label
+                        distance-scaling) - main.js drives whichever
+                        renderer is active identically either way
 js/rotation.js         Tracks which role occupies each zone and rotates them
 js/overlap.js          Positional-overlap rule checks
 js/playerLabels.js      Custom player-label persistence (shared by index.html/setup.html)
@@ -125,35 +136,17 @@ js/colors.js            Custom color persistence (shared by index.html/setup.htm
 js/lineSettings.js      Custom line-thickness persistence (shared by index.html/setup.html)
 js/fontSettings.js      Custom font persistence (shared by index.html/setup.html)
 js/effectSettings.js    Custom glow/pulse effect persistence (shared by index.html/setup.html)
-js/viewSettings.js      Net-orientation view-angle persistence (shared by index.html/setup.html)
-js/main.js             Wires the UI controls to the above
-js/setup.js             Wires up the setup page's customization forms
-js/scene3d.js           Phase 2 3D scene (Three.js, loaded via an import map
-                        from a CDN - court plane, lighting, camera,
-                        left-click draggable/selectable player pucks
-                        (clamped to the modeled court/bench footprint so a
-                        drag can never fling a puck off into open space),
-                        overlap-driven guide/violation/link lines using
-                        the Line2/LineMaterial "fat line" addon, a "Lock
-                        to Legal Positions" drag clamp, bench-warning
-                        feedback, billboarded role-label text via
-                        CSS2DRenderer, right-click-and-hold OrbitControls
-                        orbit/tilt/zoom (right-click a puck to orbit
-                        around it instead of the court center), an
-                        emissive-material glow/pulse selection highlight
-                        (reusing effectSettings.js), a 3ds Max-style
-                        ViewCube + Home button + keyboard view shortcuts
-                        (P/T/F/L/V/Z), and a draggable/collapsible
-                        floating control panel with independent guide/link
-                        toggles, a double-click selection lock, a live
-                        bench-side switcher, and a rotation/overlap
-                        dashboard readout) for scene3d.html
-js/benchSideSettings.js Bench/Libero side persistence for the 3D scene only
-                        (shared by scene3d.html/setup.html)
+js/viewSettings.js      Net-orientation view-angle persistence (2D-only, shared by index.html/setup.html)
+js/viewModeSettings.js  2D-vs-3D view mode persistence (shared by index.html/scene3d.html's redirect)
+js/benchSideSettings.js Bench/Libero side persistence for 3D View only
+                        (shared by index.html/setup.html)
 js/labelScaleSettings.js 3D player-label distance-scaling mode persistence
-                        (shared by scene3d.html/setup.html)
+                        (shared by index.html/setup.html)
 js/viewCubeSizeSettings.js 3D ViewCube widget size persistence (shared by
-                        scene3d.html/setup.html)
+                        index.html/setup.html)
+js/main.js             Wires the UI controls to the above, driving whichever
+                        renderer (2D or 3D) is currently active identically
+js/setup.js             Wires up the setup page's customization forms
 ```
 
 ## Notes on the overlap rules

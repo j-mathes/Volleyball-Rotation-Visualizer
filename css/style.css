@@ -80,6 +80,152 @@ h1 {
   display: block;
 }
 
+.scene3d-mount {
+  position: relative;
+  width: 100%;
+  max-width: 780px;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--court-bg);
+}
+
+.view-cube-wrap {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  /* Medium-size defaults (setup.html's "3D Preview - View Cube Size"
+     setting) - js/renderer3d.js overrides these at load based on the
+     saved size, everything else derives from them via var()/calc(). */
+  --vc-scene-size: 150px;
+  --vc-perspective: 750px;
+  --vc-half: 45px;
+  --vc-face-size: 90px;
+  --vc-face-font-size: 0.75rem;
+  --vc-edge-half: 10px;
+  --vc-edge-size: 20px;
+  --vc-corner-half: 8px;
+  --vc-corner-size: 16px;
+}
+
+.view-cube-home {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  border-radius: 50%;
+}
+
+.view-cube-scene {
+  position: relative;
+  width: var(--vc-scene-size);
+  height: var(--vc-scene-size);
+  perspective: var(--vc-perspective);
+}
+
+.view-cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.vc-face {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--vc-face-size);
+  height: var(--vc-face-size);
+  margin: calc(var(--vc-face-size) / -2) 0 0 calc(var(--vc-face-size) / -2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  backface-visibility: hidden;
+  box-sizing: border-box;
+  background: rgba(44, 62, 80, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-size: var(--vc-face-font-size);
+  font-weight: bold;
+  letter-spacing: 0.03em;
+}
+
+.vc-face:hover {
+  background: rgba(52, 152, 219, 0.85);
+}
+
+/* Edge/corner hotspots are tiny 3D boxes (built from real cube faces,
+   same recipe as .vc-face just smaller), not flat 2D squares - a flat
+   hotspot rotates edge-on and nearly disappears when the cube is viewed
+   close to face-on from that side. */
+.vc-hotspot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.vc-hotspot-face {
+  position: absolute;
+  left: 0;
+  top: 0;
+  cursor: pointer;
+  user-select: none;
+  backface-visibility: hidden;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(27, 39, 51, 0.6);
+}
+
+.vc-hotspot.vc-edge .vc-hotspot-face {
+  width: var(--vc-edge-size);
+  height: var(--vc-edge-size);
+  margin: calc(var(--vc-edge-size) / -2) 0 0 calc(var(--vc-edge-size) / -2);
+}
+
+.vc-hotspot.vc-corner .vc-hotspot-face {
+  width: var(--vc-corner-size);
+  height: var(--vc-corner-size);
+  margin: calc(var(--vc-corner-size) / -2) 0 0 calc(var(--vc-corner-size) / -2);
+}
+
+.vc-hotspot:hover .vc-hotspot-face {
+  background: rgba(52, 152, 219, 0.9);
+}
+
+.view-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--panel-bg);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  min-width: 150px;
+}
+
+.view-menu button {
+  display: block;
+  width: 100%;
+  border-radius: 0;
+  text-align: left;
+}
+
+.view-menu[hidden] {
+  display: none;
+}
+
 .panel {
   background: var(--panel-bg);
   border-radius: 8px;

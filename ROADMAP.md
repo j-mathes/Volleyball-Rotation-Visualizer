@@ -156,26 +156,44 @@ rework when the renderer changes later.
             faces each), not flat 2D squares - a flat hotspot rotates
             edge-on and becomes nearly invisible/unclickable when the
             cube is viewed close to face-on from that side.
-- [ ] 2.13 Wire the 3D renderer in as the 4th `viewMode` option behind
+- [x] 2.13 Wire the 3D renderer in as the 4th `viewMode` option behind
       the Phase 1 interface. Sub-items to verify while wiring (expected
       to mostly fall out "for free" once the shared app state/rotation
       logic drives the 3D renderer too via the same interface, but called
       out explicitly so they don't get missed during testing):
-      - [ ] Switching between 2D and 3D (either direction) preserves the
+      - [x] Switching between 2D and 3D (either direction) preserves the
             exact current court setup (rotation number, every player's
             position, Libero swap state) - this is standard, expected
             behavior for any `viewMode` switch (same as toggling the 2D
             Net Left/Top/Right angle never resets positions today), not
             an optional nice-to-have.
-      - [ ] Rotation state + Rotate CW/CCW/Reset-to-Base actually rotate
+      - [x] Rotation state + Rotate CW/CCW/Reset-to-Base actually rotate
             the pucks (currently static placeholders, no rotation logic
             wired in at all).
-      - [ ] Libero swap-in/out as real tracked state (not just a freely
+      - [x] Libero swap-in/out as real tracked state (not just a freely
             draggable puck with no role-replacement semantics).
-      - [ ] Save/Load court setups + Playlist playback work against the
+      - [x] Save/Load court setups + Playlist playback work against the
             3D scene.
-      - [ ] Rotation number / server-zone display (see 2.10's dashboard;
+      - [x] Rotation number / server-zone display (see 2.10's dashboard;
             depends on 2.8's text labels).
-      - [ ] Player display-name customization (jersey numbers) shows up
+      - [x] Player display-name customization (jersey numbers) shows up
             on the 3D labels too (same 2.8 dependency).
+
+This turned into a full architectural unification rather than a thin
+wire-up: `js/scene3d.js` (the standalone preview's self-contained scene,
+with its own `RotationState`, overlap-checking, and selection) was
+retired and replaced by `js/renderer3d.js` + `js/player3d.js`, which
+implement the SAME interface `js/renderer.js` does - main.js's existing
+(already renderer-agnostic) rotation/Libero/overlap logic now drives
+BOTH renderers identically, with zero duplicated app-state logic. The 3D
+scene mounts directly inside index.html (a `#scene3dMount` div alongside
+`#court`, toggled via a new "View Mode" panel section) instead of a
+separate page; `scene3d.html` now just redirects to `index.html` (forcing
+3D mode first, so old bookmarks/links still land somewhere useful). The
+floating "Controls" panel from Phase 2.10 was removed entirely - its
+guide/link toggles, clamp toggle, and overlap-results list are now the
+SAME shared elements the 2D view already had (no more duplicate UI); only
+genuinely 3D-only concepts (the ViewCube/camera, and the Bench Side
+toggle) remain 3D-specific, shown/hidden by the same "View Mode" section.
+
 

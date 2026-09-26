@@ -1,5 +1,5 @@
 // Persists the ViewCube widget's size (Phase 2.12's 3D view-navigation
-// cube). Scoped to the 3D scene only (see js/scene3d.js) - there's no 2D
+// cube). Scoped to the 3D scene only (see js/renderer3d.js) - there's no 2D
 // equivalent.
 const STORAGE_KEY = 'volleyballViz.viewCubeSize3D';
 export const DEFAULT_VIEW_CUBE_SIZE_3D = 'medium';
