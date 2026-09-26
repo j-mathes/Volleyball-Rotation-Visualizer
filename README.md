@@ -86,7 +86,8 @@ uncluttered. Currently includes:
   BENCH label, and the rotation tracker.
 - **Glow & Pulse Effects** — set the glow blur radius for
   selectable/selected player highlights and the lock-pulse animation's
-  duration/max blur.
+  duration/max blur; also drives the equivalent emissive-material glow/
+  pulse on the selected puck in the [3D Preview](scene3d.html).
 - **3D Preview — Bench Side** — choose which side of the court the
   bench/Libero substitution area sits on in the [3D Preview](scene3d.html)
   page specifically (the 2D visualizer already places it automatically
@@ -132,7 +133,9 @@ js/scene3d.js           Phase 2 3D scene (Three.js, loaded via an import map
                         to Legal Positions" drag clamp, bench-warning
                         feedback, billboarded role-label text via
                         CSS2DRenderer, OrbitControls camera orbit/tilt/
-                        zoom, and a draggable floating control panel with
+                        zoom, an emissive-material glow/pulse selection
+                        highlight (reusing effectSettings.js), and a
+                        draggable/collapsible floating control panel with
                         independent guide/link toggles, a double-click
                         selection lock, a live bench-side switcher, and a
                         rotation/overlap dashboard readout) for scene3d.html

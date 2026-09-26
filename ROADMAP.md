@@ -106,7 +106,7 @@ rework when the renderer changes later.
       - [x] Dashboard readout: rotation number / server-zone (depends on
             2.8's text labels existing first) + an overlap-results list
             (3D currently has no on-screen equivalent of either).
-- [ ] 2.11 Glow/pulse effect settings analog for 3D — `effectSettings.js`
+- [x] 2.11 Glow/pulse effect settings analog for 3D — `effectSettings.js`
       drives a CSS drop-shadow glow in 2D (selectable/guide-selected/
       locked highlights); 3D has no equivalent yet (e.g. an emissive
       material intensity pulse) - needs its own design, not a direct port.

@@ -18,6 +18,7 @@ import { checkOverlap, getClampBounds, summarizeByPlayer } from './overlap.js';
 import { applyColors } from './colors.js';
 import { getLineSettings } from './lineSettings.js';
 import { getFontSettings } from './fontSettings.js';
+import { getEffectSettings } from './effectSettings.js';
 import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
 import { RotationState } from './rotation.js';
@@ -195,7 +196,7 @@ function createPlayerPuck(x, z, fillColor, labelText, zone = null) {
 
   const outline = new THREE.Mesh(
     new THREE.CylinderGeometry(PLAYER_RADIUS + 4, PLAYER_RADIUS + 4, PUCK_HEIGHT * 0.8, 32),
-    new THREE.MeshStandardMaterial({ color: playerOutline }),
+    new THREE.MeshStandardMaterial({ color: playerOutline, emissive: 0x000000, emissiveIntensity: 0 }),
   );
   outline.position.y = -1;
   group.add(outline);
@@ -767,12 +768,50 @@ function updateLabelScaling() {
   }
 }
 
-function animate() {
+// Glow/pulse selection highlight (Phase 2.11) - the 3D analog of 2D's
+// `.guide-selected`/`.locked` CSS drop-shadow glow, which has no direct
+// equivalent for a WebGL material (no CSS filter/blur to reuse). Reuses
+// the SAME `effectSettings.js` values 2D's setup.html panel edits (not a
+// separate 3D-only setting - settings are independent of rendering
+// mechanism, per Phase 0), reinterpreted as `MeshStandardMaterial`
+// emissive-intensity units on the puck's outline mesh: a steady glow at
+// `glowBlurRadius` while selected, pulsing up to `pulseMaxBlurRadius` and
+// back down over `pulseDurationMs` while the selection is also locked
+// (2.10). `/ 6` just rescales the CSS pixel-radius numbers (default 6px)
+// onto a sensible ~1.0 default emissive-intensity baseline.
+const effectSettings = getEffectSettings();
+const glowIntensity = effectSettings.glowBlurRadius / 6;
+const pulseMaxIntensity = effectSettings.pulseMaxBlurRadius / 6;
+
+function updateSelectionGlow(nowMs) {
+  for (const group of draggablePlayers) {
+    const material = group.userData.outline.material;
+    if (group !== selectedGroup) {
+      if (material.emissiveIntensity !== 0) {
+        material.emissiveIntensity = 0;
+      }
+      continue;
+    }
+    material.emissive.set(selectedOutline);
+    if (selectionLocked) {
+      // Same "ease-in-out, low at 0%/100%, peak at 50%" shape as the CSS
+      // `lock-pulse` keyframe.
+      const phase = (nowMs % effectSettings.pulseDurationMs) / effectSettings.pulseDurationMs;
+      const t = (Math.sin(phase * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+      material.emissiveIntensity = glowIntensity + (pulseMaxIntensity - glowIntensity) * t;
+    } else {
+      material.emissiveIntensity = glowIntensity;
+    }
+  }
+}
+
+function animate(nowMs) {
   requestAnimationFrame(animate);
   controls.update();
   updateLabelScaling();
+  updateSelectionGlow(nowMs);
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 }
-animate();
+animate(0);
 
