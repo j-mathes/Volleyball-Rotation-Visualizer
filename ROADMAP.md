@@ -226,7 +226,7 @@ only the applicable options shown per mode.
       from the existing `#overlapResults` list, reusing `summarizeByPlayer`
       unchanged). Court/`#scene3dMount` width expands into the freed
       space.
-- [ ] 3.2 3D Alt-to-orbit remap - holding Alt temporarily turns
+- [x] 3.2 3D Alt-to-orbit remap - holding Alt temporarily turns
       LEFT-click-drag into camera orbit (toggles
       `controls.mouseButtons.LEFT` between `ROTATE`/`null` on Alt
       keydown/keyup; puck select/drag no-ops while Alt is held). RIGHT

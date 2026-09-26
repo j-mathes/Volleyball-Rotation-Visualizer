@@ -155,6 +155,16 @@ export function createCourtRenderer(svg) {
     });
   }
 
+  // Right-click is reserved for the quad-menu (see ROADMAP Phase 3.3) -
+  // this suppresses the browser's native context menu and forwards the
+  // event on; there's no 2D-only camera to conflict with, unlike 3D.
+  function onContextMenu(handler) {
+    svg.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      handler(event);
+    });
+  }
+
   // Called by main.js before switching to a different renderer (see
   // main.js's `switchViewMode`) - without this, a fresh
   // `createCourtRenderer` call the next time 2D is selected again would
@@ -180,6 +190,7 @@ export function createCourtRenderer(svg) {
     moveToCourt,
     moveToBench,
     onBackgroundClick,
+    onContextMenu,
     destroy,
   };
 }

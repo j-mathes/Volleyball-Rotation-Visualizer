@@ -77,12 +77,13 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   controls.minDistance = 200;
   controls.maxDistance = 3000;
   controls.maxPolarAngle = Math.PI * 0.49;
-  // Left button is reserved for selecting/dragging pucks; orbiting is
-  // right-button-drag instead of OrbitControls' left-button default, so
-  // the two gestures never compete for the same button. OrbitControls
-  // suppresses the right-click context menu on its own domElement
-  // automatically once RIGHT is bound to an action.
-  controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  // Left button is reserved for selecting/dragging pucks; holding Alt
+  // temporarily turns left-drag into orbiting instead (Maya/Houdini
+  // convention - see the keydown/keyup listeners below, which live-toggle
+  // `controls.mouseButtons.LEFT` between ROTATE and null), so plain
+  // left-click never has a camera side effect. Right-click is reserved
+  // for the quad-menu (ROADMAP Phase 3.3) rather than orbiting.
+  controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null };
   controls.update();
 
   // Default view (Phase 2.12's Home button/key), captured once before any
@@ -92,7 +93,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
 
   // Smoothly animates the camera position/orbit-target over `durationMs`
   // (Phase 2.12 - used by the ViewCube/keyboard shortcuts/Home button and
-  // the right-click orbit-anchor below). Safe to drive every frame
+  // the Alt+click orbit-anchor below). Safe to drive every frame
   // alongside OrbitControls: `OrbitControls.update()` re-derives its
   // internal spherical state from the camera's CURRENT position relative
   // to `target` on every call rather than caching a stale one, so
@@ -330,6 +331,36 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     event.preventDefault();
   }
   window.addEventListener('keydown', onKeydown);
+
+  // Holding Alt temporarily turns left-drag into orbiting (see the
+  // `controls.mouseButtons` comment above) - toggled live rather than a
+  // fixed mapping so plain left-click keeps selecting/dragging pucks the
+  // rest of the time. `onPointerDownLeft` below checks `altHeld` and
+  // no-ops while it's true, letting OrbitControls own the drag entirely.
+  // The 'blur' listener guards against Alt getting "stuck" held if the
+  // user Alt-tabs away mid-drag (no keyup ever fires in that case).
+  let altHeld = false;
+  function onAltKeydown(event) {
+    if (event.key !== 'Alt' || altHeld) {
+      return;
+    }
+    altHeld = true;
+    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+  }
+  function onAltKeyup(event) {
+    if (event.key !== 'Alt') {
+      return;
+    }
+    altHeld = false;
+    controls.mouseButtons.LEFT = null;
+  }
+  function onWindowBlur() {
+    altHeld = false;
+    controls.mouseButtons.LEFT = null;
+  }
+  window.addEventListener('keydown', onAltKeydown);
+  window.addEventListener('keyup', onAltKeyup);
+  window.addEventListener('blur', onWindowBlur);
 
   // Billboarded (always-facing-camera) text labels (Phase 2.8) - a DOM
   // overlay positioned by each label's Object3D world transform. Sits on
@@ -578,16 +609,16 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // at all: `_fireClick`/`_fireDoubleClick` (see player3d.js) invoke
   // whatever `onClick`/`onDoubleClick` handler main.js registered, which
   // is where all of that logic (identical to 2D) actually lives. The
-  // only local state this renderer needs is which puck is currently being
-  // right-click-orbited around (`selectedPlayer`, used solely for the
-  // Z/zoom-extents shortcut - see below).
+  // only local state this renderer needs is which puck is currently the
+  // orbit anchor (`selectedPlayer`, used solely for the Z/zoom-extents
+  // shortcut - see below).
   const raycaster = new THREE.Raycaster();
   const pointerNDC = new THREE.Vector2();
   const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(PUCK_HEIGHT / 2));
   const dragPoint = new THREE.Vector3();
   let draggingPlayer = null;
   let pointerDownAt = null;
-  // Tracks whichever puck was last right-clicked (the current orbit
+  // Tracks whichever puck was last Alt+left-clicked (the current orbit
   // anchor) purely so `zoomExtents` (Z key) can frame it - independent of
   // main.js's own left-click "selectedRole" concept.
   let selectedPlayer = null;
@@ -604,10 +635,10 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // (bubble-phase) pointerdown listener on the same element - letting us
   // disable orbiting for this gesture before OrbitControls sees it, so
   // dragging a puck never also orbits the camera at the same time. Only
-  // the left/primary button selects/drags pucks - right-click is
-  // reserved for orbiting.
+  // the left/primary button selects/drags pucks, and only while Alt isn't
+  // held (Alt+left orbits instead - see below).
   function onPointerDownLeft(event) {
-    if (event.button !== 0) {
+    if (event.button !== 0 || altHeld) {
       return;
     }
     updatePointerNDC(event);
@@ -624,14 +655,17 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   }
   renderer.domElement.addEventListener('pointerdown', onPointerDownLeft, { capture: true });
 
-  // Right-click sets the orbit anchor for the gesture that follows:
-  // right-clicking a puck re-targets `controls.target` onto it, right-
+  // Alt+left-click sets the orbit anchor for the gesture that follows:
+  // Alt+clicking a puck re-targets `controls.target` onto it, Alt+
   // clicking empty space resets the target back to the default court
-  // center. Completely independent of left-click puck selection - purely
-  // a camera pivot choice, made fresh on every right-click. Tweened (not
-  // instant) so re-anchoring doesn't cause a jarring jump.
-  function onPointerDownRight(event) {
-    if (event.button !== 2) {
+  // center. Completely independent of plain left-click puck selection -
+  // purely a camera pivot choice, made fresh on every Alt+click. Tweened
+  // (not instant) so re-anchoring doesn't cause a jarring jump. Fires on
+  // pointerdown (not click) so the drag that follows (OrbitControls, via
+  // `controls.mouseButtons.LEFT` while Alt is held) already orbits around
+  // the new anchor.
+  function onPointerDownAlt(event) {
+    if (event.button !== 0 || !altHeld) {
       return;
     }
     updatePointerNDC(event);
@@ -641,7 +675,20 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     const endTarget = hit ? hit.object.parent.position.clone() : DEFAULT_CONTROLS_TARGET.clone();
     flyCameraTo(camera.position.clone(), endTarget, 250);
   }
-  renderer.domElement.addEventListener('pointerdown', onPointerDownRight, { capture: true });
+  renderer.domElement.addEventListener('pointerdown', onPointerDownAlt, { capture: true });
+
+  // Right-click is reserved for the quad-menu (ROADMAP Phase 3.3, not
+  // built yet) rather than orbiting - suppress the native browser menu
+  // now so it doesn't pop up in the meantime.
+  let contextMenuHandler = null;
+  function onContextMenuEvent(event) {
+    event.preventDefault();
+    contextMenuHandler?.(event);
+  }
+  renderer.domElement.addEventListener('contextmenu', onContextMenuEvent);
+  function onContextMenu(handler) {
+    contextMenuHandler = handler;
+  }
 
   function onPointerMove(event) {
     if (!draggingPlayer) {
@@ -775,6 +822,9 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     cancelAnimationFrame(rafId);
     resizeObserver.disconnect();
     window.removeEventListener('keydown', onKeydown);
+    window.removeEventListener('keydown', onAltKeydown);
+    window.removeEventListener('keyup', onAltKeyup);
+    window.removeEventListener('blur', onWindowBlur);
     document.removeEventListener('click', onDocumentClickForViewMenu);
     controls.dispose();
     renderer.domElement.remove();
@@ -807,6 +857,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     moveToCourt,
     moveToBench,
     onBackgroundClick,
+    onContextMenu,
     destroy,
   };
 }
