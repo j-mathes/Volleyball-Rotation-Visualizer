@@ -78,6 +78,35 @@ export function checkOverlap(positionsByZone) {
   return results;
 }
 
+// Computes the legal drag range (in x and/or y) for whichever player
+// currently occupies `zone`, based on where its row/column neighbors
+// currently sit - the same rule pairs checkOverlap uses, just solved for
+// "how far can this one player move" instead of "are these two ok".
+// Used to clamp dragging so a fault can't be created in the first place,
+// rather than only flagging it after the fact. Any side with no
+// constraint is left as +-Infinity.
+export function getClampBounds(zone, positionsByZone) {
+  const bounds = { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
+
+  for (const [leftZone, rightZone] of LEFT_RIGHT_CHECKS) {
+    if (zone === leftZone) {
+      bounds.maxX = Math.min(bounds.maxX, positionsByZone[rightZone].x + TOLERANCE);
+    } else if (zone === rightZone) {
+      bounds.minX = Math.max(bounds.minX, positionsByZone[leftZone].x - TOLERANCE);
+    }
+  }
+
+  for (const [frontZone, backZone] of FRONT_BACK_PAIRS) {
+    if (zone === frontZone) {
+      bounds.maxY = Math.min(bounds.maxY, positionsByZone[backZone].y + TOLERANCE);
+    } else if (zone === backZone) {
+      bounds.minY = Math.max(bounds.minY, positionsByZone[frontZone].y - TOLERANCE);
+    }
+  }
+
+  return bounds;
+}
+
 // Displays players, not zone-pair rules: one entry per on-court player,
 // ordered clockwise starting at zone 1 (1, 6, 5, 4, 3, 2). Each entry is
 // "ok" (no overlap) or lists which other player(s) it's violating with.

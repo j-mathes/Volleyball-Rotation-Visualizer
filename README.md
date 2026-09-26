@@ -5,7 +5,9 @@ formation. It focuses on four mechanics:
 
 - **Rotation** — click a rotate button to cycle all six players through the
   court's six zones the way a real side-out rotation works.
-- **Free movement** — drag any player anywhere on the court.
+- **Free movement** — drag any player anywhere on the court. An optional
+  "Lock to Legal Positions" toggle clamps dragging so a player can't be
+  moved past the fault line against its current row/column neighbors.
 - **Overlap detection** — the current formation is continuously checked
   against the FIVB positional-fault rules (row order and front/back order),
   with no button to press. Optional "Show Overlap Guides" and "Show Player

@@ -238,6 +238,18 @@ select {
   box-sizing: border-box;
 }
 
+.overlap-details {
+  margin-top: 8px;
+}
+
+.overlap-details summary {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--accent);
+  cursor: pointer;
+  user-select: none;
+}
+
 .overlap-results {
   list-style: none;
   margin: 8px 0 0;

@@ -35,7 +35,11 @@
             <button id="overlapGuideToggle" class="full-width">Show Overlap Guides</button>
             <button id="playerLinkToggle" class="full-width">Show Player Links</button>
           </div>
-          <ul id="overlapResults" class="overlap-results"></ul>
+          <button id="clampToggle" class="full-width" title="Prevents dragging a player past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
+          <details id="overlapResultsDetails" class="overlap-details" open>
+            <summary id="overlapResultsSummary">Overlap Results</summary>
+            <ul id="overlapResults" class="overlap-results"></ul>
+          </details>
         </div>
 
         <div class="panel-section">

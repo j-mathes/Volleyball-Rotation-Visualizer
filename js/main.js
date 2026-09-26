@@ -2,7 +2,7 @@ import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COUR
 import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer, createViewport, setViewportRotation } from './court.js';
 import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
-import { checkOverlap, summarizeByPlayer } from './overlap.js';
+import { checkOverlap, summarizeByPlayer, getClampBounds } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
 import { saveSetup, takePendingSetup, getSavedSetups } from './courtSetups.js';
 import { applyColors } from './colors.js';
@@ -19,9 +19,11 @@ applyEffectSettings();
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
 const overlapResultsEl = document.getElementById('overlapResults');
+const overlapResultsSummaryEl = document.getElementById('overlapResultsSummary');
 const liberoSwapBtn = document.getElementById('liberoSwapBtn');
 const overlapGuideToggle = document.getElementById('overlapGuideToggle');
 const playerLinkToggle = document.getElementById('playerLinkToggle');
+const clampToggle = document.getElementById('clampToggle');
 const saveSetupBtn = document.getElementById('saveSetupBtn');
 const setupNameInput = document.getElementById('setupNameInput');
 const quickLoadInput = document.getElementById('quickLoadInput');
@@ -68,6 +70,12 @@ let guidesEnabled = false;
 // True while the "Show Player Links" toggle is on, drawing solid green
 // lines from the selected player to its corresponding players.
 let linksEnabled = false;
+// True while the "Lock to Legal Positions" toggle is on: dragging any of
+// the 6 on-court players is clamped so it can't cross a fault line against
+// its current row/column neighbors. The benched player (Libero or whoever
+// it replaced) is never clamped, since it isn't part of the 6 on-court
+// zone checks until swapped in.
+let clampEnabled = false;
 // True while the selection is locked (toggled by double-clicking a player):
 // clicking/dragging other players still moves them, but never changes
 // which player is selected.
@@ -111,6 +119,8 @@ function refreshRotationDisplay() {
 function handleDragMove(player) {
   if (player.role === benchedRole()) {
     player.setBenchWarning(isWithinCourt(player.x, player.y));
+  } else if (clampEnabled) {
+    clampToLegalPosition(player);
   }
   if (guidesEnabled || linksEnabled) {
     runOverlapCheck();
@@ -129,6 +139,25 @@ function currentPositionsByZone() {
     positions[zone] = { x: player.x, y: player.y, role: onCourtRole };
   }
   return positions;
+}
+
+// Snaps `player` back inside its legal range against its current row/
+// column neighbors, so it can never actually be dragged into a fault -
+// only the 6 on-court zone occupants are constrained this way (checked via
+// findZoneForRole; a benched player isn't in `positions`, so this is a
+// no-op for it).
+function clampToLegalPosition(player) {
+  const positions = currentPositionsByZone();
+  const zone = findZoneForRole(positions, player.role);
+  if (!zone) {
+    return;
+  }
+  const bounds = getClampBounds(zone, positions);
+  const clampedX = Math.min(Math.max(player.x, bounds.minX), bounds.maxX);
+  const clampedY = Math.min(Math.max(player.y, bounds.minY), bounds.maxY);
+  if (clampedX !== player.x || clampedY !== player.y) {
+    player.setPosition(clampedX, clampedY);
+  }
 }
 
 function clearHighlights() {
@@ -224,6 +253,11 @@ function runOverlapCheck() {
   overlapResultsEl.innerHTML = '';
   violationLinesLayer.innerHTML = '';
   linkLinesLayer.innerHTML = '';
+
+  const violationCount = summary.filter((entry) => !entry.ok).length;
+  overlapResultsSummaryEl.textContent = violationCount === 0
+    ? 'Overlap Results — all legal'
+    : `Overlap Results — ${violationCount} violation${violationCount === 1 ? '' : 's'}`;
 
   Object.values(playersByRole).forEach((player) => {
     player.setOverlapping(false);
@@ -512,6 +546,21 @@ playerLinkToggle.addEventListener('click', () => {
     selectionLocked = false;
   }
   runOverlapCheck();
+});
+
+clampToggle.addEventListener('click', () => {
+  clampEnabled = !clampEnabled;
+  clampToggle.classList.toggle('active', clampEnabled);
+  if (clampEnabled) {
+    // Snaps every on-court player back inside bounds immediately, in case
+    // it was already mid-fault when the toggle was switched on.
+    for (const player of Object.values(playersByRole)) {
+      if (player.role !== benchedRole()) {
+        clampToLegalPosition(player);
+      }
+    }
+    runOverlapCheck();
+  }
 });
 
 // Clicking anywhere on the court that isn't a player deselects the
