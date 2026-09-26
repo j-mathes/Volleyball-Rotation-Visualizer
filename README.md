@@ -117,3 +117,8 @@ reference/             Archived third-party source kept for reference only
 
 See [RULES.md](RULES.md) for the full breakdown of the zone layout,
 starting lineup, overlap rules (FIVB 7.4), and Libero swap behavior.
+
+## License
+
+Copyright © 2026 Jared Mathes — [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+
