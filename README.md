@@ -109,8 +109,6 @@ js/effectSettings.js    Custom glow/pulse effect persistence (shared by index.ht
 js/viewSettings.js      Net-orientation view-angle persistence (shared by index.html/setup.html)
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
-reference/             Archived third-party source kept for reference only
-                        (not used by the build — see its own README)
 ```
 
 ## Notes on the overlap rules

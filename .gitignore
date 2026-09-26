@@ -12,3 +12,6 @@ Thumbs.db
 
 # Node (in case tooling is added later)
 node_modules/
+
+# Archived third-party reference code, not part of the build
+reference/
