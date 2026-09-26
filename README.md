@@ -130,7 +130,9 @@ js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 js/scene3d.js           Phase 2 3D scene (Three.js, loaded via an import map
                         from a CDN - court plane, lighting, camera,
-                        draggable player pucks via raycasting,
+                        draggable player pucks via raycasting (clamped to
+                        the modeled court/bench footprint so a drag can
+                        never fling a puck off into open space),
                         overlap-driven guide/violation/link lines using
                         the Line2/LineMaterial "fat line" addon, a "Lock
                         to Legal Positions" drag clamp, bench-warning
@@ -139,12 +141,12 @@ js/scene3d.js           Phase 2 3D scene (Three.js, loaded via an import map
                         zoom, an emissive-material glow/pulse selection
                         highlight (reusing effectSettings.js), a 3ds
                         Max-style ViewCube + Home button + keyboard view
-                        shortcuts (P/T/F/L/V/Z) with orbit/zoom re-centered
-                        on the selected puck, and a draggable/collapsible
-                        floating control panel with independent guide/link
-                        toggles, a double-click selection lock, a live
-                        bench-side switcher, and a rotation/overlap
-                        dashboard readout) for scene3d.html
+                        shortcuts (P/T/F/L/V/Z) with an opt-in "Orbit
+                        Around Selection" mode, and a draggable/
+                        collapsible floating control panel with
+                        independent guide/link toggles, a double-click
+                        selection lock, a live bench-side switcher, and a
+                        rotation/overlap dashboard readout) for scene3d.html
 js/benchSideSettings.js Bench/Libero side persistence for the 3D scene only
                         (shared by scene3d.html/setup.html)
 js/labelScaleSettings.js 3D player-label distance-scaling mode persistence
