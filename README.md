@@ -134,11 +134,14 @@ js/scene3d.js           Phase 2 3D scene (Three.js, loaded via an import map
                         feedback, billboarded role-label text via
                         CSS2DRenderer, OrbitControls camera orbit/tilt/
                         zoom, an emissive-material glow/pulse selection
-                        highlight (reusing effectSettings.js), and a
-                        draggable/collapsible floating control panel with
-                        independent guide/link toggles, a double-click
-                        selection lock, a live bench-side switcher, and a
-                        rotation/overlap dashboard readout) for scene3d.html
+                        highlight (reusing effectSettings.js), a 3ds
+                        Max-style ViewCube + Home button + keyboard view
+                        shortcuts (P/T/F/L/V/Z) with orbit/zoom re-centered
+                        on the selected puck, and a draggable/collapsible
+                        floating control panel with independent guide/link
+                        toggles, a double-click selection lock, a live
+                        bench-side switcher, and a rotation/overlap
+                        dashboard readout) for scene3d.html
 js/benchSideSettings.js Bench/Libero side persistence for the 3D scene only
                         (shared by scene3d.html/setup.html)
 js/labelScaleSettings.js 3D player-label distance-scaling mode persistence

@@ -68,6 +68,222 @@ controls.maxDistance = 3000;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.update();
 
+// Default view (Phase 2.12's Home button/key), captured once before any
+// user interaction.
+const DEFAULT_CAMERA_POSITION = camera.position.clone();
+const DEFAULT_CONTROLS_TARGET = controls.target.clone();
+
+// Smoothly animates the camera position/orbit-target over `durationMs`
+// (Phase 2.12 - used by the ViewCube/keyboard shortcuts/Home button, and
+// by selecting/deselecting a puck). Safe to drive every frame alongside
+// OrbitControls: `OrbitControls.update()` re-derives its internal
+// spherical state from the camera's CURRENT position relative to
+// `target` on every call rather than caching a stale one, so directly
+// tweening `camera.position`/`controls.target` here and letting the
+// existing `controls.update()` in `animate()` run afterward "just works"
+// with no desync.
+let cameraTween = null;
+function flyCameraTo(endPosition, endTarget, durationMs = 400) {
+  cameraTween = {
+    startPosition: camera.position.clone(),
+    endPosition: endPosition.clone(),
+    startTarget: controls.target.clone(),
+    endTarget: endTarget.clone(),
+    startTime: performance.now(),
+    durationMs,
+  };
+}
+function updateCameraTween(nowMs) {
+  if (!cameraTween) {
+    return;
+  }
+  const t = Math.min(1, (nowMs - cameraTween.startTime) / cameraTween.durationMs);
+  const eased = t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
+  camera.position.lerpVectors(cameraTween.startPosition, cameraTween.endPosition, eased);
+  controls.target.lerpVectors(cameraTween.startTarget, cameraTween.endTarget, eased);
+  if (t >= 1) {
+    cameraTween = null;
+  }
+}
+
+function resetToDefaultView() {
+  // A full reset also clears whatever puck is selected (Home means "back
+  // to the default state" globally) - otherwise `updateSelectionOrbitFollow`
+  // would immediately re-target the still-selected puck on the very next
+  // frame, undoing the reset. Plain view-cube/keyboard direction snaps
+  // deliberately do NOT do this - those stay centered on the current
+  // selection, only Home resets it.
+  selectedGroup = null;
+  selectionLocked = false;
+  refreshOverlayLines();
+  flyCameraTo(DEFAULT_CAMERA_POSITION, DEFAULT_CONTROLS_TARGET);
+}
+
+// Converts a preset view direction (e.g. "top-front-right" = (1,1,1)) into
+// a camera position at the current orbit distance from `target`, clamped
+// to the same polar-angle limits normal dragging respects (so, e.g.,
+// "Bottom" snaps to the lowest angle the ground plane still allows,
+// rather than an unreachable literal underside view).
+function directionToCameraPosition(direction, target, distance) {
+  const spherical = new THREE.Spherical().setFromVector3(direction.clone().normalize());
+  spherical.phi = THREE.MathUtils.clamp(spherical.phi, controls.minPolarAngle, controls.maxPolarAngle);
+  spherical.makeSafe();
+  return target.clone().add(new THREE.Vector3().setFromSpherical(spherical).multiplyScalar(distance));
+}
+
+// Snaps to a preset view, orbiting around whichever point is currently
+// the active orbit target (the court center, or the selected puck - see
+// `setSelectedGroup` below) rather than resetting that choice.
+function snapToViewDirection(direction) {
+  const target = controls.target.clone();
+  const distance = camera.position.distanceTo(target);
+  flyCameraTo(directionToCameraPosition(direction, target, distance), target);
+}
+
+// Frames either the whole court (nothing selected) or tightly frames the
+// selected puck, preserving the current viewing angle/direction and only
+// adjusting distance - matches 3ds Max's "Zoom Extents" (Z key).
+function zoomExtents() {
+  const target = selectedGroup ? selectedGroup.position.clone() : DEFAULT_CONTROLS_TARGET.clone();
+  const distance = THREE.MathUtils.clamp(
+    selectedGroup ? PLAYER_RADIUS * 8 : COURT_SIZE * 1.3,
+    controls.minDistance,
+    controls.maxDistance,
+  );
+  const offset = camera.position.clone().sub(controls.target);
+  const direction = offset.lengthSq() > 0 ? offset.normalize() : new THREE.Vector3(0, 1, 0);
+  flyCameraTo(target.clone().add(direction.multiplyScalar(distance)), target);
+}
+
+// The 26 ViewCube regions (6 faces + 12 edges + 8 corners), each a unit
+// direction from the target - built programmatically (not 26 hand-authored
+// DOM elements) since it's the same shape for all three groups. Faces are
+// full flush panels (need a rotation to lie against the cube's surface,
+// the standard CSS cube recipe); edges/corners are just small markers
+// positioned by a plain `translate3d` in the cube's own (unrotated) local
+// space - no extra rotation needed since they aren't flush panels.
+const VIEW_CUBE_FACES = [
+  { label: 'TOP', dir: [0, 1, 0], transform: 'rotateX(90deg) translateZ(30px)' },
+  { label: 'BOTTOM', dir: [0, -1, 0], transform: 'rotateX(-90deg) translateZ(30px)' },
+  { label: 'FRONT', dir: [0, 0, 1], transform: 'translateZ(30px)' },
+  { label: 'BACK', dir: [0, 0, -1], transform: 'rotateY(180deg) translateZ(30px)' },
+  { label: 'LEFT', dir: [-1, 0, 0], transform: 'rotateY(-90deg) translateZ(30px)' },
+  { label: 'RIGHT', dir: [1, 0, 0], transform: 'rotateY(90deg) translateZ(30px)' },
+];
+// Edges: exactly one axis is zero. Corners: none are zero.
+const VIEW_CUBE_EDGES_AND_CORNERS = [];
+for (const x of [-1, 0, 1]) {
+  for (const y of [-1, 0, 1]) {
+    for (const z of [-1, 0, 1]) {
+      const nonZeroCount = [x, y, z].filter((n) => n !== 0).length;
+      if (nonZeroCount === 2 || nonZeroCount === 3) {
+        VIEW_CUBE_EDGES_AND_CORNERS.push({ dir: [x, y, z], kind: nonZeroCount === 2 ? 'vc-edge' : 'vc-corner' });
+      }
+    }
+  }
+}
+
+const viewCubeEl = document.getElementById('viewCube3D');
+for (const { label, dir, transform } of VIEW_CUBE_FACES) {
+  const face = document.createElement('div');
+  face.className = 'vc-face';
+  face.textContent = label;
+  face.style.transform = transform;
+  face.dataset.dir = dir.join(',');
+  viewCubeEl.appendChild(face);
+}
+for (const { dir, kind } of VIEW_CUBE_EDGES_AND_CORNERS) {
+  const [x, y, z] = dir;
+  const hotspot = document.createElement('div');
+  hotspot.className = kind;
+  // CSS Y grows downward, so the vertical offset is negated to keep "up"
+  // (dir y = +1, i.e. TOP) visually above center.
+  hotspot.style.transform = `translate3d(${x * 30}px, ${y * -30}px, ${z * 30}px)`;
+  hotspot.dataset.dir = dir.join(',');
+  viewCubeEl.appendChild(hotspot);
+}
+viewCubeEl.querySelectorAll('[data-dir]').forEach((el) => {
+  el.addEventListener('click', () => snapToViewDirection(new THREE.Vector3(...el.dataset.dir.split(',').map(Number))));
+});
+
+// Rotates the (purely decorative/navigational) CSS cube to visually
+// track the main camera's current orbit angle every frame, so it always
+// shows which way the "camera" is currently facing - the actual point of
+// a ViewCube.
+function updateViewCubeOrientation() {
+  const offset = camera.position.clone().sub(controls.target);
+  const spherical = new THREE.Spherical().setFromVector3(offset);
+  const azimuthDeg = THREE.MathUtils.radToDeg(spherical.theta);
+  const polarDeg = THREE.MathUtils.radToDeg(spherical.phi);
+  viewCubeEl.style.transform = `rotateX(${polarDeg - 90}deg) rotateY(${-azimuthDeg}deg)`;
+}
+
+document.getElementById('viewCubeHome').addEventListener('click', resetToDefaultView);
+
+// "V" view-picker menu (Phase 2.12) - a simple list of all 6 faces plus
+// Home/Perspective, standing in for 3ds Max's popup view menu.
+const viewMenuEl = document.getElementById('viewMenu3D');
+function setViewMenuOpen(open) {
+  viewMenuEl.hidden = !open;
+}
+viewMenuEl.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-view]');
+  if (!button) {
+    return;
+  }
+  if (button.dataset.view === 'home') {
+    resetToDefaultView();
+  } else {
+    snapToViewDirection(new THREE.Vector3(...button.dataset.view.split(',').map(Number)));
+  }
+  setViewMenuOpen(false);
+});
+document.addEventListener('click', (event) => {
+  if (!viewMenuEl.hidden && !event.target.closest('.view-cube-wrap')) {
+    setViewMenuOpen(false);
+  }
+});
+
+// Keyboard shortcuts (Phase 2.12), modeled on 3ds Max's view navigation:
+// P/Home (perspective/home), T/F/L (top/front/left - the 3 most useful
+// preset angles for a court), V (view picker menu), Z (zoom extents).
+// Ignored while a modifier key is held (so browser shortcuts like Ctrl+F
+// still work) or while a text input has focus (none currently exist on
+// this page, but this guards against future ones).
+window.addEventListener('keydown', (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
+  const focusedTag = document.activeElement?.tagName;
+  if (focusedTag === 'INPUT' || focusedTag === 'TEXTAREA') {
+    return;
+  }
+  switch (event.key.toLowerCase()) {
+    case 'p':
+    case 'home':
+      resetToDefaultView();
+      break;
+    case 't':
+      snapToViewDirection(new THREE.Vector3(0, 1, 0));
+      break;
+    case 'f':
+      snapToViewDirection(new THREE.Vector3(0, 0, 1));
+      break;
+    case 'l':
+      snapToViewDirection(new THREE.Vector3(-1, 0, 0));
+      break;
+    case 'z':
+      zoomExtents();
+      break;
+    case 'v':
+      setViewMenuOpen(viewMenuEl.hidden);
+      break;
+    default:
+      return;
+  }
+  event.preventDefault();
+});
+
 // Billboarded (always-facing-camera) text labels (Phase 2.8) - a DOM
 // overlay positioned by each label's Object3D world transform, rather
 // than 3D text geometry, so it stays crisp and legible at any zoom/angle.
@@ -325,16 +541,27 @@ function boundaryLinePoints(axis, anchor) {
 }
 
 let selectedGroup = null;
+// True once a puck's selection has been locked via double-click: other
+// pucks can still be dragged/tapped without changing the selection until
+// unlocked (double-click the locked puck again).
+let selectionLocked = false;
 // True while the "Show Overlap Guides" / "Show Player Links" panel
 // toggles are on (independently, matching 2D - previously 3D always drew
 // both together whenever a puck was selected). Selecting a puck at all is
 // gated on at least one of these being enabled, same as 2D.
 let guidesEnabled = false;
 let linksEnabled = false;
-// True once a puck's selection has been locked via double-click: other
-// pucks can still be dragged/tapped without changing the selection until
-// unlocked (double-click the locked puck again).
-let selectionLocked = false;
+
+// Reassigns `selectedGroup` and (Phase 2.12) smoothly re-centers the
+// orbit target on the newly-selected puck, or back to the court center
+// when deselected - `updateSelectionOrbitFollow()` (called every frame
+// from `animate()`) then keeps the target glued to it live if it's
+// dragged, without re-tweening on every drag move.
+function setSelectedGroup(group) {
+  selectedGroup = group;
+  const endTarget = selectedGroup ? selectedGroup.position.clone() : DEFAULT_CONTROLS_TARGET.clone();
+  flyCameraTo(camera.position.clone(), endTarget, 300);
+}
 
 const overlapResultsEl = document.getElementById('overlapResults3D');
 const overlapResultsSummaryEl = document.getElementById('overlapResultsSummary3D');
@@ -551,7 +778,7 @@ guideToggleBtn.addEventListener('click', () => {
   guidesEnabled = !guidesEnabled;
   guideToggleBtn.classList.toggle('active', guidesEnabled);
   if (!guidesEnabled && !linksEnabled) {
-    selectedGroup = null;
+    setSelectedGroup(null);
     selectionLocked = false;
   }
   refreshOverlayLines();
@@ -560,7 +787,7 @@ linkToggleBtn.addEventListener('click', () => {
   linksEnabled = !linksEnabled;
   linkToggleBtn.classList.toggle('active', linksEnabled);
   if (!guidesEnabled && !linksEnabled) {
-    selectedGroup = null;
+    setSelectedGroup(null);
     selectionLocked = false;
   }
   refreshOverlayLines();
@@ -702,7 +929,7 @@ function endDrag(event) {
   if ((guidesEnabled || linksEnabled) && !selectionLocked) {
     const moved = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
     const wasTap = moved <= TAP_MOVE_THRESHOLD;
-    selectedGroup = wasTap && selectedGroup === draggingGroup ? null : draggingGroup;
+    setSelectedGroup(wasTap && selectedGroup === draggingGroup ? null : draggingGroup);
   }
   refreshOverlayLines();
   renderer.domElement.releasePointerCapture(event.pointerId);
@@ -731,7 +958,7 @@ renderer.domElement.addEventListener('dblclick', (event) => {
   if (selectionLocked && selectedGroup === group) {
     selectionLocked = false;
   } else {
-    selectedGroup = group;
+    setSelectedGroup(group);
     selectionLocked = true;
   }
   refreshOverlayLines();
@@ -805,11 +1032,25 @@ function updateSelectionGlow(nowMs) {
   }
 }
 
+// Keeps the orbit target glued to the selected puck every frame (Phase
+// 2.12), so dragging it around continues to orbit/zoom relative to it
+// live, without re-triggering `setSelectedGroup`'s one-shot tween on
+// every drag move. Skipped while a tween is in flight so it doesn't fight
+// the initial "re-center on selection" animation.
+function updateSelectionOrbitFollow() {
+  if (selectedGroup && !cameraTween) {
+    controls.target.copy(selectedGroup.position);
+  }
+}
+
 function animate(nowMs) {
   requestAnimationFrame(animate);
+  updateCameraTween(nowMs);
+  updateSelectionOrbitFollow();
   controls.update();
   updateLabelScaling();
   updateSelectionGlow(nowMs);
+  updateViewCubeOrientation();
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 }

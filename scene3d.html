@@ -72,6 +72,102 @@
     .floating-panel-body {
       padding: 16px;
     }
+    .view-cube-wrap {
+      position: fixed;
+      top: 90px;
+      right: 20px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .view-cube-home {
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      font-size: 1.1rem;
+      line-height: 1;
+      border-radius: 50%;
+    }
+    .view-cube-scene {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      perspective: 500px;
+    }
+    .view-cube {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+    }
+    .vc-face,
+    .vc-edge,
+    .vc-corner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      backface-visibility: hidden;
+      box-sizing: border-box;
+    }
+    .vc-face {
+      width: 60px;
+      height: 60px;
+      margin: -30px 0 0 -30px;
+      background: rgba(44, 62, 80, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+      font-size: 0.6rem;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+    }
+    .vc-face:hover {
+      background: rgba(52, 152, 219, 0.85);
+    }
+    .vc-edge {
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(27, 39, 51, 0.6);
+    }
+    .vc-corner {
+      width: 12px;
+      height: 12px;
+      margin: -6px 0 0 -6px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(27, 39, 51, 0.6);
+    }
+    .vc-edge:hover,
+    .vc-corner:hover {
+      background: rgba(52, 152, 219, 0.9);
+    }
+    .view-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      background: var(--panel-bg);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      min-width: 150px;
+    }
+    .view-menu button {
+      display: block;
+      width: 100%;
+      border-radius: 0;
+      text-align: left;
+    }
+    .view-menu[hidden] {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -82,6 +178,21 @@
     </div>
   </div>
   <div id="scene3d"></div>
+  <div id="viewCubeWrap" class="view-cube-wrap">
+    <button type="button" id="viewCubeHome" class="view-cube-home" title="Reset to default view (Home / P)">&#8962;</button>
+    <div class="view-cube-scene">
+      <div id="viewCube3D" class="view-cube"></div>
+      <div id="viewMenu3D" class="view-menu" hidden>
+        <button type="button" data-view="0,1,0">Top</button>
+        <button type="button" data-view="0,-1,0">Bottom</button>
+        <button type="button" data-view="0,0,1">Front</button>
+        <button type="button" data-view="0,0,-1">Back</button>
+        <button type="button" data-view="-1,0,0">Left</button>
+        <button type="button" data-view="1,0,0">Right</button>
+        <button type="button" data-view="home">Home / Perspective</button>
+      </div>
+    </div>
+  </div>
   <div id="controlPanel3D" class="floating-panel">
     <div class="floating-panel-handle">
       <span>&#10021; Controls (drag to move)</span>

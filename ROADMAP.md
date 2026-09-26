@@ -110,10 +110,30 @@ rework when the renderer changes later.
       drives a CSS drop-shadow glow in 2D (selectable/guide-selected/
       locked highlights); 3D has no equivalent yet (e.g. an emissive
       material intensity pulse) - needs its own design, not a direct port.
-- [ ] 2.12 View Orientation toggle for 3D — TBD: reconsider once 2.9's
-      camera orbit controls exist, since free camera movement may already
-      cover what the 2D Net Left/Top/Right toggle is for; revisit before
-      committing to porting it as-is.
+- [x] 2.12 3ds Max-style view navigation for 3D — redefines the original
+      "View Orientation toggle" idea now that 2.9's free-orbit camera
+      exists (a literal port of 2D's Net Left/Top/Right toggle doesn't map
+      cleanly onto a full 3D perspective scene). Per explicit user
+      request, modeled on 3ds Max's ViewCube + view shortcuts:
+      - [x] ViewCube widget (small 3D cube in the viewport corner; 6
+            faces + 12 edges + 8 corners = 26 clickable regions) that
+            smoothly snaps the camera to that preset view (preserving
+            current zoom distance), and visually rotates in sync with the
+            main camera as the user orbits, for at-a-glance orientation
+            feedback.
+      - [x] Home button/icon (plus Home/P keys) resets to the scene's
+            original default camera view.
+      - [x] Keyboard shortcuts: P (perspective/home), T (top), F (front),
+            L (left), V (view picker menu of all 6 faces), Z (zoom
+            extents - frames the whole court, or tightly frames the
+            selected puck if one is selected). (3ds Max's C/object-
+            transform-gizmo/shading/grid/snap shortcuts don't apply here -
+            no secondary camera object and this isn't a modeling tool.)
+      - [x] Orbiting/zooming re-centers on the currently selected puck (if
+            any) instead of always the court center - selecting a puck
+            smoothly re-targets the orbit there, and the target keeps
+            tracking it live if it's dragged; deselecting smoothly
+            re-targets back to the court center.
 - [ ] 2.13 Wire the 3D renderer in as the 4th `viewMode` option behind
       the Phase 1 interface. Sub-items to verify while wiring (expected
       to mostly fall out "for free" once the shared app state/rotation
