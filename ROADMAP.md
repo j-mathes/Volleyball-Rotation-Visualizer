@@ -119,6 +119,12 @@ rework when the renderer changes later.
       to mostly fall out "for free" once the shared app state/rotation
       logic drives the 3D renderer too via the same interface, but called
       out explicitly so they don't get missed during testing):
+      - [ ] Switching between 2D and 3D (either direction) preserves the
+            exact current court setup (rotation number, every player's
+            position, Libero swap state) - this is standard, expected
+            behavior for any `viewMode` switch (same as toggling the 2D
+            Net Left/Top/Right angle never resets positions today), not
+            an optional nice-to-have.
       - [ ] Rotation state + Rotate CW/CCW/Reset-to-Base actually rotate
             the pucks (currently static placeholders, no rotation logic
             wired in at all).

@@ -45,6 +45,11 @@ formation. It focuses on four mechanics:
   selectable/selected player highlights, and the lock-pulse animation's
   duration, are editable on the setup page.
 
+A separate, in-progress [3D Preview](scene3d.html) (linked from the main
+page's header) is being built out per [ROADMAP.md](ROADMAP.md)'s Phase 2 -
+a true Three.js scene with draggable player pucks and the same overlap
+detection, not yet wired into the main visualizer's `viewMode` toggle.
+
 See [RULES.md](RULES.md) for the full rules/conventions reference this
 project is built against, and [ROADMAP.md](ROADMAP.md) for planned future
 work (view-orientation toggle, 3D mode, and further customization options).
@@ -82,6 +87,10 @@ uncluttered. Currently includes:
 - **Glow & Pulse Effects** — set the glow blur radius for
   selectable/selected player highlights and the lock-pulse animation's
   duration/max blur.
+- **3D Preview — Bench Side** — choose which side of the court the
+  bench/Libero substitution area sits on in the [3D Preview](scene3d.html)
+  page specifically (the 2D visualizer already places it automatically
+  per net orientation, so it doesn't need this setting).
 
 ## Project structure
 
