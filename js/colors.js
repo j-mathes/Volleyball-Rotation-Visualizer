@@ -17,6 +17,8 @@ export const DEFAULT_COLORS = {
   'panel-bg': '#f5f7fa',
   accent: '#2c3e50',
   'libero-fill': '#efa581',
+  'bench-fill': '#ffffff',
+  'bench-fill-opacity': 0.12,
 };
 
 // Human-readable labels for the settings UI, in display order.
@@ -34,6 +36,8 @@ export const COLOR_LABELS = {
   'panel-bg': 'Side Panel Background',
   accent: 'Accent',
   'libero-fill': 'Libero',
+  'bench-fill': 'Bench Area',
+  'bench-fill-opacity': 'Bench Area Opacity (0-1)',
 };
 
 export function getColors() {

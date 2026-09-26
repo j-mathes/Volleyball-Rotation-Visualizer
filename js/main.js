@@ -1,5 +1,5 @@
-import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COURT_SIZE } from './config.js';
-import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, setViewportRotation, createFixedLayer } from './court.js';
+import { ZONE_POSITIONS, BENCH_POSITION_CLASSIC, BENCH_POSITION_REPLACED_CLASSIC, BENCH_POSITION_TOP_RIGHT, BENCH_POSITION_REPLACED_TOP_RIGHT, BENCH_POSITION_TOP_LEFT, BENCH_POSITION_REPLACED_TOP_LEFT, BENCH_CENTER_TOP_RIGHT, BENCH_CENTER_TOP_LEFT, BACK_ROW, COURT_SIZE } from './config.js';
+import { setViewBox, drawCourt, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, setViewportRotation, createClassicBenchLayer, createTopBenchLayer } from './court.js';
 import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer, getClampBounds } from './overlap.js';
@@ -46,20 +46,50 @@ const lineSettings = getLineSettings();
 
 // Net-orientation view angle: 0 (net-top), 90 (net-right), -90 (net-left).
 // Persisted across reloads; changed live via the View Orientation toggle.
-// Only the court/players (in `viewport`) rotate with it - the bench strip
-// (in `fixedLayer`) always stays upright at the top of the screen.
+// Only the court/players (in `viewport`) rotate with it. The bench panel
+// and "R#" tracker use one of three fixed (non-rotating) layouts
+// depending on the angle: `classicBench` (bench-left, tracker-top-left)
+// at 0 deg, matching the original pre-toggle design, or `topBenchRight`/
+// `topBenchLeft` (bench/tracker fixed above the court, mirrored bench
+// position, same tracker position) at +90/-90 deg respectively.
 let viewAngle = getViewAngle();
 
-setViewBox(svg);
-const fixedLayer = createFixedLayer(svg);
-drawBenchZone(fixedLayer);
-const rotationTrackerEl = createRotationTracker(fixedLayer);
+setViewBox(svg, viewAngle);
 const viewport = createViewport(svg);
 setViewportRotation(viewport, viewAngle);
 drawCourt(viewport);
 const violationLinesLayer = createViolationLinesLayer(viewport);
 const linkLinesLayer = createLinkLinesLayer(viewport);
 const clampLinesLayer = createClampLinesLayer(viewport);
+// Appended after the viewport (i.e. painted on top of the court floor),
+// so a player mid-swap-animation - still positioned over the court while
+// reparented into a bench layer - stays visible instead of disappearing
+// behind the floor.
+const classicBench = createClassicBenchLayer(svg);
+const topBenchRight = createTopBenchLayer(svg, BENCH_CENTER_TOP_RIGHT);
+const topBenchLeft = createTopBenchLayer(svg, BENCH_CENTER_TOP_LEFT);
+
+// Whichever bench layout is currently active, and the matching bench-slot
+// positions within it - see the comment above `viewAngle`.
+function currentBenchLayer() {
+  if (viewAngle === 0) return classicBench.layer;
+  return viewAngle === 90 ? topBenchRight.layer : topBenchLeft.layer;
+}
+function currentBenchPosition() {
+  if (viewAngle === 0) return BENCH_POSITION_CLASSIC;
+  return viewAngle === 90 ? BENCH_POSITION_TOP_RIGHT : BENCH_POSITION_TOP_LEFT;
+}
+function currentBenchPositionReplaced() {
+  if (viewAngle === 0) return BENCH_POSITION_REPLACED_CLASSIC;
+  return viewAngle === 90 ? BENCH_POSITION_REPLACED_TOP_RIGHT : BENCH_POSITION_REPLACED_TOP_LEFT;
+}
+// Only one of the three bench layouts is visible at a time.
+function refreshBenchLayerVisibility() {
+  classicBench.layer.style.display = viewAngle === 0 ? '' : 'none';
+  topBenchRight.layer.style.display = viewAngle === 90 ? '' : 'none';
+  topBenchLeft.layer.style.display = viewAngle === -90 ? '' : 'none';
+}
+refreshBenchLayerVisibility();
 
 const rotationState = new RotationState();
 
@@ -98,9 +128,10 @@ for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
 }
 
 // The Libero doesn't rotate through the six zones; it waits on the
-// sideline (in the fixed bench strip, upright at angle 0) and can be
-// dragged onto the court to test a replacement.
-playersByRole.L = new Player(svg, fixedLayer, 'L', playerLabels.L, BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd, handleDragMove, 0);
+// sideline (in the currently active bench layer, upright at angle 0) and
+// can be dragged onto the court to test a replacement.
+const initialBenchPos = currentBenchPosition();
+playersByRole.L = new Player(svg, currentBenchLayer(), 'L', playerLabels.L, initialBenchPos.x, initialBenchPos.y, handleDragEnd, handleDragMove, 0);
 
 // Whichever role is currently on the bench: the Libero itself, unless it
 // has swapped in for someone, in which case that role is benched instead.
@@ -116,7 +147,10 @@ function isWithinCourt(x, y) {
 // whoever's currently serving from zone 1.
 function refreshRotationDisplay() {
   serverZoneEl.textContent = playerLabels[rotationState.roleInZone(1)];
-  rotationTrackerEl.textContent = `R${rotationState.rotationNumber}`;
+  const text = `R${rotationState.rotationNumber}`;
+  classicBench.trackerText.textContent = text;
+  topBenchRight.trackerText.textContent = text;
+  topBenchLeft.trackerText.textContent = text;
 }
 
 // Warns (in red) if the single benched player has been dragged onto a
@@ -385,7 +419,7 @@ async function applyState(state, { animate = false, duration = 600 } = {}) {
     if (!pos) {
       continue;
     }
-    player.setContainer(role === benched ? fixedLayer : viewport, role === benched ? 0 : viewAngle);
+    player.setContainer(role === benched ? currentBenchLayer() : viewport, role === benched ? 0 : viewAngle);
     if (animate) {
       animations.push(player.animateTo(pos.x, pos.y, duration));
     } else {
@@ -410,13 +444,15 @@ async function snapAllToZonePositions(duration = 600) {
     if (liberoState.replacedRole === role) {
       // The Libero takes this zone; the player it replaced waits in its own bench slot.
       animations.push(playersByRole.L.animateTo(x, y, duration));
-      animations.push(playersByRole[role].animateTo(BENCH_POSITION_REPLACED.x, BENCH_POSITION_REPLACED.y, duration));
+      const replacedPos = currentBenchPositionReplaced();
+      animations.push(playersByRole[role].animateTo(replacedPos.x, replacedPos.y, duration));
     } else {
       animations.push(playersByRole[role].animateTo(x, y, duration));
     }
   }
   if (!liberoState.replacedRole) {
-    animations.push(playersByRole.L.animateTo(BENCH_POSITION.x, BENCH_POSITION.y, duration));
+    const benchPos = currentBenchPosition();
+    animations.push(playersByRole.L.animateTo(benchPos.x, benchPos.y, duration));
   }
   await Promise.all(animations);
   runOverlapCheck();
@@ -448,8 +484,9 @@ function setAwaitingSelection(active) {
 async function swapLiberoOn(role) {
   clearHighlights();
   const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
-  playersByRole[role].setContainer(fixedLayer, 0);
-  await playersByRole[role].animateTo(BENCH_POSITION_REPLACED.x, BENCH_POSITION_REPLACED.y, 500);
+  const replacedPos = currentBenchPositionReplaced();
+  playersByRole[role].setContainer(currentBenchLayer(), 0);
+  await playersByRole[role].animateTo(replacedPos.x, replacedPos.y, 500);
   playersByRole.L.setContainer(viewport, viewAngle);
   await playersByRole.L.animateTo(x, y, 500);
   liberoState.replacedRole = role;
@@ -466,8 +503,9 @@ async function swapLiberoOff() {
   }
   clearHighlights();
   const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
-  playersByRole.L.setContainer(fixedLayer, 0);
-  await playersByRole.L.animateTo(BENCH_POSITION.x, BENCH_POSITION.y, 500);
+  const benchPos = currentBenchPosition();
+  playersByRole.L.setContainer(currentBenchLayer(), 0);
+  await playersByRole.L.animateTo(benchPos.x, benchPos.y, 500);
   playersByRole[role].setContainer(viewport, viewAngle);
   await playersByRole[role].animateTo(x, y, 500);
   liberoState.replacedRole = null;
@@ -598,18 +636,24 @@ clampToggle.addEventListener('click', () => {
   }
 });
 
-// Re-applies the rotating viewport's rotation and every on-court player's
-// counter-rotated label for the new view angle, without recreating any
-// DOM nodes (player positions/rotation/Libero state are untouched). The
-// viewBox never changes (see setViewBox) and the benched player stays at
-// angle 0, since the fixed bench strip never rotates.
+// Re-applies the viewBox/viewport rotation for the new view angle, snaps
+// the benched player into the newly active bench layout (classic vs top -
+// see currentBenchLayer), and re-applies every on-court player's counter-
+// rotated label, without recreating any DOM nodes (rotation/Libero state
+// is untouched).
 function applyViewAngle(angle) {
   viewAngle = angle;
   saveViewAngle(viewAngle);
+  setViewBox(svg, viewAngle);
   setViewportRotation(viewport, viewAngle);
+  refreshBenchLayerVisibility();
   const benched = benchedRole();
   for (const [role, player] of Object.entries(playersByRole)) {
-    if (role !== benched) {
+    if (role === benched) {
+      const pos = role === 'L' ? currentBenchPosition() : currentBenchPositionReplaced();
+      player.setContainer(currentBenchLayer(), 0);
+      player.setPosition(pos.x, pos.y);
+    } else {
       player.setViewAngle(viewAngle);
     }
   }

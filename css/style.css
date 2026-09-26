@@ -12,6 +12,8 @@
   --panel-bg: #f5f7fa;
   --accent: #2c3e50;
   --libero-fill: #efa581;
+  --bench-fill: #ffffff;
+  --bench-fill-opacity: 0.12;
   --player-outline-width: 5;
   --diagram-font-family: Verdana, Arial, sans-serif;
   --player-label-size: 34px;

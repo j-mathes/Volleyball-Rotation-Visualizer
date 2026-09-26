@@ -266,6 +266,10 @@ importSetupInput.addEventListener('change', async () => {
 
 renderSavedSetups();
 
+// Entries in COLOR_LABELS that are a plain 0-1 opacity value rather than a
+// hex color, so they need a number input instead of a color swatch.
+const NUMERIC_COLOR_SETTINGS = ['bench-fill-opacity'];
+
 function renderColorForm() {
   const colors = getColors();
   colorForm.innerHTML = '';
@@ -274,7 +278,14 @@ function renderColorForm() {
     row.className = 'color-row';
 
     const input = document.createElement('input');
-    input.type = 'color';
+    if (NUMERIC_COLOR_SETTINGS.includes(name)) {
+      input.type = 'number';
+      input.min = 0;
+      input.max = 1;
+      input.step = 0.01;
+    } else {
+      input.type = 'color';
+    }
     input.name = name;
     input.value = colors[name];
     row.appendChild(input);
@@ -291,7 +302,8 @@ colorForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const colors = {};
   for (const name of Object.keys(COLOR_LABELS)) {
-    colors[name] = colorForm.elements.namedItem(name).value;
+    const raw = colorForm.elements.namedItem(name).value;
+    colors[name] = NUMERIC_COLOR_SETTINGS.includes(name) ? Number(raw) : raw;
   }
   saveColors(colors);
   applyColors();
