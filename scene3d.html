@@ -28,7 +28,10 @@
 <body>
   <div class="app-header">
     <h1>3D Preview <small style="font-weight: normal; opacity: 0.8;">(work in progress)</small></h1>
-    <a href="index.html" class="setup-link">&larr; Back to Visualizer</a>
+    <div class="header-links">
+      <button type="button" id="clampToggle3D" title="Constrain dragging so a player can't be moved past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
+      <a href="index.html" class="setup-link">&larr; Back to Visualizer</a>
+    </div>
   </div>
   <div id="scene3d"></div>
   <script type="importmap">

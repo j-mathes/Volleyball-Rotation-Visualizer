@@ -77,7 +77,7 @@ rework when the renderer changes later.
       guide/violation/link width settings into the 3D fat lines'
       `linewidth`, which are currently hardcoded (10/6/6) instead of
       reading the same customizable settings 2D uses.
-- [ ] 2.6 "Lock to Legal Positions" drag clamp — port the 2D app's
+- [x] 2.6 "Lock to Legal Positions" drag clamp — port the 2D app's
       off-roadmap clamp toggle (uses `overlap.js`'s `getClampBounds`) so
       dragging a puck can be constrained from crossing a fault line
       against its current row/column neighbors, same as 2D. Not yet in

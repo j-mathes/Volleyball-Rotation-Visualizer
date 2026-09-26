@@ -12,7 +12,7 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS, BACK_ROW } from './config.js';
 import { PLAYER_RADIUS } from './player.js';
-import { checkOverlap } from './overlap.js';
+import { checkOverlap, getClampBounds } from './overlap.js';
 import { applyColors } from './colors.js';
 import { getLineSettings } from './lineSettings.js';
 import { getBenchSide3D } from './benchSideSettings.js';
@@ -352,6 +352,75 @@ function updatePointerNDC(event) {
 
 renderer.domElement.style.touchAction = 'none';
 
+// "Lock to Legal Positions" (Phase 2.6) - an optional drag clamp so a
+// fault can never be created in the first place, reusing overlap.js's
+// getClampBounds (identical to the 2D renderer). Only on-court pucks are
+// clamped - the benched Libero isn't part of the zone-based rule checks.
+// Toggled via the plain header button for now; folds into the floating
+// control panel once Phase 2.10 exists.
+let clampEnabled = false;
+const clampLines = [];
+function clearClampLines() {
+  for (const line of clampLines) {
+    scene.remove(line);
+    line.geometry.dispose();
+    line.material.dispose();
+  }
+  clampLines.length = 0;
+}
+function addClampLine(axis, anchor) {
+  const geometry = new LineGeometry();
+  geometry.setPositions(boundaryLinePoints(axis, anchor).flatMap((p) => [p.x, p.y, p.z]));
+  const material = new LineMaterial({ color: guideColor, linewidth: lineSettings.guideLineWidth, dashed: true, dashSize: 24, gapSize: 16, worldUnits: true });
+  material.resolution.set(renderer.domElement.width, renderer.domElement.height);
+  const line = new Line2(geometry, material);
+  line.computeLineDistances();
+  scene.add(line);
+  clampLines.push(line);
+}
+
+// Solves the legal x/z range for `zone` against its current row/column
+// neighbors and clamps (rawX, rawZ) into it. `bounds.minX`/`maxX`/etc. are
+// the DRAGGED player's own center stop-coordinate (they bake in TOLERANCE,
+// the sum of BOTH circles' radii, so its edge just touches the neighbor's
+// edge there) - NOT the boundary line's position. The line belongs at the
+// actual shared edge, one PLAYER_RADIUS further from center (toward
+// whichever neighbor is binding), i.e. `bounds.minX + PLAYER_RADIUS` /
+// `bounds.maxX - PLAYER_RADIUS` - drawing it at the raw bound instead
+// makes it cut through the dragged puck's own center.
+function clampToLegalPosition(zone, rawX, rawZ, { drawLines = false } = {}) {
+  const bounds = getClampBounds(zone, currentPositionsByZone());
+  const clampedX = Math.min(Math.max(rawX, bounds.minX), bounds.maxX);
+  const clampedZ = Math.min(Math.max(rawZ, bounds.minY), bounds.maxY);
+  if (drawLines) {
+    if (clampedX !== rawX) {
+      addClampLine('horizontal', clampedX === bounds.maxX ? clampedX - PLAYER_RADIUS : clampedX + PLAYER_RADIUS);
+    }
+    if (clampedZ !== rawZ) {
+      addClampLine('vertical', clampedZ === bounds.maxY ? clampedZ - PLAYER_RADIUS : clampedZ + PLAYER_RADIUS);
+    }
+  }
+  return { x: clampedX, z: clampedZ };
+}
+
+const clampToggleBtn = document.getElementById('clampToggle3D');
+clampToggleBtn.addEventListener('click', () => {
+  clampEnabled = !clampEnabled;
+  clampToggleBtn.classList.toggle('active', clampEnabled);
+  if (clampEnabled) {
+    // Snaps every on-court puck back inside bounds immediately, in case
+    // one was already mid-fault when the toggle was switched on.
+    for (const group of draggablePlayers) {
+      if (group.userData.zone !== null) {
+        const { x, z } = clampToLegalPosition(group.userData.zone, group.position.x, group.position.z);
+        group.position.x = x;
+        group.position.z = z;
+      }
+    }
+    refreshOverlayLines();
+  }
+});
+
 renderer.domElement.addEventListener('pointerdown', (event) => {
   updatePointerNDC(event);
   raycaster.setFromCamera(pointerNDC, camera);
@@ -372,10 +441,16 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   updatePointerNDC(event);
   raycaster.setFromCamera(pointerNDC, camera);
   if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
-    draggingGroup.position.x = dragPoint.x;
+    clearClampLines();
     // Clamped to z >= 0 so a player can never be dragged across the net
     // into the (purely visual, no-players-allowed) opponent's half.
-    draggingGroup.position.z = Math.max(dragPoint.z, 0);
+    let x = dragPoint.x;
+    let z = Math.max(dragPoint.z, 0);
+    if (clampEnabled && draggingGroup.userData.zone !== null) {
+      ({ x, z } = clampToLegalPosition(draggingGroup.userData.zone, x, z, { drawLines: true }));
+    }
+    draggingGroup.position.x = x;
+    draggingGroup.position.z = z;
     refreshOverlayLines();
   }
 });
@@ -384,6 +459,9 @@ function endDrag(event) {
   if (!draggingGroup) {
     return;
   }
+  // The clamp-boundary line only makes sense while actively pressed
+  // against it mid-drag; clear it once the drag is complete.
+  clearClampLines();
   // Matches the 2D renderer: releasing over a player selects it regardless
   // of whether it was a tap or a drag (a native 'click' event fires after
   // a 2D SVG drag release too) - a tap on the ALREADY-selected puck is the
