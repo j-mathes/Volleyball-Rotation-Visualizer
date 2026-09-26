@@ -88,6 +88,8 @@ uncluttered. Currently includes:
 ```
 index.html            Page shell and layout
 setup.html             Help text and customization options (see "Setup page" above)
+scene3d.html            Phase 2 3D rendering preview (work in progress, not yet
+                        wired into the main index.html view-angle toggle)
 css/style.css          Styling for the court, panel, and players
 js/config.js           Court/zone coordinates and the starting lineup
 js/court.js            Draws the static court lines and bench layouts (SVG primitives)
@@ -109,6 +111,8 @@ js/effectSettings.js    Custom glow/pulse effect persistence (shared by index.ht
 js/viewSettings.js      Net-orientation view-angle persistence (shared by index.html/setup.html)
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
+js/scene3d.js           Phase 2 3D scene (Three.js, loaded from a CDN ES module
+                        URL - court plane, lighting, camera) for scene3d.html
 ```
 
 ## Notes on the overlap rules

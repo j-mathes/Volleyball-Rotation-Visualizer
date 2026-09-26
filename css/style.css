@@ -58,6 +58,11 @@ h1 {
   font-size: 0.9rem;
 }
 
+.header-links {
+  display: flex;
+  gap: 16px;
+}
+
 .layout {
   display: flex;
   gap: 24px;

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Preview — Volleyball Rotation Visualizer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 16px 24px;
+      background: rgba(27, 39, 51, 0.75);
+      box-sizing: border-box;
+    }
+    #scene3d {
+      position: fixed;
+      inset: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-header">
+    <h1>3D Preview <small style="font-weight: normal; opacity: 0.8;">(work in progress)</small></h1>
+    <a href="index.html" class="setup-link">&larr; Back to Visualizer</a>
+  </div>
+  <div id="scene3d"></div>
+  <script type="module" src="js/scene3d.js"></script>
+</body>
+</html>
