@@ -19,8 +19,13 @@ function toSvgPoint(svg, clientX, clientY) {
 }
 
 export class Player {
-  constructor(svg, role, label, x, y, onDragEnd, onDragMove) {
-    this.svg = svg;
+  // `root` is the actual <svg> element (needed for pointer-to-user-space
+  // coordinate math); `container` is where this player's group is appended
+  // - normally the rotatable viewport group (see court.js's createViewport)
+  // rather than `root` directly. `angle` counter-rotates the label text so
+  // it stays upright regardless of the viewport's rotation.
+  constructor(root, container, role, label, x, y, onDragEnd, onDragMove, angle = 0) {
+    this.svg = root;
     this.role = role;
     this.x = x;
     this.y = y;
@@ -30,11 +35,11 @@ export class Player {
 
     this.group = el('g', { class: role === 'L' ? 'player libero' : 'player' });
     this.circle = el('circle', { cx: 0, cy: 0, r: PLAYER_RADIUS });
-    this.text = el('text', { x: 0, y: 2 });
+    this.text = el('text', { x: 0, y: 2, transform: `rotate(${-angle}, 0, 2)` });
     this.text.textContent = label;
     this.group.appendChild(this.circle);
     this.group.appendChild(this.text);
-    svg.appendChild(this.group);
+    container.appendChild(this.group);
 
     this._applyTransform();
     this._attachDragHandlers();

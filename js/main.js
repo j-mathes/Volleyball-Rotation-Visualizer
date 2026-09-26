@@ -1,5 +1,5 @@
 import { ZONE_POSITIONS, BENCH_POSITION, BENCH_POSITION_REPLACED, BACK_ROW, COURT_SIZE } from './config.js';
-import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer } from './court.js';
+import { setViewBox, drawBenchZone, drawCourt, createRotationTracker, createViolationLinesLayer, createLinkLinesLayer, createViewport, setViewportRotation } from './court.js';
 import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer } from './overlap.js';
@@ -7,10 +7,14 @@ import { getPlayerLabels } from './playerLabels.js';
 import { saveSetup, takePendingSetup, getSavedSetups } from './courtSetups.js';
 import { applyColors } from './colors.js';
 import { getLineSettings, applyLineSettings } from './lineSettings.js';
+import { applyFontSettings } from './fontSettings.js';
+import { applyEffectSettings } from './effectSettings.js';
 import { getPlaylist, getPlaylistDelay } from './playlist.js';
 
 applyColors();
 applyLineSettings();
+applyFontSettings();
+applyEffectSettings();
 
 const svg = document.getElementById('court');
 const serverZoneEl = document.getElementById('serverZone');
@@ -34,12 +38,19 @@ const playerLabels = getPlayerLabels();
 // read once at load, since they only change there.
 const lineSettings = getLineSettings();
 
-setViewBox(svg);
-drawBenchZone(svg);
-drawCourt(svg);
-const rotationTrackerEl = createRotationTracker(svg);
-const violationLinesLayer = createViolationLinesLayer(svg);
-const linkLinesLayer = createLinkLinesLayer(svg);
+// Net-orientation view angle: 0 (net-top), 90 (net-right), -90 (net-left).
+// Not yet wired to a UI control (see ROADMAP.md Phase 1) - hardcoded to
+// the default orientation for now.
+const viewAngle = 0;
+
+setViewBox(svg, viewAngle);
+const viewport = createViewport(svg);
+setViewportRotation(viewport, viewAngle);
+drawBenchZone(viewport, viewAngle);
+drawCourt(viewport);
+const rotationTrackerEl = createRotationTracker(viewport, viewAngle);
+const violationLinesLayer = createViolationLinesLayer(viewport);
+const linkLinesLayer = createLinkLinesLayer(viewport);
 
 const rotationState = new RotationState();
 
@@ -68,12 +79,12 @@ let selectedRole = null;
 const playersByRole = {};
 for (const [zone, role] of Object.entries(rotationState.zoneToRole)) {
   const { x, y } = ZONE_POSITIONS[zone];
-  playersByRole[role] = new Player(svg, role, playerLabels[role], x, y, handleDragEnd, handleDragMove);
+  playersByRole[role] = new Player(svg, viewport, role, playerLabels[role], x, y, handleDragEnd, handleDragMove, viewAngle);
 }
 
 // The Libero doesn't rotate through the six zones; it waits on the
 // sideline and can be dragged onto the court to test a replacement.
-playersByRole.L = new Player(svg, 'L', playerLabels.L, BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd, handleDragMove);
+playersByRole.L = new Player(svg, viewport, 'L', playerLabels.L, BENCH_POSITION.x, BENCH_POSITION.y, handleDragEnd, handleDragMove, viewAngle);
 
 // Whichever role is currently on the bench: the Libero itself, unless it
 // has swapped in for someone, in which case that role is benched instead.

@@ -37,21 +37,21 @@ rework when the renderer changes later.
       a chosen folder), not all-or-nothing. Also add a quick-recall
       affordance for jumping straight to a saved setup (e.g. a searchable
       dropdown) instead of always navigating to the setup page's full list.
-- [ ] 0.8 Font customization — expose the font family (and size) used for
+- [x] 0.8 Font customization — expose the font family (and size) used for
       player labels, the BENCH label, and the "R#" rotation tracker as a
       setting, replacing the hardcoded `Verdana` literals in `court.js`,
       `player.js`, and `style.css`.
-- [ ] 0.9 Glow/pulse effect tuning — expose the drop-shadow blur radius
+- [x] 0.9 Glow/pulse effect tuning — expose the drop-shadow blur radius
       used for selectable/guide-selected/locked player highlights, and the
       `lock-pulse` animation's duration, as settings instead of the
       hardcoded values in `style.css`.
 
 ## Phase 1 — 2D View Orientation Toggle
 
-- [ ] 1.1 Generalize the court rotation into a parameterized angle
+- [x] 1.1 Generalize the court rotation into a parameterized angle
       (0°/net-top, 90°/net-right, -90°/net-left) with matching viewBox
       swap for the ±90° cases.
-- [ ] 1.2 Counter-rotate all text elements (BENCH label, "R#" tracker,
+- [x] 1.2 Counter-rotate all text elements (BENCH label, "R#" tracker,
       player labels) so they stay upright at any angle.
 - [ ] 1.3 Add a UI toggle (segmented control) wired to a `viewMode` state.
 - [ ] 1.4 Extract a thin rendering interface (`createPlayer`,

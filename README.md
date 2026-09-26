@@ -29,6 +29,12 @@ formation. It focuses on four mechanics:
 - **Line thickness customization** — the player outline and
   guide/violation/link line stroke widths are editable on the setup page
   instead of hardcoded.
+- **Font customization** — the font family and text sizes for player
+  labels, the BENCH label, and the rotation tracker are editable on the
+  setup page.
+- **Glow/pulse effect tuning** — the glow blur radius for
+  selectable/selected player highlights, and the lock-pulse animation's
+  duration, are editable on the setup page.
 
 See [RULES.md](RULES.md) for the full rules/conventions reference this
 project is built against, and [ROADMAP.md](ROADMAP.md) for planned future
@@ -62,6 +68,11 @@ uncluttered. Currently includes:
 - **Line Thickness** — set the stroke width (px) of the player outline and
   the guide/violation/link lines, persisted in localStorage and shared
   with the main visualizer.
+- **Font** — set the font family and text sizes for player labels, the
+  BENCH label, and the rotation tracker.
+- **Glow & Pulse Effects** — set the glow blur radius for
+  selectable/selected player highlights and the lock-pulse animation's
+  duration/max blur.
 
 ## Project structure
 
@@ -79,6 +90,8 @@ js/courtSetups.js       Saved court setup persistence (shared by index.html/setu
 js/playlist.js          Court setup playlist persistence (shared by index.html/setup.html)
 js/colors.js            Custom color persistence (shared by index.html/setup.html)
 js/lineSettings.js      Custom line-thickness persistence (shared by index.html/setup.html)
+js/fontSettings.js      Custom font persistence (shared by index.html/setup.html)
+js/effectSettings.js    Custom glow/pulse effect persistence (shared by index.html/setup.html)
 js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 reference/             Archived third-party source kept for reference only

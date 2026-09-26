@@ -13,6 +13,13 @@
   --accent: #2c3e50;
   --libero-fill: #efa581;
   --player-outline-width: 5;
+  --diagram-font-family: Verdana, Arial, sans-serif;
+  --player-label-size: 34px;
+  --bench-label-size: 24px;
+  --rotation-tracker-size: 56px;
+  --glow-blur-radius: 6px;
+  --pulse-max-blur-radius: 14px;
+  --pulse-duration: 1.2s;
 }
 
 * {
@@ -383,6 +390,21 @@ select {
   box-sizing: border-box;
 }
 
+.font-family-row {
+  grid-column: 1 / -1;
+}
+
+.font-family-row input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
 .player {
   cursor: grab;
 }
@@ -422,27 +444,27 @@ select {
   stroke-width: 8;
   stroke-dasharray: 14, 8;
   cursor: pointer;
-  filter: drop-shadow(0 0 6px var(--player-selectable));
+  filter: drop-shadow(0 0 var(--glow-blur-radius) var(--player-selectable));
 }
 
 .player.guide-selected circle {
   stroke: var(--guide-selected);
   stroke-width: 8;
-  filter: drop-shadow(0 0 6px var(--guide-selected));
+  filter: drop-shadow(0 0 var(--glow-blur-radius) var(--guide-selected));
 }
 
 .player.guide-selected.locked circle {
-  animation: lock-pulse 1.2s ease-in-out infinite;
+  animation: lock-pulse var(--pulse-duration) ease-in-out infinite;
 }
 
 @keyframes lock-pulse {
   0%, 100% {
     stroke-opacity: 1;
-    filter: drop-shadow(0 0 6px #ffffff);
+    filter: drop-shadow(0 0 var(--glow-blur-radius) #ffffff);
   }
   50% {
     stroke-opacity: 0.4;
-    filter: drop-shadow(0 0 14px #ffffff);
+    filter: drop-shadow(0 0 var(--pulse-max-blur-radius) #ffffff);
   }
 }
 
@@ -457,8 +479,8 @@ select {
   stroke-width: 1;
   text-anchor: middle;
   dominant-baseline: central;
-  font-family: Verdana, Arial, sans-serif;
+  font-family: var(--diagram-font-family);
   font-weight: bold;
-  font-size: 34px;
+  font-size: var(--player-label-size);
   pointer-events: none;
 }

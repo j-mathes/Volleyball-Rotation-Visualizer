@@ -77,6 +77,31 @@
       </div>
 
       <div class="panel-section">
+        <h2>Font</h2>
+        <p class="hint">Customize the font family and text sizes used for
+          player labels, the BENCH label, and the "R#" rotation tracker.
+          Saved fonts apply next time the visualizer page loads.</p>
+        <div id="fontSettingsFields" class="color-form"></div>
+        <div class="button-row">
+          <button type="button" id="saveFontSettings" class="full-width">Save</button>
+          <button type="button" id="resetFontSettings" class="full-width">Reset to Defaults</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Glow &amp; Pulse Effects</h2>
+        <p class="hint">Customize the glow blur radius for
+          selectable/selected player highlights, and the pulse animation
+          shown while a selection is locked. Saved effects apply next time
+          the visualizer page loads.</p>
+        <form id="effectSettingsForm" class="color-form"></form>
+        <div class="button-row">
+          <button type="submit" form="effectSettingsForm" class="full-width">Save</button>
+          <button type="button" id="resetEffectSettings" class="full-width">Reset to Defaults</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
         <h2>Saved Court Setups</h2>
         <p class="hint">Save the current on-court arrangement from the
           "Court Setups" section of the visualizer, then load, export, or

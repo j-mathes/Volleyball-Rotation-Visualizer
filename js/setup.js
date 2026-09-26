@@ -3,10 +3,14 @@ import { getPlayerLabels, savePlayerLabels, resetPlayerLabels } from './playerLa
 import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber, getFolderNames, setSetupFolder, renameFolder } from './courtSetups.js';
 import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS } from './colors.js';
 import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings, LINE_SETTING_LABELS } from './lineSettings.js';
+import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings, DEFAULT_FONT_SETTINGS, FONT_SETTING_LABELS } from './fontSettings.js';
+import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 
 applyColors();
 applyLineSettings();
+applyFontSettings();
+applyEffectSettings();
 
 const form = document.getElementById('playerLabelForm');
 const resetBtn = document.getElementById('resetPlayerLabels');
@@ -17,6 +21,11 @@ const colorForm = document.getElementById('colorForm');
 const resetColorsBtn = document.getElementById('resetColors');
 const lineSettingsForm = document.getElementById('lineSettingsForm');
 const resetLineSettingsBtn = document.getElementById('resetLineSettings');
+const fontSettingsFieldsEl = document.getElementById('fontSettingsFields');
+const saveFontSettingsBtn = document.getElementById('saveFontSettings');
+const resetFontSettingsBtn = document.getElementById('resetFontSettings');
+const effectSettingsForm = document.getElementById('effectSettingsForm');
+const resetEffectSettingsBtn = document.getElementById('resetEffectSettings');
 const playlistListEl = document.getElementById('playlistList');
 const addToPlaylistSelect = document.getElementById('addToPlaylistSelect');
 const addToPlaylistBtn = document.getElementById('addToPlaylistBtn');
@@ -338,6 +347,106 @@ resetLineSettingsBtn.addEventListener('click', () => {
 });
 
 renderLineSettingsForm();
+
+function renderFontSettingsFields() {
+  const settings = getFontSettings();
+  fontSettingsFieldsEl.innerHTML = '';
+
+  const familyRow = document.createElement('label');
+  familyRow.className = 'line-setting-row font-family-row';
+  const familyLabel = document.createElement('span');
+  familyLabel.textContent = FONT_SETTING_LABELS.fontFamily;
+  familyRow.appendChild(familyLabel);
+  const familyInput = document.createElement('input');
+  familyInput.type = 'text';
+  familyInput.name = 'fontFamily';
+  familyInput.value = settings.fontFamily;
+  familyRow.appendChild(familyInput);
+  fontSettingsFieldsEl.appendChild(familyRow);
+
+  for (const name of ['playerLabelSize', 'benchLabelSize', 'rotationTrackerSize']) {
+    const row = document.createElement('label');
+    row.className = 'line-setting-row';
+
+    const labelText = document.createElement('span');
+    labelText.textContent = FONT_SETTING_LABELS[name];
+    row.appendChild(labelText);
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.name = name;
+    input.min = 8;
+    input.max = 100;
+    input.value = settings[name];
+    row.appendChild(input);
+
+    fontSettingsFieldsEl.appendChild(row);
+  }
+}
+
+saveFontSettingsBtn.addEventListener('click', () => {
+  const current = getFontSettings();
+  const fontFamily = fontSettingsFieldsEl.querySelector('[name="fontFamily"]').value.trim() || DEFAULT_FONT_SETTINGS.fontFamily;
+  const settings = { fontFamily };
+  for (const name of ['playerLabelSize', 'benchLabelSize', 'rotationTrackerSize']) {
+    const value = Number(fontSettingsFieldsEl.querySelector(`[name="${name}"]`).value);
+    settings[name] = Number.isFinite(value) && value > 0 ? value : current[name];
+  }
+  saveFontSettings(settings);
+  applyFontSettings();
+  renderFontSettingsFields();
+});
+
+resetFontSettingsBtn.addEventListener('click', () => {
+  resetFontSettings();
+  applyFontSettings();
+  renderFontSettingsFields();
+});
+
+renderFontSettingsFields();
+
+function renderEffectSettingsForm() {
+  const settings = getEffectSettings();
+  effectSettingsForm.innerHTML = '';
+  for (const name of Object.keys(EFFECT_SETTING_LABELS)) {
+    const row = document.createElement('label');
+    row.className = 'line-setting-row';
+
+    const labelText = document.createElement('span');
+    labelText.textContent = EFFECT_SETTING_LABELS[name];
+    row.appendChild(labelText);
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.name = name;
+    input.min = 0;
+    input.value = settings[name];
+    row.appendChild(input);
+
+    effectSettingsForm.appendChild(row);
+  }
+}
+
+effectSettingsForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const current = getEffectSettings();
+  const settings = {};
+  for (const name of Object.keys(EFFECT_SETTING_LABELS)) {
+    const value = Number(effectSettingsForm.elements.namedItem(name).value);
+    settings[name] = Number.isFinite(value) && value >= 0 ? value : current[name];
+  }
+  saveEffectSettings(settings);
+  applyEffectSettings();
+  renderEffectSettingsForm();
+});
+
+resetEffectSettingsBtn.addEventListener('click', () => {
+  resetEffectSettings();
+  applyEffectSettings();
+  renderEffectSettingsForm();
+});
+
+renderEffectSettingsForm();
 
 function renderPlaylist() {
   const setups = getSavedSetups();
