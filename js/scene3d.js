@@ -1,11 +1,18 @@
-// Phase 2.1 — Three.js scene foundation: court plane, lighting, camera.
-// Loaded via a CDN ES module URL (no bundler/build step, consistent with
-// the rest of this project) from scene3d.html. Not yet wired into the 2D
-// app's view-angle toggle - that's Phase 2.6, once enough of the 3D scene
-// exists to be a real 4th `viewMode` option.
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS } from './config.js';
+// Phase 2.1-2.4 — Three.js scene: court plane, lighting, camera, draggable
+// player pucks, and overlap-driven guide/violation/link lines. Three.js
+// (core + the addons/lines "fat line" module) is loaded from a CDN via
+// scene3d.html's import map (no bundler/build step, consistent with the
+// rest of this project) - the addons resolve their own internal `import
+// ... from 'three'` this way too, which a plain CDN URL import can't do.
+// Not yet wired into the 2D app's view-angle toggle - that's Phase 2.6,
+// once enough of the 3D scene exists to be a real 4th `viewMode` option.
+import * as THREE from 'three';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS, BACK_ROW } from './config.js';
 import { PLAYER_RADIUS } from './player.js';
+import { checkOverlap } from './overlap.js';
 import { applyColors } from './colors.js';
 import { getBenchSide3D } from './benchSideSettings.js';
 
@@ -131,13 +138,22 @@ const PUCK_HEIGHT = 20;
 const playerFill = cssColor('--player-fill', '#efa581');
 const liberoFill = cssColor('--libero-fill', '#efa581');
 const playerOutline = cssColor('--player-outline', '#f5f5f5');
+const violationFill = cssColor('--player-overlap', '#e74c3c');
+const selectedOutline = cssColor('--guide-selected', '#3498db');
+// Matches the 2D renderer's `.guide-related` CSS rule - a hardcoded
+// black outline (not a customizable CSS var there either).
+const guideRelatedOutline = '#000000';
 
 // Each entry's `.parent` is the group raycasting/dragging moves as a unit,
 // so the fill and outline meshes always stay aligned to each other.
+// `zone` (1-6) is set for on-court pucks only - it's what ties a puck to
+// overlap.js's zone-keyed positions, and is null for the (not zone-
+// checked) benched Libero puck.
 const draggablePlayers = [];
-function createPlayerPuck(x, z, fillColor) {
+function createPlayerPuck(x, z, fillColor, zone = null) {
   const group = new THREE.Group();
   group.position.set(x, PUCK_HEIGHT / 2, z);
+  group.userData.zone = zone;
 
   const outline = new THREE.Mesh(
     new THREE.CylinderGeometry(PLAYER_RADIUS + 4, PLAYER_RADIUS + 4, PUCK_HEIGHT * 0.8, 32),
@@ -145,32 +161,183 @@ function createPlayerPuck(x, z, fillColor) {
   );
   outline.position.y = -1;
   group.add(outline);
+  group.userData.outline = outline;
 
   const fill = new THREE.Mesh(
     new THREE.CylinderGeometry(PLAYER_RADIUS, PLAYER_RADIUS, PUCK_HEIGHT, 32),
     new THREE.MeshStandardMaterial({ color: fillColor }),
   );
   group.add(fill);
+  group.userData.fill = fill;
+  group.userData.baseFillColor = fillColor;
 
   scene.add(group);
   draggablePlayers.push(group);
   return group;
 }
 
-for (const pos of Object.values(ZONE_POSITIONS)) {
-  createPlayerPuck(pos.x, pos.y, playerFill);
+for (const [zone, pos] of Object.entries(ZONE_POSITIONS)) {
+  createPlayerPuck(pos.x, pos.y, playerFill, Number(zone));
 }
 createPlayerPuck(benchX, COURT_SIZE / 2, liberoFill);
+
+// Guide/violation/link lines (Phase 2.4) - reuses overlap.js's zone-based
+// rule checker (identical logic to the 2D renderer) fed with each on-court
+// puck's live (x, z) position, and draws the results as "fat" lines via
+// the Line2/LineGeometry/LineMaterial addon, since regular THREE.Line
+// ignores `linewidth` on most GPUs/browsers (capped at ~1px) - the same
+// limitation that motivated the net/court-line planes above, but dashed
+// lines specifically need this addon's LineMaterial (`dashed: true`)
+// rather than another plane. `worldUnits: true` makes `linewidth` scale
+// with the court instead of staying a fixed pixel size on screen.
+const linkColor = cssColor('--link-line', '#16a34a');
+const guideColor = cssColor('--guide-line', '#000000');
+const violationColor = cssColor('--player-overlap', '#e74c3c');
+const overlayLines = [];
+
+function clearOverlayLines() {
+  for (const line of overlayLines) {
+    scene.remove(line);
+    line.geometry.dispose();
+    line.material.dispose();
+  }
+  overlayLines.length = 0;
+}
+
+function addFatLine(points, color, { dashed = false, linewidth = 8 } = {}) {
+  const geometry = new LineGeometry();
+  geometry.setPositions(points.flatMap((p) => [p.x, p.y, p.z]));
+  const material = new LineMaterial({ color, linewidth, dashed, dashSize: 24, gapSize: 16, worldUnits: true });
+  material.resolution.set(renderer.domElement.width, renderer.domElement.height);
+  const line = new Line2(geometry, material);
+  line.computeLineDistances();
+  scene.add(line);
+  overlayLines.push(line);
+}
+
+// On-court pucks only (the benched Libero's `userData.zone` is null).
+function currentPositionsByZone() {
+  const positions = {};
+  for (const group of draggablePlayers) {
+    if (group.userData.zone) {
+      positions[group.userData.zone] = { x: group.position.x, y: group.position.z, role: `Z${group.userData.zone}` };
+    }
+  }
+  return positions;
+}
+
+// Ported from the 2D renderer's drawSeparatorLine anchor logic: anchor on
+// whichever of the pair ISN'T the selected player (so previewing a
+// selection always measures against the other, stationary-feeling side),
+// falling back to whichever player is closer to its own zone's base
+// position when neither is selected.
+function boundaryAnchor(positions, zoneA, zoneB, axis, selectedZone) {
+  let anchorIsA;
+  if (selectedZone === zoneA) {
+    anchorIsA = false;
+  } else if (selectedZone === zoneB) {
+    anchorIsA = true;
+  } else {
+    const displacement = (zone) => {
+      const pos = positions[zone];
+      const base = ZONE_POSITIONS[zone];
+      return (pos.x - base.x) ** 2 + (pos.y - base.y) ** 2;
+    };
+    anchorIsA = displacement(zoneA) <= displacement(zoneB);
+  }
+  const posA = positions[zoneA];
+  const posB = positions[zoneB];
+  return axis === 'horizontal'
+    ? (anchorIsA ? posA.x - PLAYER_RADIUS : posB.x + PLAYER_RADIUS)
+    : (anchorIsA ? posA.y - PLAYER_RADIUS : posB.y + PLAYER_RADIUS);
+}
+
+// A boundary line spans the full court along the OPPOSITE axis from the
+// one it's constraining - e.g. a left/right ("horizontal") fault is drawn
+// as a line running front-to-back at a fixed x.
+function boundaryLinePoints(axis, anchor) {
+  return axis === 'horizontal'
+    ? [new THREE.Vector3(anchor, lineY, 0), new THREE.Vector3(anchor, lineY, COURT_SIZE)]
+    : [new THREE.Vector3(0, lineY, anchor), new THREE.Vector3(COURT_SIZE, lineY, anchor)];
+}
+
+let selectedGroup = null;
+
+// Recomputes overlap status from the pucks' current positions and redraws
+// every guide/violation/link line, plus tints the affected pucks (red
+// fill for a violation, blue outline for the current selection) - called
+// after every drag move and every selection change, matching the 2D
+// renderer's "always live" overlap feedback. `selectedGroup` (not just a
+// zone number) is what's tracked, so the zone-less benched Libero can
+// still be selected/highlighted even though it never has guide/link
+// lines drawn for it (it isn't part of the on-court zone checks).
+function refreshOverlayLines() {
+  clearOverlayLines();
+  const positions = currentPositionsByZone();
+  const results = checkOverlap(positions);
+  const violatingZones = new Set();
+  const relatedZones = new Set();
+  const selectedZone = selectedGroup ? selectedGroup.userData.zone : null;
+
+  for (const result of results) {
+    if (!result.ok) {
+      violatingZones.add(result.zoneA);
+      violatingZones.add(result.zoneB);
+      const anchor = boundaryAnchor(positions, result.zoneA, result.zoneB, result.axis, selectedZone);
+      addFatLine(boundaryLinePoints(result.axis, anchor), violationColor, { dashed: true, linewidth: 10 });
+    }
+  }
+
+  if (selectedZone) {
+    for (const result of results) {
+      if (result.ok && (result.zoneA === selectedZone || result.zoneB === selectedZone)) {
+        const anchor = boundaryAnchor(positions, result.zoneA, result.zoneB, result.axis, selectedZone);
+        addFatLine(boundaryLinePoints(result.axis, anchor), guideColor, { dashed: true, linewidth: 6 });
+        const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
+        relatedZones.add(neighborZone);
+      }
+      if (result.zoneA === selectedZone || result.zoneB === selectedZone) {
+        const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
+        const a = positions[selectedZone];
+        const b = positions[neighborZone];
+        addFatLine(
+          [new THREE.Vector3(a.x, PUCK_HEIGHT / 2, a.y), new THREE.Vector3(b.x, PUCK_HEIGHT / 2, b.y)],
+          linkColor,
+          { dashed: BACK_ROW.includes(neighborZone), linewidth: 6 },
+        );
+      }
+    }
+  }
+
+  for (const group of draggablePlayers) {
+    if (group.userData.zone !== null) {
+      group.userData.fill.material.color.set(violatingZones.has(group.userData.zone) ? violationColor : group.userData.baseFillColor);
+    }
+    let outlineColor = playerOutline;
+    if (group === selectedGroup) {
+      outlineColor = selectedOutline;
+    } else if (relatedZones.has(group.userData.zone)) {
+      outlineColor = guideRelatedOutline;
+    }
+    group.userData.outline.material.color.set(outlineColor);
+  }
+}
+refreshOverlayLines();
 
 // Drag via raycasting: pointerdown hit-tests the player pucks; while
 // dragging, pointermove re-casts against a fixed horizontal plane at the
 // pucks' resting height to find where to move the grabbed one, regardless
-// of which mesh (court/ground/bench) is actually under the cursor.
+// of which mesh (court/ground/bench) is actually under the cursor. A
+// press-and-release without much movement is treated as a tap instead of
+// a drag, toggling the puck's selection (for the guide/link lines above)
+// rather than moving it.
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
 const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(PUCK_HEIGHT / 2));
 const dragPoint = new THREE.Vector3();
+const TAP_MOVE_THRESHOLD = 5;
 let draggingGroup = null;
+let pointerDownAt = null;
 
 function updatePointerNDC(event) {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -188,6 +355,7 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     return;
   }
   draggingGroup = hit.object.parent;
+  pointerDownAt = { x: event.clientX, y: event.clientY };
   renderer.domElement.setPointerCapture(event.pointerId);
   renderer.domElement.style.cursor = 'grabbing';
 });
@@ -203,6 +371,7 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     // Clamped to z >= 0 so a player can never be dragged across the net
     // into the (purely visual, no-players-allowed) opponent's half.
     draggingGroup.position.z = Math.max(dragPoint.z, 0);
+    refreshOverlayLines();
   }
 });
 
@@ -210,6 +379,14 @@ function endDrag(event) {
   if (!draggingGroup) {
     return;
   }
+  // Matches the 2D renderer: releasing over a player selects it regardless
+  // of whether it was a tap or a drag (a native 'click' event fires after
+  // a 2D SVG drag release too) - a tap on the ALREADY-selected puck is the
+  // one case that toggles it back off instead.
+  const moved = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
+  const wasTap = moved <= TAP_MOVE_THRESHOLD;
+  selectedGroup = wasTap && selectedGroup === draggingGroup ? null : draggingGroup;
+  refreshOverlayLines();
   renderer.domElement.releasePointerCapture(event.pointerId);
   renderer.domElement.style.cursor = '';
   draggingGroup = null;
@@ -228,3 +405,4 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
+

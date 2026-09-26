@@ -71,7 +71,7 @@ rework when the renderer changes later.
       setting.
 - [x] 2.3 Player representation (disc/cylinder or sprite) + drag via
       raycasting onto the court plane.
-- [ ] 2.4 Guide/violation/link lines as 3D geometry — "fat line" technique
+- [x] 2.4 Guide/violation/link lines as 3D geometry — "fat line" technique
       for thickness, `LineDashedMaterial` for dashed styles.
 - [ ] 2.5 Billboarded text labels via `CSS2DRenderer`.
 - [ ] 2.6 Camera controls (orbit/tilt).
