@@ -40,16 +40,22 @@ const sun = new THREE.DirectionalLight(0xffffff, 0.8);
 sun.position.set(COURT_SIZE * 0.3, COURT_SIZE, COURT_SIZE * 0.2);
 scene.add(sun);
 
-// Court plane - Three.js's PlaneGeometry defaults to the XY plane, so it's
-// rotated flat onto the XZ plane (Y is "up"). The 2D app's (x, y) maps to
-// this plane's (x, z); reusing COURT_SIZE keeps both renderers' court
-// footprints numerically identical.
+// Court plane - a true full court (9m x 18m in real dimensions), unlike
+// the 2D renderer which only shows one team's half. Three.js's
+// PlaneGeometry defaults to the XY plane, so it's rotated flat onto the
+// XZ plane (Y is "up"). The 2D app's (x, y) maps to this plane's (x, z);
+// reusing COURT_SIZE for the (square) half-court depth keeps both
+// renderers' footprints numerically consistent. The net sits at z=0;
+// OUR team's half (where ZONE_POSITIONS/players live) is z:[0,COURT_SIZE];
+// the opponent's half mirrors it at z:[-COURT_SIZE,0] and is purely
+// visual - no players are ever placed or draggable there (see the drag
+// clamp below).
 const court = new THREE.Mesh(
-  new THREE.PlaneGeometry(COURT_SIZE, COURT_SIZE),
+  new THREE.PlaneGeometry(COURT_SIZE, COURT_SIZE * 2),
   new THREE.MeshStandardMaterial({ color: cssColor('--court-fill', '#e2836b') }),
 );
 court.rotation.x = -Math.PI / 2;
-court.position.set(COURT_SIZE / 2, 0, COURT_SIZE / 2);
+court.position.set(COURT_SIZE / 2, 0, 0);
 scene.add(court);
 
 // Ground extending past the court's edges, matching the 2D background.
@@ -58,13 +64,15 @@ const ground = new THREE.Mesh(
   new THREE.MeshStandardMaterial({ color: cssColor('--court-bg', '#189a94') }),
 );
 ground.rotation.x = -Math.PI / 2;
-ground.position.set(COURT_SIZE / 2, -1, COURT_SIZE / 2);
+ground.position.set(COURT_SIZE / 2, -1, 0);
 scene.add(ground);
 
-// Boundary, center, and attack lines, raised slightly above the court
-// plane to avoid z-fighting - just enough static geometry to make the
-// plane read as an actual court; the dynamic guide/violation/link lines
-// come later (Phase 2.4).
+// Boundary and attack lines, raised slightly above the court plane to
+// avoid z-fighting - just enough static geometry to make the plane read
+// as an actual court; the dynamic guide/violation/link lines come later
+// (Phase 2.4). Both attack lines mirror around the net (z=0), 1/3 of a
+// half-court's depth from it on each side - the real layout, unlike an
+// earlier draft that mistakenly mirrored around each half's own center.
 const lineMaterial = new THREE.LineBasicMaterial({ color: cssColor('--line-colour', '#ffffff') });
 const lineY = 0.5;
 function addCourtLine(x1, z1, x2, z2) {
@@ -74,19 +82,32 @@ function addCourtLine(x1, z1, x2, z2) {
   ]);
   scene.add(new THREE.Line(geometry, lineMaterial));
 }
-addCourtLine(0, 0, COURT_SIZE, 0);
-addCourtLine(0, COURT_SIZE, COURT_SIZE, COURT_SIZE);
-addCourtLine(0, 0, 0, COURT_SIZE);
-addCourtLine(COURT_SIZE, 0, COURT_SIZE, COURT_SIZE);
-addCourtLine(0, COURT_SIZE / 2, COURT_SIZE, COURT_SIZE / 2); // center (net) line
-addCourtLine(0, ATTACK_LINE_Y, COURT_SIZE, ATTACK_LINE_Y);
-addCourtLine(0, COURT_SIZE - ATTACK_LINE_Y, COURT_SIZE, COURT_SIZE - ATTACK_LINE_Y);
+addCourtLine(0, -COURT_SIZE, COURT_SIZE, -COURT_SIZE); // opponent's back line
+addCourtLine(0, COURT_SIZE, COURT_SIZE, COURT_SIZE); // our back line
+addCourtLine(0, -COURT_SIZE, 0, COURT_SIZE); // left sideline
+addCourtLine(COURT_SIZE, -COURT_SIZE, COURT_SIZE, COURT_SIZE); // right sideline
+addCourtLine(0, ATTACK_LINE_Y, COURT_SIZE, ATTACK_LINE_Y); // our attack line
+addCourtLine(0, -ATTACK_LINE_Y, COURT_SIZE, -ATTACK_LINE_Y); // opponent's attack line
 
-// Bench/Libero substitution area - a tinted strip running the full length
-// of the court, immediately beside it on whichever side the "3D Preview -
-// Bench Side" setup.html setting picks (see benchSideSettings.js). Reuses
-// the same customizable --bench-fill/--bench-fill-opacity as the 2D
-// bench panel. No player/Libero occupies it yet - that's Phase 2.3.
+// Net line at z=0, thicker and wider than the boundary lines (extending
+// past both sides) - a flat plane rather than another THREE.Line, since
+// WebGL line width is capped at ~1px on most GPUs/browsers regardless of
+// `linewidth`, unlike SVG's stroke-width. No actual net mesh (a vertical
+// net plane) yet - just this ground-level marking, matching what court.js
+// draws in 2D.
+const net = new THREE.Mesh(
+  new THREE.PlaneGeometry(COURT_SIZE + 80, 10),
+  new THREE.MeshBasicMaterial({ color: cssColor('--line-colour', '#ffffff') }),
+);
+net.rotation.x = -Math.PI / 2;
+net.position.set(COURT_SIZE / 2, lineY, 0);
+scene.add(net);
+
+// Bench/Libero substitution area - a tinted strip running the depth of
+// OUR half only, immediately beside it on whichever side the "3D Preview
+// - Bench Side" setup.html setting picks (see benchSideSettings.js).
+// Reuses the same customizable --bench-fill/--bench-fill-opacity as the
+// 2D bench panel.
 const benchSide = getBenchSide3D();
 const benchX = benchSide === 'left' ? -BENCH_WIDTH / 2 : COURT_SIZE + BENCH_WIDTH / 2;
 const bench = new THREE.Mesh(
@@ -179,7 +200,9 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   raycaster.setFromCamera(pointerNDC, camera);
   if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
     draggingGroup.position.x = dragPoint.x;
-    draggingGroup.position.z = dragPoint.z;
+    // Clamped to z >= 0 so a player can never be dragged across the net
+    // into the (purely visual, no-players-allowed) opponent's half.
+    draggingGroup.position.z = Math.max(dragPoint.z, 0);
   }
 });
 
