@@ -21,6 +21,7 @@ import { getFontSettings } from './fontSettings.js';
 import { getEffectSettings } from './effectSettings.js';
 import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
+import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { RotationState } from './rotation.js';
 
 applyColors();
@@ -119,10 +120,10 @@ function resetToDefaultView() {
   flyCameraTo(DEFAULT_CAMERA_POSITION, DEFAULT_CONTROLS_TARGET);
 }
 
-// Converts a preset view direction (e.g. "top-front-right" = (1,1,1)) into
-// a camera position at the current orbit distance from `target`, clamped
-// to the same polar-angle limits normal dragging respects (so, e.g.,
-// "Bottom" snaps to the lowest angle the ground plane still allows,
+// Converts a preset view direction (e.g. "top-endline-right" = (1,1,1))
+// into a camera position at the current orbit distance from `target`,
+// clamped to the same polar-angle limits normal dragging respects (so,
+// e.g., "Bottom" snaps to the lowest angle the ground plane still allows,
 // rather than an unreachable literal underside view).
 function directionToCameraPosition(direction, target, distance) {
   const spherical = new THREE.Spherical().setFromVector3(direction.clone().normalize());
@@ -162,13 +163,49 @@ function zoomExtents() {
 // the standard CSS cube recipe); edges/corners are just small markers
 // positioned by a plain `translate3d` in the cube's own (unrotated) local
 // space - no extra rotation needed since they aren't flush panels.
+//
+// The Z-axis faces are labeled ENDLINE/NET rather than a generic Front/
+// Back: which side of the net counts as "front" is inherently ambiguous
+// (it flips depending which team you consider yourself on, and the net
+// itself has no front/back at all) - ENDLINE (our team's fixed back
+// line) and NET (the fixed z=0 plane) are unambiguous world landmarks
+// that stay correct no matter what's added later. When a net mesh or
+// referee-stand props eventually get modeled, this ViewCube should stay a
+// purely world-axis-relative navigation aid (Top/Bottom/Endline/Net/
+// Left/Right) - any "view from a specific prop's own facing direction"
+// (e.g. a future "View from 1st Referee" preset) belongs in a separate,
+// object-specific camera preset, not a repurposing of these generic axis
+// labels.
+// The ViewCube's actual pixel sizes live as CSS custom properties on
+// `#viewCubeWrap` (defaults in scene3d.html's `<style>`), overridden here
+// per the setup.html "3D Preview - View Cube Size" setting - every face/
+// hotspot transform below references these vars (`var(--vc-half)` etc.)
+// instead of a hardcoded number, so switching sizes is just a handful of
+// custom-property writes, no DOM/transform regeneration needed.
+const VIEW_CUBE_SIZE_PRESETS = {
+  small: { sceneSize: 100, perspective: 500, half: 30, faceFontRem: 0.6, edgeHalf: 8, cornerHalf: 6 },
+  medium: { sceneSize: 150, perspective: 750, half: 45, faceFontRem: 0.75, edgeHalf: 10, cornerHalf: 8 },
+  large: { sceneSize: 200, perspective: 1000, half: 60, faceFontRem: 0.9, edgeHalf: 13, cornerHalf: 10 },
+};
+const viewCubeWrapEl = document.getElementById('viewCubeWrap');
+const viewCubeSizePreset = VIEW_CUBE_SIZE_PRESETS[getViewCubeSize3D()];
+viewCubeWrapEl.style.setProperty('--vc-scene-size', `${viewCubeSizePreset.sceneSize}px`);
+viewCubeWrapEl.style.setProperty('--vc-perspective', `${viewCubeSizePreset.perspective}px`);
+viewCubeWrapEl.style.setProperty('--vc-half', `${viewCubeSizePreset.half}px`);
+viewCubeWrapEl.style.setProperty('--vc-face-size', `${viewCubeSizePreset.half * 2}px`);
+viewCubeWrapEl.style.setProperty('--vc-face-font-size', `${viewCubeSizePreset.faceFontRem}rem`);
+viewCubeWrapEl.style.setProperty('--vc-edge-half', `${viewCubeSizePreset.edgeHalf}px`);
+viewCubeWrapEl.style.setProperty('--vc-edge-size', `${viewCubeSizePreset.edgeHalf * 2}px`);
+viewCubeWrapEl.style.setProperty('--vc-corner-half', `${viewCubeSizePreset.cornerHalf}px`);
+viewCubeWrapEl.style.setProperty('--vc-corner-size', `${viewCubeSizePreset.cornerHalf * 2}px`);
+
 const VIEW_CUBE_FACES = [
-  { label: 'TOP', dir: [0, 1, 0], transform: 'rotateX(90deg) translateZ(30px)' },
-  { label: 'BOTTOM', dir: [0, -1, 0], transform: 'rotateX(-90deg) translateZ(30px)' },
-  { label: 'FRONT', dir: [0, 0, 1], transform: 'translateZ(30px)' },
-  { label: 'BACK', dir: [0, 0, -1], transform: 'rotateY(180deg) translateZ(30px)' },
-  { label: 'LEFT', dir: [-1, 0, 0], transform: 'rotateY(-90deg) translateZ(30px)' },
-  { label: 'RIGHT', dir: [1, 0, 0], transform: 'rotateY(90deg) translateZ(30px)' },
+  { label: 'TOP', dir: [0, 1, 0], transform: 'rotateX(90deg) translateZ(var(--vc-half))' },
+  { label: 'BOTTOM', dir: [0, -1, 0], transform: 'rotateX(-90deg) translateZ(var(--vc-half))' },
+  { label: 'ENDLINE', dir: [0, 0, 1], transform: 'translateZ(var(--vc-half))' },
+  { label: 'NET', dir: [0, 0, -1], transform: 'rotateY(180deg) translateZ(var(--vc-half))' },
+  { label: 'LEFT', dir: [-1, 0, 0], transform: 'rotateY(-90deg) translateZ(var(--vc-half))' },
+  { label: 'RIGHT', dir: [1, 0, 0], transform: 'rotateY(90deg) translateZ(var(--vc-half))' },
 ];
 // Edges: exactly one axis is zero. Corners: none are zero.
 const VIEW_CUBE_EDGES_AND_CORNERS = [];
@@ -181,6 +218,19 @@ for (const x of [-1, 0, 1]) {
       }
     }
   }
+}
+// Same 6-face recipe `VIEW_CUBE_FACES` uses above, just parameterized by
+// which CSS custom property holds the half-size - shared by the small
+// edge/corner "mini cubes" below.
+function cubeFaceTransforms(halfSizeVar) {
+  return [
+    `translateZ(var(${halfSizeVar}))`,
+    `rotateY(180deg) translateZ(var(${halfSizeVar}))`,
+    `rotateY(90deg) translateZ(var(${halfSizeVar}))`,
+    `rotateY(-90deg) translateZ(var(${halfSizeVar}))`,
+    `rotateX(90deg) translateZ(var(${halfSizeVar}))`,
+    `rotateX(-90deg) translateZ(var(${halfSizeVar}))`,
+  ];
 }
 
 const viewCubeEl = document.getElementById('viewCube3D');
@@ -195,11 +245,21 @@ for (const { label, dir, transform } of VIEW_CUBE_FACES) {
 for (const { dir, kind } of VIEW_CUBE_EDGES_AND_CORNERS) {
   const [x, y, z] = dir;
   const hotspot = document.createElement('div');
-  hotspot.className = kind;
+  hotspot.className = `vc-hotspot ${kind}`;
   // CSS Y grows downward, so the vertical offset is negated to keep "up"
   // (dir y = +1, i.e. TOP) visually above center.
-  hotspot.style.transform = `translate3d(${x * 30}px, ${y * -30}px, ${z * 30}px)`;
+  hotspot.style.transform = `translate3d(calc(${x} * var(--vc-half)), calc(${-y} * var(--vc-half)), calc(${z} * var(--vc-half)))`;
   hotspot.dataset.dir = dir.join(',');
+  // Real 3D boxes (6 tiny faces each), not flat squares - a flat marker
+  // rotates edge-on and nearly disappears when the cube is viewed close
+  // to face-on from that side, making it hard to click.
+  const halfSizeVar = kind === 'vc-edge' ? '--vc-edge-half' : '--vc-corner-half';
+  for (const faceTransform of cubeFaceTransforms(halfSizeVar)) {
+    const hotspotFace = document.createElement('div');
+    hotspotFace.className = 'vc-hotspot-face';
+    hotspotFace.style.transform = faceTransform;
+    hotspot.appendChild(hotspotFace);
+  }
   viewCubeEl.appendChild(hotspot);
 }
 viewCubeEl.querySelectorAll('[data-dir]').forEach((el) => {
@@ -245,7 +305,7 @@ document.addEventListener('click', (event) => {
 });
 
 // Keyboard shortcuts (Phase 2.12), modeled on 3ds Max's view navigation:
-// P/Home (perspective/home), T/F/L (top/front/left - the 3 most useful
+// P/Home (perspective/home), T/F/L (top/endline/left - the 3 most useful
 // preset angles for a court), V (view picker menu), Z (zoom extents).
 // Ignored while a modifier key is held (so browser shortcuts like Ctrl+F
 // still work) or while a text input has focus (none currently exist on
@@ -267,6 +327,7 @@ window.addEventListener('keydown', (event) => {
       snapToViewDirection(new THREE.Vector3(0, 1, 0));
       break;
     case 'f':
+      // Endline view (our team's fixed back line, looking toward the net).
       snapToViewDirection(new THREE.Vector3(0, 0, 1));
       break;
     case 'l':

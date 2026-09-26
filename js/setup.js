@@ -8,6 +8,7 @@ import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffect
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
 import { getLabelScaleMode3D, saveLabelScaleMode3D } from './labelScaleSettings.js';
+import { getViewCubeSize3D, saveViewCubeSize3D } from './viewCubeSizeSettings.js';
 
 applyColors();
 applyLineSettings();
@@ -703,4 +704,29 @@ labelScale3DFixedBtn.addEventListener('click', () => {
   refreshLabelScale3DButtons();
 });
 refreshLabelScale3DButtons();
+
+const viewCubeSize3DSmallBtn = document.getElementById('viewCubeSize3DSmall');
+const viewCubeSize3DMediumBtn = document.getElementById('viewCubeSize3DMedium');
+const viewCubeSize3DLargeBtn = document.getElementById('viewCubeSize3DLarge');
+
+function refreshViewCubeSize3DButtons() {
+  const size = getViewCubeSize3D();
+  viewCubeSize3DSmallBtn.classList.toggle('active', size === 'small');
+  viewCubeSize3DMediumBtn.classList.toggle('active', size === 'medium');
+  viewCubeSize3DLargeBtn.classList.toggle('active', size === 'large');
+}
+
+viewCubeSize3DSmallBtn.addEventListener('click', () => {
+  saveViewCubeSize3D('small');
+  refreshViewCubeSize3DButtons();
+});
+viewCubeSize3DMediumBtn.addEventListener('click', () => {
+  saveViewCubeSize3D('medium');
+  refreshViewCubeSize3DButtons();
+});
+viewCubeSize3DLargeBtn.addEventListener('click', () => {
+  saveViewCubeSize3D('large');
+  refreshViewCubeSize3DButtons();
+});
+refreshViewCubeSize3DButtons();
 

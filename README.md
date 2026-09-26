@@ -96,6 +96,9 @@ uncluttered. Currently includes:
   [3D Preview](scene3d.html) shrink/grow with camera distance (matching
   the pucks' own perspective scaling, the default) or stay a fixed screen
   size regardless of distance.
+- **3D Preview — View Cube Size** — choose Small/Medium (default)/Large
+  for the ViewCube navigation widget's size in the
+  [3D Preview](scene3d.html) page's viewport corner.
 
 ## Project structure
 
@@ -146,6 +149,8 @@ js/benchSideSettings.js Bench/Libero side persistence for the 3D scene only
                         (shared by scene3d.html/setup.html)
 js/labelScaleSettings.js 3D player-label distance-scaling mode persistence
                         (shared by scene3d.html/setup.html)
+js/viewCubeSizeSettings.js 3D ViewCube widget size persistence (shared by
+                        scene3d.html/setup.html)
 ```
 
 ## Notes on the overlap rules

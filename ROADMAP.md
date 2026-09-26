@@ -123,9 +123,9 @@ rework when the renderer changes later.
             feedback.
       - [x] Home button/icon (plus Home/P keys) resets to the scene's
             original default camera view.
-      - [x] Keyboard shortcuts: P (perspective/home), T (top), F (front),
-            L (left), V (view picker menu of all 6 faces), Z (zoom
-            extents - frames the whole court, or tightly frames the
+      - [x] Keyboard shortcuts: P (perspective/home), T (top), F
+            (endline), L (left), V (view picker menu of all 6 faces), Z
+            (zoom extents - frames the whole court, or tightly frames the
             selected puck if one is selected). (3ds Max's C/object-
             transform-gizmo/shading/grid/snap shortcuts don't apply here -
             no secondary camera object and this isn't a modeling tool.)
@@ -134,6 +134,20 @@ rework when the renderer changes later.
             smoothly re-targets the orbit there, and the target keeps
             tracking it live if it's dragged; deselecting smoothly
             re-targets back to the court center.
+      - [x] The cube's two Z-axis faces are labeled ENDLINE/NET rather
+            than a generic Front/Back - which side of the net counts as
+            "front" is inherently ambiguous (flips depending which team
+            you consider yourself on, and the net itself has no front/
+            back), whereas our team's fixed endline and the fixed net
+            plane (z=0) are unambiguous world landmarks that stay correct
+            regardless of what's added later. Any future "view from a
+            specific prop's own facing" (e.g. a referee stand) belongs in
+            a separate, object-specific camera preset, not a repurposing
+            of this generic world-axis ViewCube.
+      - [x] Edge/corner ViewCube hotspots are small 3D boxes (6 tiny
+            faces each), not flat 2D squares - a flat hotspot rotates
+            edge-on and becomes nearly invisible/unclickable when the
+            cube is viewed close to face-on from that side.
 - [ ] 2.13 Wire the 3D renderer in as the 4th `viewMode` option behind
       the Phase 1 interface. Sub-items to verify while wiring (expected
       to mostly fall out "for free" once the shared app state/rotation
