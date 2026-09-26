@@ -446,8 +446,18 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     // into the (purely visual, no-players-allowed) opponent's half.
     let x = dragPoint.x;
     let z = Math.max(dragPoint.z, 0);
-    if (clampEnabled && draggingGroup.userData.zone !== null) {
-      ({ x, z } = clampToLegalPosition(draggingGroup.userData.zone, x, z, { drawLines: true }));
+    if (draggingGroup.userData.zone !== null) {
+      if (clampEnabled) {
+        ({ x, z } = clampToLegalPosition(draggingGroup.userData.zone, x, z, { drawLines: true }));
+      }
+    } else {
+      // Warns (red tint) if the benched Libero has been dragged onto a
+      // court that already has its full 6 players, so it's never
+      // possible to end up with 7 - matches the 2D renderer's check.
+      // Left as-is (not reset) after the drag ends, same as 2D, since the
+      // puck may still be sitting on the court at that point.
+      const isWithinCourt = x >= 0 && x <= COURT_SIZE && z >= 0 && z <= COURT_SIZE;
+      draggingGroup.userData.fill.material.color.set(isWithinCourt ? violationColor : draggingGroup.userData.baseFillColor);
     }
     draggingGroup.position.x = x;
     draggingGroup.position.z = z;

@@ -83,7 +83,7 @@ rework when the renderer changes later.
       against its current row/column neighbors, same as 2D. Not yet in
       the 3D scene - currently the only drag constraint there is the
       net-crossing clamp (z >= 0).
-- [ ] 2.7 Bench-warning drag feedback — port the 2D app's check that
+- [x] 2.7 Bench-warning drag feedback — port the 2D app's check that
       warns (red tint) when the benched/Libero puck is dragged onto a
       court that already has its full 6 players, so it's never possible
       to end up with 7. Not yet in the 3D scene at all.
