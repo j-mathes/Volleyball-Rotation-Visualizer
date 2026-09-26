@@ -661,6 +661,15 @@ async function switchViewMode(mode) {
     return;
   }
   const state = captureCurrentState();
+  // The bench area's exact layout (position/orientation/shape) is
+  // entirely renderer-specific - 2D's and 3D's bench coordinates aren't
+  // the same coordinate space at all, so a captured bench-area position
+  // from the OLD renderer is meaningless in the NEW one (previously this
+  // carried the stale raw x/y across, silently misplacing the benched
+  // player until its next unrelated reposition - e.g. a rotation - visibly
+  // snapped it into the correct spot). On-court positions don't have this
+  // problem since both renderers share the same ZONE_POSITIONS space.
+  const benchedBeforeSwitch = state.liberoReplacedRole || 'L';
   renderer.destroy?.();
   viewMode = mode;
   saveViewMode(mode);
@@ -668,6 +677,8 @@ async function switchViewMode(mode) {
   renderer = createRendererForMode(mode);
   wireRendererEvents();
   createPlayers();
+  const newBenchPos = benchedBeforeSwitch === 'L' ? renderer.benchPosition() : renderer.benchPositionReplaced();
+  state.positions[benchedBeforeSwitch] = { x: newBenchPos.x, y: newBenchPos.y };
   if (mode === '3d') {
     refreshBenchSide3DButtons();
   } else {

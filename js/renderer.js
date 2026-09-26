@@ -187,6 +187,17 @@ export function createCourtRenderer(svg, initialAngle) {
     });
   }
 
+  // Called by main.js before switching to a different renderer (see
+  // main.js's `switchViewMode`) - without this, a fresh
+  // `createCourtRenderer` call the next time 2D is selected again would
+  // append a whole SECOND viewport/bench-layer/player tree alongside this
+  // one (court.js's `createViewport`/bench-layer helpers just append,
+  // they don't clear first), since hiding the `<svg>` via `display: none`
+  // doesn't remove its existing content.
+  function destroy() {
+    svg.innerHTML = '';
+  }
+
   return {
     get viewAngle() {
       return viewAngle;
@@ -205,5 +216,6 @@ export function createCourtRenderer(svg, initialAngle) {
     moveToBench,
     setViewAngle,
     onBackgroundClick,
+    destroy,
   };
 }
