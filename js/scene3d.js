@@ -14,12 +14,13 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS, INITIAL_ZONE_ROLES, BACK_ROW } from './config.js';
 import { PLAYER_RADIUS } from './player.js';
-import { checkOverlap, getClampBounds } from './overlap.js';
+import { checkOverlap, getClampBounds, summarizeByPlayer } from './overlap.js';
 import { applyColors } from './colors.js';
 import { getLineSettings } from './lineSettings.js';
 import { getFontSettings } from './fontSettings.js';
-import { getBenchSide3D } from './benchSideSettings.js';
+import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
+import { RotationState } from './rotation.js';
 
 applyColors();
 
@@ -152,8 +153,8 @@ scene.add(net);
 // - Bench Side" setup.html setting picks (see benchSideSettings.js).
 // Reuses the same customizable --bench-fill/--bench-fill-opacity as the
 // 2D bench panel.
-const benchSide = getBenchSide3D();
-const benchX = benchSide === 'left' ? -BENCH_WIDTH / 2 : COURT_SIZE + BENCH_WIDTH / 2;
+let benchSide = getBenchSide3D();
+let benchX = benchSide === 'left' ? -BENCH_WIDTH / 2 : COURT_SIZE + BENCH_WIDTH / 2;
 const bench = new THREE.Mesh(
   new THREE.PlaneGeometry(BENCH_WIDTH, COURT_SIZE),
   new THREE.MeshStandardMaterial({
@@ -281,7 +282,7 @@ function currentPositionsByZone() {
   const positions = {};
   for (const group of draggablePlayers) {
     if (group.userData.zone) {
-      positions[group.userData.zone] = { x: group.position.x, y: group.position.z, role: `Z${group.userData.zone}` };
+      positions[group.userData.zone] = { x: group.position.x, y: group.position.z, role: INITIAL_ZONE_ROLES[group.userData.zone] };
     }
   }
   return positions;
@@ -323,6 +324,62 @@ function boundaryLinePoints(axis, anchor) {
 }
 
 let selectedGroup = null;
+// True while the "Show Overlap Guides" / "Show Player Links" panel
+// toggles are on (independently, matching 2D - previously 3D always drew
+// both together whenever a puck was selected). Selecting a puck at all is
+// gated on at least one of these being enabled, same as 2D.
+let guidesEnabled = false;
+let linksEnabled = false;
+// True once a puck's selection has been locked via double-click: other
+// pucks can still be dragged/tapped without changing the selection until
+// unlocked (double-click the locked puck again).
+let selectionLocked = false;
+
+const overlapResultsEl = document.getElementById('overlapResults3D');
+const overlapResultsSummaryEl = document.getElementById('overlapResultsSummary3D');
+
+// Dashboard readout (Phase 2.10) - reuses the same RotationState class
+// the 2D app drives, though nothing rotates it yet (Phase 2.13 wires up
+// real Rotate CW/CCW buttons); shows the correct static R1/server-zone
+// values now and will start reflecting real rotations for free once that
+// lands.
+const rotationState = new RotationState();
+const serverZoneEl = document.getElementById('serverZone3D');
+const rotationNumberEl = document.getElementById('rotationNumber3D');
+function refreshRotationDisplay() {
+  serverZoneEl.textContent = rotationState.roleInZone(1);
+  rotationNumberEl.textContent = `R${rotationState.rotationNumber}`;
+}
+refreshRotationDisplay();
+
+// Mirrors main.js's runOverlapCheck list rendering (one row per on-court
+// player, clockwise from zone 1).
+function renderOverlapResultsList(results, positions) {
+  const summary = summarizeByPlayer(results, positions);
+  overlapResultsEl.innerHTML = '';
+  const violationCount = summary.filter((entry) => !entry.ok).length;
+  overlapResultsSummaryEl.textContent = violationCount === 0
+    ? 'Overlap Results — all legal'
+    : `Overlap Results — ${violationCount} violation${violationCount === 1 ? '' : 's'}`;
+
+  for (const entry of summary) {
+    const item = document.createElement('li');
+    item.className = entry.ok ? 'ok' : 'violation';
+
+    const icon = document.createElement('span');
+    icon.className = `status-icon ${entry.ok ? 'ok' : 'violation'}`;
+    icon.textContent = entry.ok ? '\u2713' : '\u2715';
+    item.appendChild(icon);
+
+    const label = document.createElement('span');
+    label.textContent = entry.ok
+      ? entry.role
+      : `${entry.role} \u2014 ${entry.violatingRoles.join(', ')}`;
+    item.appendChild(label);
+
+    overlapResultsEl.appendChild(item);
+  }
+}
 
 // Recomputes overlap status from the pucks' current positions and redraws
 // every guide/violation/link line, plus tints the affected pucks (red
@@ -349,7 +406,7 @@ function refreshOverlayLines() {
     }
   }
 
-  if (selectedZone) {
+  if (selectedZone && guidesEnabled) {
     for (const result of results) {
       if (result.ok && (result.zoneA === selectedZone || result.zoneB === selectedZone)) {
         const anchor = boundaryAnchor(positions, result.zoneA, result.zoneB, result.axis, selectedZone);
@@ -357,6 +414,11 @@ function refreshOverlayLines() {
         const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
         relatedZones.add(neighborZone);
       }
+    }
+  }
+
+  if (selectedZone && linksEnabled) {
+    for (const result of results) {
       if (result.zoneA === selectedZone || result.zoneB === selectedZone) {
         const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
         const a = positions[selectedZone];
@@ -369,6 +431,8 @@ function refreshOverlayLines() {
       }
     }
   }
+
+  renderOverlapResultsList(results, positions);
 
   for (const group of draggablePlayers) {
     if (group.userData.zone !== null) {
@@ -477,6 +541,100 @@ clampToggleBtn.addEventListener('click', () => {
   }
 });
 
+// "Show Overlap Guides" / "Show Player Links" (Phase 2.10) - independent
+// toggles matching 2D, instead of always drawing both together whenever a
+// puck is selected. Turning both off clears the current selection/lock.
+const guideToggleBtn = document.getElementById('overlapGuideToggle3D');
+const linkToggleBtn = document.getElementById('playerLinkToggle3D');
+guideToggleBtn.addEventListener('click', () => {
+  guidesEnabled = !guidesEnabled;
+  guideToggleBtn.classList.toggle('active', guidesEnabled);
+  if (!guidesEnabled && !linksEnabled) {
+    selectedGroup = null;
+    selectionLocked = false;
+  }
+  refreshOverlayLines();
+});
+linkToggleBtn.addEventListener('click', () => {
+  linksEnabled = !linksEnabled;
+  linkToggleBtn.classList.toggle('active', linksEnabled);
+  if (!guidesEnabled && !linksEnabled) {
+    selectedGroup = null;
+    selectionLocked = false;
+  }
+  refreshOverlayLines();
+});
+
+// Bench Side (Phase 2.10) - surfaces the setup.html-only setting
+// (benchSideSettings.js) directly in the 3D panel too, applying and
+// persisting it immediately instead of only taking effect on next load:
+// moves the bench plane and snaps whichever puck is currently benched
+// (userData.zone === null) to the new side.
+const benchSideLeftBtn = document.getElementById('benchSideLeft3D');
+const benchSideRightBtn = document.getElementById('benchSideRight3D');
+function refreshBenchSideButtons() {
+  benchSideLeftBtn.classList.toggle('active', benchSide === 'left');
+  benchSideRightBtn.classList.toggle('active', benchSide === 'right');
+}
+function setBenchSide(side) {
+  if (side === benchSide) {
+    return;
+  }
+  benchSide = side;
+  saveBenchSide3D(side);
+  benchX = benchSide === 'left' ? -BENCH_WIDTH / 2 : COURT_SIZE + BENCH_WIDTH / 2;
+  bench.position.x = benchX;
+  const benchedGroup = draggablePlayers.find((group) => group.userData.zone === null);
+  if (benchedGroup) {
+    benchedGroup.position.x = benchX;
+    benchedGroup.position.z = COURT_SIZE / 2;
+    benchedGroup.userData.fill.material.color.set(benchedGroup.userData.baseFillColor);
+  }
+  refreshBenchSideButtons();
+  refreshOverlayLines();
+}
+benchSideLeftBtn.addEventListener('click', () => setBenchSide('left'));
+benchSideRightBtn.addEventListener('click', () => setBenchSide('right'));
+refreshBenchSideButtons();
+
+// Floating control panel is draggable via its handle (Phase 2.10) - a
+// plain DOM pointer drag, unrelated to the puck-drag/OrbitControls
+// coordination above since it never touches the WebGL canvas.
+const controlPanel = document.getElementById('controlPanel3D');
+const controlPanelHandle = controlPanel.querySelector('.floating-panel-handle');
+let panelDrag = null;
+controlPanelHandle.addEventListener('pointerdown', (event) => {
+  // Don't start a drag when the collapse button itself was pressed - it's
+  // inside the handle (for a compact single-row layout) but has its own
+  // click behavior.
+  if (event.target.closest('.floating-panel-collapse-btn')) {
+    return;
+  }
+  panelDrag = { startX: event.clientX, startY: event.clientY, originLeft: controlPanel.offsetLeft, originTop: controlPanel.offsetTop };
+  controlPanel.style.right = 'auto';
+  controlPanel.style.bottom = 'auto';
+  controlPanelHandle.setPointerCapture(event.pointerId);
+});
+controlPanelHandle.addEventListener('pointermove', (event) => {
+  if (!panelDrag) {
+    return;
+  }
+  controlPanel.style.left = `${panelDrag.originLeft + (event.clientX - panelDrag.startX)}px`;
+  controlPanel.style.top = `${panelDrag.originTop + (event.clientY - panelDrag.startY)}px`;
+});
+controlPanelHandle.addEventListener('pointerup', (event) => {
+  panelDrag = null;
+  controlPanelHandle.releasePointerCapture(event.pointerId);
+});
+
+// Collapse/minimize the whole panel down to just its handle bar, so it
+// can be tucked out of the way without leaving the page.
+const panelCollapseBtn = document.getElementById('panelCollapseToggle3D');
+panelCollapseBtn.addEventListener('click', () => {
+  const collapsed = controlPanel.classList.toggle('collapsed');
+  panelCollapseBtn.title = collapsed ? 'Expand this panel' : 'Collapse this panel';
+});
+
 // Registered capture-phase so this runs BEFORE OrbitControls' own
 // (bubble-phase) pointerdown listener on the same element - letting us
 // disable orbiting for this gesture before OrbitControls sees it, so
@@ -536,10 +694,15 @@ function endDrag(event) {
   // Matches the 2D renderer: releasing over a player selects it regardless
   // of whether it was a tap or a drag (a native 'click' event fires after
   // a 2D SVG drag release too) - a tap on the ALREADY-selected puck is the
-  // one case that toggles it back off instead.
-  const moved = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
-  const wasTap = moved <= TAP_MOVE_THRESHOLD;
-  selectedGroup = wasTap && selectedGroup === draggingGroup ? null : draggingGroup;
+  // one case that toggles it back off instead. Selection only happens at
+  // all while at least one of the guide/link toggles is on, and never
+  // changes while the selection is locked (2.10) - other pucks can still
+  // be dragged, they just won't steal the selection.
+  if ((guidesEnabled || linksEnabled) && !selectionLocked) {
+    const moved = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
+    const wasTap = moved <= TAP_MOVE_THRESHOLD;
+    selectedGroup = wasTap && selectedGroup === draggingGroup ? null : draggingGroup;
+  }
   refreshOverlayLines();
   renderer.domElement.releasePointerCapture(event.pointerId);
   renderer.domElement.style.cursor = '';
@@ -548,6 +711,30 @@ function endDrag(event) {
 }
 renderer.domElement.addEventListener('pointerup', endDrag);
 renderer.domElement.addEventListener('pointercancel', endDrag);
+
+// Selection lock (Phase 2.10): double-clicking a puck locks the selection
+// onto it (dragging/tapping other pucks no longer changes the selection,
+// though they still move normally) - double-clicking the already-locked
+// puck again unlocks it. Matches 2D's player.onDoubleClick behavior.
+renderer.domElement.addEventListener('dblclick', (event) => {
+  if (!guidesEnabled && !linksEnabled) {
+    return;
+  }
+  updatePointerNDC(event);
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
+  if (!hit) {
+    return;
+  }
+  const group = hit.object.parent;
+  if (selectionLocked && selectedGroup === group) {
+    selectionLocked = false;
+  } else {
+    selectedGroup = group;
+    selectionLocked = true;
+  }
+  refreshOverlayLines();
+});
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;

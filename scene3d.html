@@ -23,17 +23,97 @@
       position: fixed;
       inset: 0;
     }
+    .floating-panel {
+      position: fixed;
+      left: 24px;
+      bottom: 24px;
+      z-index: 15;
+      width: 260px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      background: var(--panel-bg);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+    .floating-panel-handle {
+      position: sticky;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: move;
+      touch-action: none;
+      user-select: none;
+      padding: 10px 14px;
+      font-weight: bold;
+      color: var(--accent);
+      background: #e4e9ef;
+      border-radius: 8px 8px 0 0;
+    }
+    .floating-panel-collapse-btn {
+      flex: 0 0 auto;
+      background: transparent;
+      color: var(--accent);
+      padding: 4px 12px;
+      font-size: 1.4rem;
+      line-height: 1;
+      transition: transform 0.15s ease;
+    }
+    .floating-panel-collapse-btn:hover {
+      background: rgba(44, 62, 80, 0.15);
+    }
+    .floating-panel.collapsed .floating-panel-collapse-btn {
+      transform: rotate(-90deg);
+    }
+    .floating-panel.collapsed .floating-panel-body {
+      display: none;
+    }
+    .floating-panel-body {
+      padding: 16px;
+    }
   </style>
 </head>
 <body>
   <div class="app-header">
     <h1>3D Preview <small style="font-weight: normal; opacity: 0.8;">(work in progress)</small></h1>
     <div class="header-links">
-      <button type="button" id="clampToggle3D" title="Constrain dragging so a player can't be moved past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
       <a href="index.html" class="setup-link">&larr; Back to Visualizer</a>
     </div>
   </div>
   <div id="scene3d"></div>
+  <div id="controlPanel3D" class="floating-panel">
+    <div class="floating-panel-handle">
+      <span>&#10021; Controls (drag to move)</span>
+      <button type="button" id="panelCollapseToggle3D" class="floating-panel-collapse-btn" title="Collapse/expand this panel">&#9662;</button>
+    </div>
+    <div class="floating-panel-body">
+      <div class="panel-section">
+        <div class="rotation-display">Serving: <span id="serverZone3D">S</span> (zone 1) &middot; <span id="rotationNumber3D">R1</span></div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Overlap Status</h2>
+        <div class="button-row">
+          <button id="overlapGuideToggle3D" class="full-width">Show Overlap Guides</button>
+          <button id="playerLinkToggle3D" class="full-width">Show Player Links</button>
+        </div>
+        <button id="clampToggle3D" class="full-width" title="Constrain dragging so a player can't be moved past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
+        <details id="overlapResultsDetails3D" class="overlap-details">
+          <summary id="overlapResultsSummary3D">Overlap Results</summary>
+          <ul id="overlapResults3D" class="overlap-results"></ul>
+        </details>
+      </div>
+
+      <div class="panel-section">
+        <h2>Bench Side</h2>
+        <div class="button-row">
+          <button id="benchSideLeft3D" class="full-width">Left</button>
+          <button id="benchSideRight3D" class="full-width">Right</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <script type="importmap">
     {
       "imports": {

@@ -89,21 +89,21 @@ rework when the renderer changes later.
       to end up with 7. Not yet in the 3D scene at all.
 - [x] 2.8 Billboarded text labels via `CSS2DRenderer`.
 - [x] 2.9 Camera controls (orbit/tilt).
-- [ ] 2.10 Floating 3D control UI + dashboard — 2D's fixed side panel
+- [x] 2.10 Floating 3D control UI + dashboard — 2D's fixed side panel
       doesn't work once the camera can move freely around the full 3D
       scene (2.9), since it'd end up blocking the view or sitting far
       from whatever's currently on screen. Needs a movable/floating panel
       (draggable to reposition) and/or a right-click context menu (design
       still open - pick whichever tests better) for toggles, plus a
       floating "dashboard" readout for status info. Sub-items:
-      - [ ] "Show Overlap Guides" / "Show Player Links" independent
+      - [x] "Show Overlap Guides" / "Show Player Links" independent
             toggle buttons (3D currently always shows both together
             whenever a puck is selected, unlike 2D's separate toggles).
-      - [ ] Selection lock (double-click a puck to lock the selection,
+      - [x] Selection lock (double-click a puck to lock the selection,
             same as 2D - not in 3D yet).
-      - [ ] Surface the "Lock to Legal Positions" (2.6) and "3D Preview -
+      - [x] Surface the "Lock to Legal Positions" (2.6) and "3D Preview -
             Bench Side" (2.2, currently setup.html-only) toggles here too.
-      - [ ] Dashboard readout: rotation number / server-zone (depends on
+      - [x] Dashboard readout: rotation number / server-zone (depends on
             2.8's text labels existing first) + an overlap-results list
             (3D currently has no on-screen equivalent of either).
 - [ ] 2.11 Glow/pulse effect settings analog for 3D — `effectSettings.js`
