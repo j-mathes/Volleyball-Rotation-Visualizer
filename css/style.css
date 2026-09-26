@@ -56,10 +56,6 @@ h1 {
   font-size: 0.9rem;
 }
 
-.setup-panel {
-  max-width: 700px;
-}
-
 .layout {
   display: flex;
   gap: 24px;
@@ -406,7 +402,8 @@ select {
   grid-column: 1 / -1;
 }
 
-.font-family-row input[type="text"] {
+.font-family-row input[type="text"],
+.font-family-row select {
   flex: 1 1 auto;
   min-width: 0;
   font-family: inherit;

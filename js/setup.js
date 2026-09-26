@@ -3,7 +3,7 @@ import { getPlayerLabels, savePlayerLabels, resetPlayerLabels } from './playerLa
 import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber, getFolderNames, setSetupFolder, renameFolder } from './courtSetups.js';
 import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS } from './colors.js';
 import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings, LINE_SETTING_LABELS } from './lineSettings.js';
-import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings, DEFAULT_FONT_SETTINGS, FONT_SETTING_LABELS } from './fontSettings.js';
+import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings, DEFAULT_FONT_SETTINGS, FONT_SETTING_LABELS, FONT_FAMILY_OPTIONS } from './fontSettings.js';
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 
@@ -357,11 +357,26 @@ function renderFontSettingsFields() {
   const familyLabel = document.createElement('span');
   familyLabel.textContent = FONT_SETTING_LABELS.fontFamily;
   familyRow.appendChild(familyLabel);
-  const familyInput = document.createElement('input');
-  familyInput.type = 'text';
-  familyInput.name = 'fontFamily';
-  familyInput.value = settings.fontFamily;
-  familyRow.appendChild(familyInput);
+  const familySelect = document.createElement('select');
+  familySelect.name = 'fontFamily';
+  for (const option of FONT_FAMILY_OPTIONS) {
+    const optionEl = document.createElement('option');
+    optionEl.value = option.value;
+    optionEl.textContent = option.label;
+    optionEl.style.fontFamily = option.value;
+    familySelect.appendChild(optionEl);
+  }
+  familySelect.value = settings.fontFamily;
+  // A previously-saved value that isn't in the curated list (e.g. from an
+  // older version) still needs to show as selected, not silently reset.
+  if (familySelect.value !== settings.fontFamily) {
+    const customOption = document.createElement('option');
+    customOption.value = settings.fontFamily;
+    customOption.textContent = settings.fontFamily;
+    familySelect.appendChild(customOption);
+    familySelect.value = settings.fontFamily;
+  }
+  familyRow.appendChild(familySelect);
   fontSettingsFieldsEl.appendChild(familyRow);
 
   for (const name of ['playerLabelSize', 'benchLabelSize', 'rotationTrackerSize']) {
@@ -386,7 +401,7 @@ function renderFontSettingsFields() {
 
 saveFontSettingsBtn.addEventListener('click', () => {
   const current = getFontSettings();
-  const fontFamily = fontSettingsFieldsEl.querySelector('[name="fontFamily"]').value.trim() || DEFAULT_FONT_SETTINGS.fontFamily;
+  const fontFamily = fontSettingsFieldsEl.querySelector('[name="fontFamily"]').value || DEFAULT_FONT_SETTINGS.fontFamily;
   const settings = { fontFamily };
   for (const name of ['playerLabelSize', 'benchLabelSize', 'rotationTrackerSize']) {
     const value = Number(fontSettingsFieldsEl.querySelector(`[name="${name}"]`).value);

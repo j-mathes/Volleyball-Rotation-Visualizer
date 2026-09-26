@@ -19,6 +19,22 @@ export const FONT_SETTING_LABELS = {
   rotationTrackerSize: 'Rotation Tracker Size',
 };
 
+// Curated subset of fonts that render reasonably (and are widely available)
+// across Windows/macOS/Linux, offered as a pick list on the setup page
+// instead of free text entry. Each value is a full font-family stack with
+// a generic fallback.
+export const FONT_FAMILY_OPTIONS = [
+  { label: 'Verdana (default)', value: 'Verdana, Arial, sans-serif' },
+  { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Segoe UI', value: '"Segoe UI", Tahoma, sans-serif' },
+  { label: 'Tahoma', value: 'Tahoma, Geneva, sans-serif' },
+  { label: 'Trebuchet MS', value: '"Trebuchet MS", sans-serif' },
+  { label: 'Arial Black', value: '"Arial Black", Impact, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Courier New', value: '"Courier New", Courier, monospace' },
+];
+
 export function getFontSettings() {
   return { ...DEFAULT_FONT_SETTINGS, ...readSaved() };
 }
