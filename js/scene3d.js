@@ -4,8 +4,9 @@
 // app's view-angle toggle - that's Phase 2.6, once enough of the 3D scene
 // exists to be a real 4th `viewMode` option.
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { COURT_SIZE, ATTACK_LINE_Y } from './config.js';
+import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH } from './config.js';
 import { applyColors } from './colors.js';
+import { getBenchSide3D } from './benchSideSettings.js';
 
 applyColors();
 
@@ -79,6 +80,25 @@ addCourtLine(COURT_SIZE, 0, COURT_SIZE, COURT_SIZE);
 addCourtLine(0, COURT_SIZE / 2, COURT_SIZE, COURT_SIZE / 2); // center (net) line
 addCourtLine(0, ATTACK_LINE_Y, COURT_SIZE, ATTACK_LINE_Y);
 addCourtLine(0, COURT_SIZE - ATTACK_LINE_Y, COURT_SIZE, COURT_SIZE - ATTACK_LINE_Y);
+
+// Bench/Libero substitution area - a tinted strip running the full length
+// of the court, immediately beside it on whichever side the "3D Preview -
+// Bench Side" setup.html setting picks (see benchSideSettings.js). Reuses
+// the same customizable --bench-fill/--bench-fill-opacity as the 2D
+// bench panel. No player/Libero occupies it yet - that's Phase 2.3.
+const benchSide = getBenchSide3D();
+const benchX = benchSide === 'left' ? -BENCH_WIDTH / 2 : COURT_SIZE + BENCH_WIDTH / 2;
+const bench = new THREE.Mesh(
+  new THREE.PlaneGeometry(BENCH_WIDTH, COURT_SIZE),
+  new THREE.MeshStandardMaterial({
+    color: cssColor('--bench-fill', '#ffffff'),
+    opacity: Number(cssColor('--bench-fill-opacity', '0.12')) || 0.12,
+    transparent: true,
+  }),
+);
+bench.rotation.x = -Math.PI / 2;
+bench.position.set(benchX, 0.25, COURT_SIZE / 2);
+scene.add(bench);
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;

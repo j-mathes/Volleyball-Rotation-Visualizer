@@ -6,6 +6,7 @@ import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings
 import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings, DEFAULT_FONT_SETTINGS, FONT_SETTING_LABELS, FONT_FAMILY_OPTIONS } from './fontSettings.js';
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
+import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
 
 applyColors();
 applyLineSettings();
@@ -663,4 +664,23 @@ playlistDelayInput.addEventListener('change', () => {
 });
 
 renderPlaylist();
+
+const benchSide3DLeftBtn = document.getElementById('benchSide3DLeft');
+const benchSide3DRightBtn = document.getElementById('benchSide3DRight');
+
+function refreshBenchSide3DButtons() {
+  const side = getBenchSide3D();
+  benchSide3DLeftBtn.classList.toggle('active', side === 'left');
+  benchSide3DRightBtn.classList.toggle('active', side === 'right');
+}
+
+benchSide3DLeftBtn.addEventListener('click', () => {
+  saveBenchSide3D('left');
+  refreshBenchSide3DButtons();
+});
+benchSide3DRightBtn.addEventListener('click', () => {
+  saveBenchSide3D('right');
+  refreshBenchSide3DButtons();
+});
+refreshBenchSide3DButtons();
 

@@ -62,7 +62,7 @@ rework when the renderer changes later.
 ## Phase 2 — 3D True Rendering Mode
 
 - [x] 2.1 Add Three.js; build the scene (court plane, lighting, camera).
-- [ ] 2.2 Configurable Libero bench side — a selectable setting for the
+- [x] 2.2 Configurable Libero bench side — a selectable setting for the
       bench/Libero substitution area's placement in the 3D scene. Not
       needed in 2D: the renderer.js interface already resolves bench
       side automatically per net-orientation view angle (classic left /
