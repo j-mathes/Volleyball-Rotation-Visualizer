@@ -67,6 +67,12 @@ controls.enablePan = false;
 controls.minDistance = 200;
 controls.maxDistance = 3000;
 controls.maxPolarAngle = Math.PI * 0.49;
+// Left button is reserved for selecting/dragging pucks (see the
+// pointerdown handler below); orbiting is right-button-drag instead of
+// OrbitControls' left-button default, so the two gestures never compete
+// for the same button. OrbitControls suppresses the browser's right-click
+// context menu on its own domElement automatically once RIGHT is bound.
+controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 controls.update();
 
 // Default view (Phase 2.12's Home button/key), captured once before any
@@ -609,27 +615,6 @@ let selectionLocked = false;
 // gated on at least one of these being enabled, same as 2D.
 let guidesEnabled = false;
 let linksEnabled = false;
-// True while the "Orbit Around Selection" panel toggle is on: the camera
-// orbits/zooms around whichever puck is currently selected instead of the
-// court center. Off by default - selecting a puck otherwise never moves
-// the camera at all (a user-reported "the view rotated when I merely
-// selected something" surprise), so this re-anchoring is opt-in.
-let orbitAboutSelection = false;
-
-// Re-centers the orbit target on the current selection (or back to the
-// court center if nothing's selected), but ONLY while "Orbit Around
-// Selection" is on - a no-op otherwise, so plain selection stays free of
-// camera side-effects by default. Called once per selection CHANGE (not
-// every frame); `updateOrbitAboutSelectionFollow()` (in `animate()`)
-// separately keeps the target glued to a moving/dragged selection live
-// after this initial tween completes.
-function refreshOrbitAnchor() {
-  if (!orbitAboutSelection) {
-    return;
-  }
-  const endTarget = selectedGroup ? selectedGroup.position.clone() : DEFAULT_CONTROLS_TARGET.clone();
-  flyCameraTo(camera.position.clone(), endTarget, 300);
-}
 
 const overlapResultsEl = document.getElementById('overlapResults3D');
 const overlapResultsSummaryEl = document.getElementById('overlapResultsSummary3D');
@@ -837,26 +822,13 @@ clampToggleBtn.addEventListener('click', () => {
   }
 });
 
-// "Orbit Around Selection" - opt-in re-anchoring (see `refreshOrbitAnchor`
-// above for the on-select-change tween; `updateOrbitAboutSelectionFollow`
-// below keeps it glued to a moving/dragged selection every frame).
-// Toggling it ON immediately re-anchors onto whatever's currently
-// selected (or the court center if nothing is); toggling OFF just stops
-// following further changes - the camera stays wherever it currently is.
-const orbitAboutSelectionBtn = document.getElementById('orbitAboutSelection3D');
-orbitAboutSelectionBtn.addEventListener('click', () => {
-  orbitAboutSelection = !orbitAboutSelection;
-  orbitAboutSelectionBtn.classList.toggle('active', orbitAboutSelection);
-  refreshOrbitAnchor();
-});
-
 // "Show Overlap Guides" / "Show Player Links" (Phase 2.10) - independent
 // toggles matching 2D, instead of always drawing both together whenever a
 // puck is selected. Selecting a puck itself is independent of these (see
-// `endDrag`/the `dblclick` handler below) - selection also drives orbit-
-// around-selection and the glow highlight (2.11/2.12), which are useful
-// even with neither toggle on, so these toggles only gate whether guide/
-// link LINES get drawn for whatever's currently selected.
+// `endDrag`/the `dblclick` handler below) - selection also drives the
+// glow highlight (2.11), which is useful even with neither toggle on, so
+// these toggles only gate whether guide/link LINES get drawn for
+// whatever's currently selected.
 const guideToggleBtn = document.getElementById('overlapGuideToggle3D');
 const linkToggleBtn = document.getElementById('playerLinkToggle3D');
 guideToggleBtn.addEventListener('click', () => {
@@ -964,8 +936,14 @@ function clampToPlayArea(zone, x, z) {
 // Registered capture-phase so this runs BEFORE OrbitControls' own
 // (bubble-phase) pointerdown listener on the same element - letting us
 // disable orbiting for this gesture before OrbitControls sees it, so
-// dragging a puck never also orbits the camera at the same time.
+// dragging a puck never also orbits the camera at the same time. Only the
+// left/primary button selects/drags pucks - right-click is reserved for
+// orbiting (see `controls.mouseButtons` above), so a right-click over a
+// puck must fall through to OrbitControls instead of grabbing it.
 renderer.domElement.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0) {
+    return;
+  }
   updatePointerNDC(event);
   raycaster.setFromCamera(pointerNDC, camera);
   const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
@@ -977,6 +955,29 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   controls.enabled = false;
   renderer.domElement.setPointerCapture(event.pointerId);
   renderer.domElement.style.cursor = 'grabbing';
+}, { capture: true });
+
+// Right-click sets the orbit anchor for the gesture that follows (per
+// user request: "right click on an object selects it for orbit; right
+// click and hold on empty space orbits normally around court world
+// space") - right-clicking a puck re-targets `controls.target` onto it,
+// right-clicking empty space resets the target back to the default court
+// center. This is completely independent of the left-click puck
+// selection above (blue outline/glow/overlap preview) - purely a camera
+// pivot choice, made fresh on every right-click. Registered capture-phase
+// so the retarget lands before OrbitControls reads `controls.target` on
+// the same gesture. Tweened (not instant) so re-anchoring doesn't cause a
+// jarring jump - camera.position itself never moves, so this is a smooth
+// re-aim, not a dolly.
+renderer.domElement.addEventListener('pointerdown', (event) => {
+  if (event.button !== 2) {
+    return;
+  }
+  updatePointerNDC(event);
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
+  const endTarget = hit ? hit.object.parent.position.clone() : DEFAULT_CONTROLS_TARGET.clone();
+  flyCameraTo(camera.position.clone(), endTarget, 250);
 }, { capture: true });
 
 renderer.domElement.addEventListener('pointermove', (event) => {
@@ -1019,14 +1020,13 @@ function endDrag(event) {
   // a 2D SVG drag release too) - a tap on the ALREADY-selected puck is the
   // one case that toggles it back off instead. Selection works regardless
   // of the guide/link toggles, and never changes the current camera view
-  // (unless "Orbit Around Selection" is on - see `refreshOrbitAnchor`) or
-  // while the selection is locked (2.10) - other pucks can still be
-  // dragged, they just won't steal the selection.
+  // (right-click is what sets the orbit anchor - see the right-click
+  // handler below) or while the selection is locked (2.10) - other pucks
+  // can still be dragged, they just won't steal the selection.
   if (!selectionLocked) {
     const moved = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
     const wasTap = moved <= TAP_MOVE_THRESHOLD;
     selectedGroup = wasTap && selectedGroup === draggingGroup ? null : draggingGroup;
-    refreshOrbitAnchor();
   }
   refreshOverlayLines();
   renderer.domElement.releasePointerCapture(event.pointerId);
@@ -1044,6 +1044,9 @@ renderer.domElement.addEventListener('pointercancel', endDrag);
 // the guide/link-toggle gate (see `endDrag` above - selection here is
 // independent of those).
 renderer.domElement.addEventListener('dblclick', (event) => {
+  if (event.button !== 0) {
+    return;
+  }
   updatePointerNDC(event);
   raycaster.setFromCamera(pointerNDC, camera);
   const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
@@ -1056,7 +1059,6 @@ renderer.domElement.addEventListener('dblclick', (event) => {
   } else {
     selectedGroup = group;
     selectionLocked = true;
-    refreshOrbitAnchor();
   }
   refreshOverlayLines();
 });
@@ -1129,21 +1131,9 @@ function updateSelectionGlow(nowMs) {
   }
 }
 
-// Keeps the orbit target glued to the selected puck's LIVE position every
-// frame while "Orbit Around Selection" is on (e.g. while it's mid-drag) -
-// `refreshOrbitAnchor`'s tween only fires once per selection CHANGE, this
-// is the continuous follow-up. Skipped while a tween is in flight so it
-// doesn't fight that initial re-anchor animation.
-function updateOrbitAboutSelectionFollow() {
-  if (orbitAboutSelection && selectedGroup && !cameraTween) {
-    controls.target.copy(selectedGroup.position);
-  }
-}
-
 function animate(nowMs) {
   requestAnimationFrame(animate);
   updateCameraTween(nowMs);
-  updateOrbitAboutSelectionFollow();
   controls.update();
   updateLabelScaling();
   updateSelectionGlow(nowMs);

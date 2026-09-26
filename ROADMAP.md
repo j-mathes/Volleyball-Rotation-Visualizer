@@ -129,16 +129,19 @@ rework when the renderer changes later.
             selected puck if one is selected). (3ds Max's C/object-
             transform-gizmo/shading/grid/snap shortcuts don't apply here -
             no secondary camera object and this isn't a modeling tool.)
-      - [x] Orbiting/zooming re-centers on the currently selected puck, but
-            ONLY when the opt-in "Orbit Around Selection" panel toggle is
-            on (default off) - plain selection never moves the camera by
-            itself (an earlier always-on version of this was reverted per
-            user feedback: selecting a puck visibly rotating/moving the
-            view was surprising/unwanted). While enabled, selecting a
-            puck smoothly re-targets the orbit onto it, and the target
-            keeps tracking it live if it's dragged; deselecting smoothly
-            re-targets back to the court center. `Z` (zoom extents) still
-            explicitly frames the selection regardless of this toggle.
+      - [x] Left-click selects/drags pucks; right-click is reserved for
+            orbiting instead of OrbitControls' left-button default (so
+            the two gestures never compete for the same button) -
+            right-click-and-hold on a puck sets it as the orbit anchor
+            for that gesture (re-targets the camera onto it), right-
+            click-and-hold on empty court/ground orbits normally around
+            the court center. This replaced an earlier "Orbit Around
+            Selection" panel toggle (which re-centered on the left-click
+            selection instead) - no toggle is needed once left/right
+            click are split, and it keeps left-click selection
+            completely free of camera side-effects as before. `Z` (zoom
+            extents) still explicitly frames the left-click selection
+            regardless of the current right-click orbit anchor.
       - [x] The cube's two Z-axis faces are labeled ENDLINE/NET rather
             than a generic Front/Back - which side of the net counts as
             "front" is inherently ambiguous (flips depending which team
