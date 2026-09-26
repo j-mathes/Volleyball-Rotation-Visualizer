@@ -24,7 +24,7 @@ rework when the renderer changes later.
       hardcoded stroke-width/color literals in `drawSeparatorLine`/
       `drawLinkLine`, plus the player circle's outline stroke-width in
       `style.css`, into a shared settings object, editable on the setup page.
-- [ ] 0.6 Court position "playlist" — save multiple named setups (reusing
+- [x] 0.6 Court position "playlist" — save multiple named setups (reusing
       0.2's serialization format as the list items) and animate through
       them in sequence, reusing the existing `Player.animateTo` tweening
       for the transitions between each saved setup. Setup page hosts

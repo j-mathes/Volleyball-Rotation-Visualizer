@@ -4,9 +4,10 @@ import { Player, PLAYER_RADIUS } from './player.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
-import { saveSetup, takePendingSetup } from './courtSetups.js';
+import { saveSetup, takePendingSetup, getSavedSetups } from './courtSetups.js';
 import { applyColors } from './colors.js';
 import { getLineSettings, applyLineSettings } from './lineSettings.js';
+import { getPlaylist, getPlaylistDelay } from './playlist.js';
 
 applyColors();
 applyLineSettings();
@@ -19,6 +20,9 @@ const overlapGuideToggle = document.getElementById('overlapGuideToggle');
 const playerLinkToggle = document.getElementById('playerLinkToggle');
 const saveSetupBtn = document.getElementById('saveSetupBtn');
 const setupNameInput = document.getElementById('setupNameInput');
+const playlistPlayBtn = document.getElementById('playlistPlayBtn');
+const playlistStepBtn = document.getElementById('playlistStepBtn');
+const playlistStatusEl = document.getElementById('playlistStatus');
 
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
@@ -289,22 +293,32 @@ function captureCurrentState() {
   };
 }
 
-// Restores a previously captured (or imported) state, snapping every
-// player straight to its saved position (no tweening - this only runs on
-// load or an explicit "Load" from the setup page).
-function applyState(state) {
+// Restores a previously captured (or imported) state. Snaps every player
+// straight to its saved position by default (used on load or an explicit
+// "Load" from the setup page); pass `animate: true` to tween instead
+// (used by playlist playback).
+async function applyState(state, { animate = false, duration = 600 } = {}) {
   setAwaitingSelection(false);
   rotationState.zoneToRole = { ...state.zoneToRole };
   liberoState.replacedRole = state.liberoReplacedRole || null;
+  const animations = [];
   for (const [role, player] of Object.entries(playersByRole)) {
     const pos = state.positions[role];
-    if (pos) {
+    if (!pos) {
+      continue;
+    }
+    if (animate) {
+      animations.push(player.animateTo(pos.x, pos.y, duration));
+    } else {
       player.setPosition(pos.x, pos.y);
     }
   }
   refreshRotationDisplay();
   refreshLiberoButtonLabel();
   clearHighlights();
+  if (animate) {
+    await Promise.all(animations);
+  }
   runOverlapCheck();
 }
 
@@ -520,3 +534,75 @@ if (pendingSetup) {
 } else {
   runOverlapCheck();
 }
+
+// Resolves the playlist (built on the setup page) into the actual saved
+// states it references, silently dropping any entry whose saved setup was
+// since deleted.
+function getPlaylistStates() {
+  const byId = Object.fromEntries(getSavedSetups().map((setup) => [setup.id, setup]));
+  return getPlaylist().map((item) => byId[item.setupId]).filter(Boolean);
+}
+
+let playlistPlaying = false;
+let playlistIndex = -1;
+let playlistTimer = null;
+
+function refreshPlaylistUI() {
+  const states = getPlaylistStates();
+  playlistPlayBtn.textContent = playlistPlaying ? 'Pause Playlist' : 'Play Playlist';
+  playlistPlayBtn.classList.toggle('active', playlistPlaying);
+  playlistStepBtn.disabled = states.length === 0;
+  playlistPlayBtn.disabled = states.length === 0;
+  if (states.length === 0) {
+    playlistStatusEl.textContent = 'Playlist is empty - build one on the Setup page.';
+    return;
+  }
+  const current = states[Math.max(playlistIndex, 0)];
+  playlistStatusEl.textContent = `Step ${Math.max(playlistIndex, 0) + 1} / ${states.length}: ${current.name}`;
+}
+
+async function goToPlaylistStep(index) {
+  const states = getPlaylistStates();
+  if (states.length === 0) {
+    return;
+  }
+  playlistIndex = ((index % states.length) + states.length) % states.length;
+  await applyState(states[playlistIndex].state, { animate: true });
+  refreshPlaylistUI();
+}
+
+// Queues the next step after the configured delay; a no-op once paused.
+function schedulePlaylistAdvance() {
+  clearTimeout(playlistTimer);
+  if (!playlistPlaying) {
+    return;
+  }
+  playlistTimer = setTimeout(async () => {
+    await goToPlaylistStep(playlistIndex + 1);
+    schedulePlaylistAdvance();
+  }, getPlaylistDelay());
+}
+
+playlistPlayBtn.addEventListener('click', async () => {
+  if (playlistPlaying) {
+    playlistPlaying = false;
+    clearTimeout(playlistTimer);
+    refreshPlaylistUI();
+    return;
+  }
+  playlistPlaying = true;
+  refreshPlaylistUI();
+  if (playlistIndex === -1) {
+    await goToPlaylistStep(0);
+  }
+  schedulePlaylistAdvance();
+});
+
+playlistStepBtn.addEventListener('click', async () => {
+  playlistPlaying = false;
+  clearTimeout(playlistTimer);
+  await goToPlaylistStep(playlistIndex + 1);
+  refreshPlaylistUI();
+});
+
+refreshPlaylistUI();

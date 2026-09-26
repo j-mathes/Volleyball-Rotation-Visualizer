@@ -88,6 +88,22 @@
         </div>
         <input type="file" id="importSetupInput" accept="application/json" hidden>
       </div>
+
+      <div class="panel-section">
+        <h2>Court Setup Playlist</h2>
+        <p class="hint">Build an ordered sequence of saved setups to
+          animate through automatically. Play it back (with play/pause/step
+          controls) from the "Playlist Playback" section of the
+          visualizer.</p>
+        <ul id="playlistList" class="saved-setups-list"></ul>
+        <div class="button-row">
+          <select id="addToPlaylistSelect"></select>
+          <button type="button" id="addToPlaylistBtn">Add</button>
+        </div>
+        <button type="button" id="clearPlaylistBtn" class="full-width">Clear Playlist</button>
+        <label for="playlistDelayInput" class="hint">Step delay (ms)</label>
+        <input type="number" id="playlistDelayInput" class="text-input" min="200" step="100">
+      </div>
     </div>
   </div>
 

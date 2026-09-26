@@ -3,6 +3,7 @@ import { getPlayerLabels, savePlayerLabels, resetPlayerLabels } from './playerLa
 import { getSavedSetups, saveSetup, deleteSetup, setPendingSetup, isValidState, getRotationNumber } from './courtSetups.js';
 import { getColors, saveColors, resetColors, applyColors, COLOR_LABELS } from './colors.js';
 import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings, LINE_SETTING_LABELS } from './lineSettings.js';
+import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 
 applyColors();
 applyLineSettings();
@@ -16,6 +17,11 @@ const colorForm = document.getElementById('colorForm');
 const resetColorsBtn = document.getElementById('resetColors');
 const lineSettingsForm = document.getElementById('lineSettingsForm');
 const resetLineSettingsBtn = document.getElementById('resetLineSettings');
+const playlistListEl = document.getElementById('playlistList');
+const addToPlaylistSelect = document.getElementById('addToPlaylistSelect');
+const addToPlaylistBtn = document.getElementById('addToPlaylistBtn');
+const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+const playlistDelayInput = document.getElementById('playlistDelayInput');
 
 function renderForm() {
   const labels = getPlayerLabels();
@@ -113,6 +119,7 @@ function renderSavedSetups() {
     deleteBtn.addEventListener('click', () => {
       deleteSetup(setup.id);
       renderSavedSetups();
+      renderPlaylist();
     });
     item.appendChild(deleteBtn);
 
@@ -137,6 +144,7 @@ importSetupInput.addEventListener('change', async () => {
     const name = parsed.name || file.name.replace(/\.json$/i, '');
     saveSetup(name, state);
     renderSavedSetups();
+    renderPlaylist();
   } catch {
     alert("Could not import that file — make sure it's a setup exported from this app.");
   } finally {
@@ -228,4 +236,93 @@ resetLineSettingsBtn.addEventListener('click', () => {
 
 renderLineSettingsForm();
 
-renderColorForm();
+function renderPlaylist() {
+  const setups = getSavedSetups();
+  const byId = Object.fromEntries(setups.map((setup) => [setup.id, setup]));
+
+  // Keep the "add" dropdown in sync with the current saved-setup list.
+  addToPlaylistSelect.innerHTML = '';
+  for (const setup of setups) {
+    const option = document.createElement('option');
+    option.value = setup.id;
+    option.textContent = setup.name;
+    addToPlaylistSelect.appendChild(option);
+  }
+
+  const items = getPlaylist();
+  playlistListEl.innerHTML = '';
+
+  if (items.length === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'hint';
+    empty.textContent = 'Playlist is empty.';
+    playlistListEl.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item, index) => {
+    const setup = byId[item.setupId];
+    const row = document.createElement('li');
+    row.className = 'saved-setup-row';
+
+    const name = document.createElement('span');
+    name.className = 'saved-setup-name';
+    name.textContent = setup ? `${index + 1}. ${setup.name}` : `${index + 1}. (deleted setup)`;
+    row.appendChild(name);
+
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.textContent = '\u2191';
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener('click', () => {
+      movePlaylistItem(item.id, -1);
+      renderPlaylist();
+    });
+    row.appendChild(upBtn);
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.textContent = '\u2193';
+    downBtn.disabled = index === items.length - 1;
+    downBtn.addEventListener('click', () => {
+      movePlaylistItem(item.id, 1);
+      renderPlaylist();
+    });
+    row.appendChild(downBtn);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => {
+      removePlaylistItem(item.id);
+      renderPlaylist();
+    });
+    row.appendChild(removeBtn);
+
+    playlistListEl.appendChild(row);
+  });
+}
+
+addToPlaylistBtn.addEventListener('click', () => {
+  if (!addToPlaylistSelect.value) {
+    return;
+  }
+  addPlaylistItem(addToPlaylistSelect.value);
+  renderPlaylist();
+});
+
+clearPlaylistBtn.addEventListener('click', () => {
+  clearPlaylist();
+  renderPlaylist();
+});
+
+playlistDelayInput.value = getPlaylistDelay();
+playlistDelayInput.addEventListener('change', () => {
+  const ms = Number(playlistDelayInput.value);
+  if (Number.isFinite(ms) && ms > 0) {
+    setPlaylistDelay(ms);
+  }
+});
+
+renderPlaylist();
+
