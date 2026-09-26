@@ -11,6 +11,7 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS, INITIAL_ZONE_ROLES, BACK_ROW } from './config.js';
 import { PLAYER_RADIUS } from './player.js';
 import { checkOverlap, getClampBounds } from './overlap.js';
@@ -35,16 +36,35 @@ function cssColor(name, fallback) {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(cssColor('--court-bg', '#189a94'));
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 5000);
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 4000);
 // Elevated behind the near end line, angled down at the court's center -
 // a typical broadcast-style volleyball camera position.
 camera.position.set(COURT_SIZE / 2, COURT_SIZE * 0.9, COURT_SIZE * 1.35);
 camera.lookAt(COURT_SIZE / 2, 0, COURT_SIZE / 2);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+// logarithmicDepthBuffer avoids z-fighting flicker (the ground plane's
+// teal bleeding through the court, especially at the grazing viewing
+// angles OrbitControls now allows) - depth precision is otherwise spread
+// very unevenly across a 1-4000 near/far range.
+const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 mount.appendChild(renderer.domElement);
+
+// Camera controls (Phase 2.9) - orbit (drag) + tilt (also drag, via the
+// polar angle) + zoom (wheel), focused on the court center. Panning is
+// disabled to keep that focus point fixed, since "orbit/tilt" (not
+// "pan") is what the roadmap actually asks for; polar angle is capped
+// just short of the ground plane so the camera can't end up underneath
+// the court looking up through it.
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(COURT_SIZE / 2, 0, COURT_SIZE / 2);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 200;
+controls.maxDistance = 3000;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.update();
 
 // Billboarded (always-facing-camera) text labels (Phase 2.8) - a DOM
 // overlay positioned by each label's Object3D world transform, rather
@@ -88,7 +108,7 @@ const ground = new THREE.Mesh(
   new THREE.MeshStandardMaterial({ color: cssColor('--court-bg', '#189a94') }),
 );
 ground.rotation.x = -Math.PI / 2;
-ground.position.set(COURT_SIZE / 2, -1, 0);
+ground.position.set(COURT_SIZE / 2, -10, 0);
 scene.add(ground);
 
 // Boundary and attack lines, raised slightly above the court plane to
@@ -457,6 +477,10 @@ clampToggleBtn.addEventListener('click', () => {
   }
 });
 
+// Registered capture-phase so this runs BEFORE OrbitControls' own
+// (bubble-phase) pointerdown listener on the same element - letting us
+// disable orbiting for this gesture before OrbitControls sees it, so
+// dragging a puck never also orbits the camera at the same time.
 renderer.domElement.addEventListener('pointerdown', (event) => {
   updatePointerNDC(event);
   raycaster.setFromCamera(pointerNDC, camera);
@@ -466,9 +490,10 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   }
   draggingGroup = hit.object.parent;
   pointerDownAt = { x: event.clientX, y: event.clientY };
+  controls.enabled = false;
   renderer.domElement.setPointerCapture(event.pointerId);
   renderer.domElement.style.cursor = 'grabbing';
-});
+}, { capture: true });
 
 renderer.domElement.addEventListener('pointermove', (event) => {
   if (!draggingGroup) {
@@ -519,6 +544,7 @@ function endDrag(event) {
   renderer.domElement.releasePointerCapture(event.pointerId);
   renderer.domElement.style.cursor = '';
   draggingGroup = null;
+  controls.enabled = true;
 }
 renderer.domElement.addEventListener('pointerup', endDrag);
 renderer.domElement.addEventListener('pointercancel', endDrag);
@@ -556,6 +582,7 @@ function updateLabelScaling() {
 
 function animate() {
   requestAnimationFrame(animate);
+  controls.update();
   updateLabelScaling();
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);

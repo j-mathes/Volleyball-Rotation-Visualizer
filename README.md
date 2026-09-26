@@ -130,8 +130,9 @@ js/scene3d.js           Phase 2 3D scene (Three.js, loaded via an import map
                         overlap-driven guide/violation/link lines using
                         the Line2/LineMaterial "fat line" addon, a "Lock
                         to Legal Positions" drag clamp, bench-warning
-                        feedback, and billboarded role-label text via
-                        CSS2DRenderer) for scene3d.html
+                        feedback, billboarded role-label text via
+                        CSS2DRenderer, and OrbitControls camera
+                        orbit/tilt/zoom) for scene3d.html
 js/benchSideSettings.js Bench/Libero side persistence for the 3D scene only
                         (shared by scene3d.html/setup.html)
 js/labelScaleSettings.js 3D player-label distance-scaling mode persistence
