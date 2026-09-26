@@ -202,19 +202,59 @@ h1 {
   background: var(--court-bg);
 }
 
-.secondary-panel {
+.quad-menu {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: 640px;
   background: var(--panel-bg);
   border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
+  padding: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
 }
 
-.secondary-panel .panel-section {
-  flex: 1 1 240px;
-  min-width: 220px;
-  margin-bottom: 0;
+/* `display: flex` above otherwise beats the browser's default
+   `[hidden] { display: none }` UA rule, since author styles always win
+   over UA styles regardless of selector specificity. */
+.quad-menu[hidden] {
+  display: none;
+}
+
+.quad-section {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.quad-section h3 {
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+  color: var(--accent);
+}
+
+.quad-view-presets button {
+  font-size: 0.72rem;
+  padding: 6px 2px;
+}
+
+.shortcuts-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 0.78rem;
+  color: var(--accent);
+}
+
+.shortcuts-list li {
+  padding: 3px 0;
+}
+
+.shortcuts-list button {
+  width: 100%;
+  text-align: left;
+  font-size: 0.78rem;
+  padding: 5px 8px;
 }
 
 .view-cube-wrap {
@@ -518,6 +558,24 @@ select {
   font-size: 0.8rem;
   color: #555;
   line-height: 1.4;
+}
+
+.reference-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.reference-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #dde2e8;
+}
+
+.reference-table td:first-child {
+  font-weight: bold;
+  color: var(--accent);
+  white-space: nowrap;
+  width: 1%;
 }
 
 .player-label-form {

@@ -12,6 +12,10 @@ import { applyEffectSettings } from './effectSettings.js';
 import { getPlaylist, getPlaylistDelay } from './playlist.js';
 import { getViewMode, saveViewMode } from './viewModeSettings.js';
 import { getBenchSide3D } from './benchSideSettings.js';
+import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
+import { getLabelScaleMode3D } from './labelScaleSettings.js';
+import { createQuadMenu } from './quadMenu.js';
+import { KEYBOARD_SHORTCUTS, MOUSE_CONTROLS } from './shortcutsData.js';
 
 applyColors();
 applyLineSettings();
@@ -38,9 +42,17 @@ const playlistStepBtn = document.getElementById('playlistStepBtn');
 const playlistStatusEl = document.getElementById('playlistStatus');
 const viewMode2DBtn = document.getElementById('viewMode2DBtn');
 const viewMode3DBtn = document.getElementById('viewMode3DBtn');
-const benchSide3DSection = document.getElementById('benchSide3DSection');
 const benchSide3DLeftBtn = document.getElementById('benchSide3DLeft');
 const benchSide3DRightBtn = document.getElementById('benchSide3DRight');
+const quadMenuEl = document.getElementById('quadMenu');
+const quadViewCameraSection = document.getElementById('quadViewCamera');
+const quadSceneSetupSection = document.getElementById('quadSceneSetup');
+const quadShortcutsListEl = document.getElementById('quadShortcutsList');
+const qmResetViewBtn = document.getElementById('qmResetView');
+const qmZoomExtentsBtn = document.getElementById('qmZoomExtents');
+const qmViewPresetBtns = quadViewCameraSection.querySelectorAll('button[data-view]');
+const qmViewCubeSizeBtns = quadViewCameraSection.querySelectorAll('button[data-size]');
+const qmLabelScaleBtns = quadViewCameraSection.querySelectorAll('button[data-mode]');
 
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
@@ -589,6 +601,81 @@ function applyBenchSide3D(side) {
 benchSide3DLeftBtn.addEventListener('click', () => applyBenchSide3D('left'));
 benchSide3DRightBtn.addEventListener('click', () => applyBenchSide3D('right'));
 
+// Right-click quad-menu (ROADMAP Phase 3.3) - up to 4 sections, only as
+// many shown as apply to the current view mode. js/quadMenu.js owns the
+// generic open/close/positioning mechanics; everything below is what
+// each button actually does.
+const quadMenu = createQuadMenu(quadMenuEl, quadViewCameraSection, quadSceneSetupSection);
+
+qmResetViewBtn.addEventListener('click', () => { renderer.resetToDefaultView?.(); quadMenu.close(); });
+qmZoomExtentsBtn.addEventListener('click', () => { renderer.zoomExtents?.(); quadMenu.close(); });
+qmViewPresetBtns.forEach((button) => {
+  button.addEventListener('click', () => {
+    renderer.snapToPresetView?.(button.dataset.view);
+    quadMenu.close();
+  });
+});
+
+function refreshViewCubeSizeButtons() {
+  const size = getViewCubeSize3D();
+  qmViewCubeSizeBtns.forEach((button) => button.classList.toggle('active', button.dataset.size === size));
+}
+qmViewCubeSizeBtns.forEach((button) => {
+  button.addEventListener('click', () => {
+    renderer.setViewCubeSize?.(button.dataset.size);
+    refreshViewCubeSizeButtons();
+  });
+});
+
+function refreshLabelScaleButtons() {
+  const mode = getLabelScaleMode3D();
+  qmLabelScaleBtns.forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
+}
+qmLabelScaleBtns.forEach((button) => {
+  button.addEventListener('click', () => {
+    renderer.setLabelScaleMode?.(button.dataset.mode);
+    refreshLabelScaleButtons();
+  });
+});
+
+// Calls straight through to renderer3d.js's exposed camera-preset
+// methods - all 3D-only today, matching KEYBOARD_SHORTCUTS' `appliesTo`.
+const shortcutActions = {
+  resetView: () => renderer.resetToDefaultView?.(),
+  viewTop: () => renderer.snapToPresetView?.('0,1,0'),
+  viewEndline: () => renderer.snapToPresetView?.('0,0,1'),
+  viewLeft: () => renderer.snapToPresetView?.('-1,0,0'),
+  zoomExtents: () => renderer.zoomExtents?.(),
+};
+
+// Renders the quad-menu's Keyboard & Mouse section from shortcutsData.js,
+// filtered to whichever entries apply to the current view mode. Entries
+// with a mapped action become clickable buttons; the rest (mostly mouse
+// gestures, which aren't "clickable") are plain list text.
+function renderShortcutsList() {
+  quadShortcutsListEl.innerHTML = '';
+  for (const entry of [...KEYBOARD_SHORTCUTS, ...MOUSE_CONTROLS]) {
+    if (entry.appliesTo !== 'both' && entry.appliesTo !== viewMode) {
+      continue;
+    }
+    const item = document.createElement('li');
+    const text = 'key' in entry ? `${entry.key} \u2014 ${entry.label}` : `${entry.input} \u2014 ${entry.label}`;
+    const action = entry.action && shortcutActions[entry.action];
+    if (action) {
+      const button = document.createElement('button');
+      button.textContent = text;
+      button.addEventListener('click', () => {
+        action();
+        quadMenu.close();
+      });
+      item.appendChild(button);
+    } else {
+      item.textContent = text;
+    }
+    quadShortcutsListEl.appendChild(item);
+  }
+}
+
 // Clicking anywhere on the court that isn't a player deselects the
 // currently previewed player - re-registered on every renderer instance
 // (see switchViewMode), since a fresh 3D renderer needs its own listener
@@ -600,6 +687,13 @@ function wireRendererEvents() {
     }
     selectedRole = null;
     runOverlapCheck();
+  });
+  renderer.onContextMenu((event) => {
+    refreshBenchSide3DButtons();
+    refreshViewCubeSizeButtons();
+    refreshLabelScaleButtons();
+    renderShortcutsList();
+    quadMenu.open(event.clientX, event.clientY, viewMode === '3d');
   });
 }
 
@@ -615,7 +709,6 @@ function wireRendererEvents() {
 function refreshViewModeButtons() {
   viewMode2DBtn.classList.toggle('active', viewMode === '2d');
   viewMode3DBtn.classList.toggle('active', viewMode === '3d');
-  benchSide3DSection.hidden = viewMode !== '3d';
   svg.style.display = viewMode === '2d' ? '' : 'none';
   scene3dMount.hidden = viewMode !== '3d';
 }

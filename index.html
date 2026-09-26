@@ -10,6 +10,7 @@
     <div class="app-header">
       <h1>Volleyball Rotation Visualizer</h1>
       <div class="header-links">
+        <a href="reference.html" class="setup-link">Shortcuts</a>
         <a href="setup.html" class="setup-link">Setup</a>
       </div>
     </div>
@@ -66,34 +67,63 @@
         </div>
       </div>
 
-      <!-- Temporary until ROADMAP Phase 3.3's quad-menu relocates these. -->
-      <div class="secondary-panel">
-        <div class="panel-section" id="benchSide3DSection" hidden>
-          <h2>Bench Side</h2>
-          <p class="hint">Only applies in 3D View - the 2D view already
-            places the bench automatically for each net orientation.</p>
+      <!-- Right-click (2D and 3D) opens this at the cursor - see
+           js/quadMenu.js. Sections hidden/shown per view mode on open(). -->
+      <div id="quadMenu" class="quad-menu" hidden>
+        <div class="quad-section" id="quadViewCamera">
+          <h3>View &amp; Camera</h3>
+          <div class="button-row">
+            <button id="qmResetView" class="full-width">Reset View</button>
+            <button id="qmZoomExtents" class="full-width">Zoom Extents</button>
+          </div>
+          <div class="button-row quad-view-presets">
+            <button data-view="0,1,0">Top</button>
+            <button data-view="0,-1,0">Bottom</button>
+            <button data-view="0,0,1">Endline</button>
+            <button data-view="0,0,-1">Net</button>
+            <button data-view="-1,0,0">Left</button>
+            <button data-view="1,0,0">Right</button>
+          </div>
+          <p class="hint">ViewCube Size</p>
+          <div class="button-row">
+            <button id="qmViewCubeSmall" data-size="small" class="full-width">Small</button>
+            <button id="qmViewCubeMedium" data-size="medium" class="full-width">Medium</button>
+            <button id="qmViewCubeLarge" data-size="large" class="full-width">Large</button>
+          </div>
+          <p class="hint">Player Label Scaling</p>
+          <div class="button-row">
+            <button id="qmLabelScaleOn" data-mode="scale" class="full-width">Scale with Distance</button>
+            <button id="qmLabelScaleOff" data-mode="fixed" class="full-width">Fixed Size</button>
+          </div>
+        </div>
+
+        <div class="quad-section" id="quadSceneSetup">
+          <h3>Scene Setup</h3>
+          <p class="hint">Bench Side</p>
           <div class="button-row">
             <button id="benchSide3DLeft" class="full-width">Left</button>
             <button id="benchSide3DRight" class="full-width">Right</button>
           </div>
         </div>
 
-        <div class="panel-section">
-          <h2>Court Setups</h2>
+        <div class="quad-section" id="quadCourtSetups">
+          <h3>Court Setups &amp; Playlist</h3>
           <input type="text" id="setupNameInput" class="text-input" placeholder="Setup name">
           <button id="saveSetupBtn" class="full-width">Save Current Setup</button>
           <input type="text" id="quickLoadInput" class="text-input" list="quickLoadOptions" placeholder="Quick load a saved setup…">
           <datalist id="quickLoadOptions"></datalist>
           <button id="quickLoadBtn" class="full-width">Load</button>
-        </div>
-
-        <div class="panel-section">
-          <h2>Playlist Playback</h2>
           <div class="button-row">
             <button id="playlistPlayBtn" class="full-width">Play Playlist</button>
             <button id="playlistStepBtn" class="full-width">Step</button>
           </div>
           <p id="playlistStatus" class="hint"></p>
+        </div>
+
+        <div class="quad-section" id="quadShortcuts">
+          <h3>Keyboard &amp; Mouse</h3>
+          <ul id="quadShortcutsList" class="shortcuts-list"></ul>
+          <a href="reference.html" target="_blank">Full reference page</a>
         </div>
       </div>
     </div>

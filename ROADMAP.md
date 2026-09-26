@@ -209,7 +209,7 @@ SAME shared elements the 2D view already had (no more duplicate UI); only
 genuinely 3D-only concepts (the ViewCube/camera, and the Bench Side
 toggle) remain 3D-specific, shown/hidden by the same "View Mode" section.
 
-## Phase 3 — Control Layout Overhaul, Quad-Menu, Referee/Net Viewpoints (planned, not started)
+## Phase 3 — Control Layout Overhaul, Quad-Menu, Referee/Net Viewpoints (in progress)
 
 Replaces the vertical right-side panel with a horizontal top bar (an
 operations row of action buttons + a status row of read-only info),
@@ -237,7 +237,7 @@ only the applicable options shown per mode.
       to it; empty space -> reset to default court center). Add
       `onContextMenu(handler)` to both renderer.js and renderer3d.js
       interfaces, mirroring the existing `onBackgroundClick` pattern.
-- [ ] 3.3 Quad-menu (new `js/quadMenu.js`) - simplified fixed layout (not
+- [x] 3.3 Quad-menu (new `js/quadMenu.js`) - simplified fixed layout (not
       true cursor-quadrant flyouts), showing only as many of up to 4
       sections as are applicable per view mode:
       - View & Camera (3D-only): reset view, zoom extents, the 6 preset
@@ -247,16 +247,20 @@ only the applicable options shown per mode.
         load, play/pause, step - relocated off the old side panel.
       - Keyboard & Mouse Shortcuts (both modes): clickable list (choosing
         an entry executes it) + a link to the new reference page.
-      - Zone-label toggle (both modes, see 3.7).
+      - Zone-label toggle (both modes, see 3.7) - NOT YET ADDED to the
+        menu; deferred until 3.7 actually implements the underlying
+        toggle (no point in a menu item with nothing behind it yet).
       Requires exposing `resetToDefaultView`, `snapToPresetView(label)`,
       `zoomExtents`, and new live setters `setViewCubeSize(size)`/
       `setLabelScaleMode(mode)` (mirroring `setBenchSide`'s existing live-
       update pattern) on renderer3d.js's returned interface.
-- [ ] 3.4 Shared `js/shortcutsData.js` (canonical list tagged
-      `2d`/`3d`/`both`, covering Alt-orbit, right-click-menu, and the new
-      playlist shortcuts) + new `reference.html`/`js/reference.js` page
+- [x] 3.4 Shared `js/shortcutsData.js` (canonical list tagged
+      `2d`/`3d`/`both`) + new `reference.html`/`js/reference.js` page
       (setup.html-style chrome) listing keyboard shortcuts and mouse
-      options, linked from the app header.
+      options, linked from the app header. Covers everything that exists
+      today (Alt-orbit, right-click-menu, the 3D keyboard shortcuts); 3.8
+      will ADD its new playlist shortcuts to this same data file once
+      built, not restructure it.
 - [ ] 3.5 New 3D objects: net posts (at the sidelines, z=0) + a real
       vertical net (canvas-textured grid plane, 2.43m tall, between the
       posts - today's "net" is just a flat ground-level line marker with

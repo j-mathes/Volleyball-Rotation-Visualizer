@@ -27,8 +27,8 @@ import { getLineSettings } from './lineSettings.js';
 import { getFontSettings } from './fontSettings.js';
 import { getEffectSettings } from './effectSettings.js';
 import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
-import { getLabelScaleMode3D } from './labelScaleSettings.js';
-import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
+import { getLabelScaleMode3D, saveLabelScaleMode3D } from './labelScaleSettings.js';
+import { getViewCubeSize3D, saveViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { Player3D, PLAYER_RADIUS_3D, PUCK_HEIGHT } from './player3d.js';
 
 // Reads a customizable color (see colors.js/setup.html) so the 3D court
@@ -163,6 +163,19 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     flyCameraTo(target.clone().add(direction.multiplyScalar(distance)), target);
   }
 
+  // Accepts the same "x,y,z" string format as the ViewCube/view-menu
+  // buttons' `data-view` attribute (or the literal string "home") - lets
+  // callers outside this module (the quad-menu, ROADMAP Phase 3.3)
+  // trigger a preset view without needing to import/construct a
+  // THREE.Vector3 themselves.
+  function snapToPresetView(dataView) {
+    if (dataView === 'home') {
+      resetToDefaultView();
+      return;
+    }
+    snapToViewDirection(new THREE.Vector3(...dataView.split(',').map(Number)));
+  }
+
   // The 26 ViewCube regions (6 faces + 12 edges + 8 corners), each a unit
   // direction from the target. The Z-axis faces are labeled ENDLINE/NET
   // rather than a generic Front/Back: which side of the net counts as
@@ -176,16 +189,26 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     medium: { sceneSize: 150, perspective: 750, half: 45, faceFontRem: 0.75, edgeHalf: 10, cornerHalf: 8 },
     large: { sceneSize: 200, perspective: 1000, half: 60, faceFontRem: 0.9, edgeHalf: 13, cornerHalf: 10 },
   };
-  const viewCubeSizePreset = VIEW_CUBE_SIZE_PRESETS[getViewCubeSize3D()];
-  viewCubeWrapEl.style.setProperty('--vc-scene-size', `${viewCubeSizePreset.sceneSize}px`);
-  viewCubeWrapEl.style.setProperty('--vc-perspective', `${viewCubeSizePreset.perspective}px`);
-  viewCubeWrapEl.style.setProperty('--vc-half', `${viewCubeSizePreset.half}px`);
-  viewCubeWrapEl.style.setProperty('--vc-face-size', `${viewCubeSizePreset.half * 2}px`);
-  viewCubeWrapEl.style.setProperty('--vc-face-font-size', `${viewCubeSizePreset.faceFontRem}rem`);
-  viewCubeWrapEl.style.setProperty('--vc-edge-half', `${viewCubeSizePreset.edgeHalf}px`);
-  viewCubeWrapEl.style.setProperty('--vc-edge-size', `${viewCubeSizePreset.edgeHalf * 2}px`);
-  viewCubeWrapEl.style.setProperty('--vc-corner-half', `${viewCubeSizePreset.cornerHalf}px`);
-  viewCubeWrapEl.style.setProperty('--vc-corner-size', `${viewCubeSizePreset.cornerHalf * 2}px`);
+  // Applies a size preset's CSS custom properties - called once below
+  // with the saved size, and again by the live `setViewCubeSize` setter
+  // (ROADMAP Phase 3.3's quad-menu) whenever the user changes it.
+  function applyViewCubeSizePreset(size) {
+    const preset = VIEW_CUBE_SIZE_PRESETS[size];
+    viewCubeWrapEl.style.setProperty('--vc-scene-size', `${preset.sceneSize}px`);
+    viewCubeWrapEl.style.setProperty('--vc-perspective', `${preset.perspective}px`);
+    viewCubeWrapEl.style.setProperty('--vc-half', `${preset.half}px`);
+    viewCubeWrapEl.style.setProperty('--vc-face-size', `${preset.half * 2}px`);
+    viewCubeWrapEl.style.setProperty('--vc-face-font-size', `${preset.faceFontRem}rem`);
+    viewCubeWrapEl.style.setProperty('--vc-edge-half', `${preset.edgeHalf}px`);
+    viewCubeWrapEl.style.setProperty('--vc-edge-size', `${preset.edgeHalf * 2}px`);
+    viewCubeWrapEl.style.setProperty('--vc-corner-half', `${preset.cornerHalf}px`);
+    viewCubeWrapEl.style.setProperty('--vc-corner-size', `${preset.cornerHalf * 2}px`);
+  }
+  applyViewCubeSizePreset(getViewCubeSize3D());
+  function setViewCubeSize(size) {
+    saveViewCubeSize3D(size);
+    applyViewCubeSizePreset(size);
+  }
 
   const VIEW_CUBE_FACES = [
     { label: 'TOP', dir: [0, 1, 0], transform: 'rotateX(90deg) translateZ(var(--vc-half))' },
@@ -278,11 +301,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     if (!button) {
       return;
     }
-    if (button.dataset.view === 'home') {
-      resetToDefaultView();
-    } else {
-      snapToViewDirection(new THREE.Vector3(...button.dataset.view.split(',').map(Number)));
-    }
+    snapToPresetView(button.dataset.view);
     setViewMenuOpen(false);
   }
   viewMenuEl.addEventListener('click', onViewMenuClick);
@@ -754,11 +773,17 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     backgroundClickHandler = handler;
   }
 
-  // Label distance scaling (setup.html's "3D Preview - Label Scaling"
+  // Label distance scaling (setup.html's "3D View - Label Scaling"
   // setting, default "scale"): CSS2DObject text otherwise stays a fixed
   // screen size regardless of camera distance, unlike the pucks
-  // themselves (which shrink/grow normally via perspective).
-  const labelScaleMode = getLabelScaleMode3D();
+  // themselves (which shrink/grow normally via perspective). `let` (not
+  // `const`) so the quad-menu's live `setLabelScaleMode` setter can
+  // change it without a full renderer rebuild.
+  let labelScaleMode = getLabelScaleMode3D();
+  function setLabelScaleMode(mode) {
+    labelScaleMode = mode;
+    saveLabelScaleMode3D(mode);
+  }
   const labelScaleReferenceDistance = camera.position.distanceTo(new THREE.Vector3(COURT_SIZE / 2, PUCK_HEIGHT / 2, COURT_SIZE / 2));
   function updateLabelScaling() {
     for (const group of draggablePlayers) {
@@ -858,6 +883,11 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     moveToBench,
     onBackgroundClick,
     onContextMenu,
+    resetToDefaultView,
+    snapToPresetView,
+    zoomExtents,
+    setViewCubeSize,
+    setLabelScaleMode,
     destroy,
   };
 }
