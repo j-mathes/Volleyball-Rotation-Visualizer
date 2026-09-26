@@ -10,12 +10,15 @@ import * as THREE from 'three';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS, BACK_ROW } from './config.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS, INITIAL_ZONE_ROLES, BACK_ROW } from './config.js';
 import { PLAYER_RADIUS } from './player.js';
 import { checkOverlap, getClampBounds } from './overlap.js';
 import { applyColors } from './colors.js';
 import { getLineSettings } from './lineSettings.js';
+import { getFontSettings } from './fontSettings.js';
 import { getBenchSide3D } from './benchSideSettings.js';
+import { getLabelScaleMode3D } from './labelScaleSettings.js';
 
 applyColors();
 
@@ -42,6 +45,19 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 mount.appendChild(renderer.domElement);
+
+// Billboarded (always-facing-camera) text labels (Phase 2.8) - a DOM
+// overlay positioned by each label's Object3D world transform, rather
+// than 3D text geometry, so it stays crisp and legible at any zoom/angle.
+// Sits on top of the WebGL canvas but ignores pointer events, so it never
+// blocks the drag/click raycasting below.
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+mount.appendChild(labelRenderer.domElement);
+const fontSettings = getFontSettings();
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const sun = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -151,7 +167,7 @@ const guideRelatedOutline = '#000000';
 // overlap.js's zone-keyed positions, and is null for the (not zone-
 // checked) benched Libero puck.
 const draggablePlayers = [];
-function createPlayerPuck(x, z, fillColor, zone = null) {
+function createPlayerPuck(x, z, fillColor, labelText, zone = null) {
   const group = new THREE.Group();
   group.position.set(x, PUCK_HEIGHT / 2, z);
   group.userData.zone = zone;
@@ -172,15 +188,35 @@ function createPlayerPuck(x, z, fillColor, zone = null) {
   group.userData.fill = fill;
   group.userData.baseFillColor = fillColor;
 
+  const labelDiv = document.createElement('div');
+  labelDiv.style.transformOrigin = 'center';
+  const labelTextEl = document.createElement('div');
+  labelTextEl.textContent = labelText;
+  labelTextEl.style.color = playerOutline;
+  labelTextEl.style.fontFamily = fontSettings.fontFamily;
+  labelTextEl.style.fontSize = `${fontSettings.playerLabelSize}px`;
+  labelTextEl.style.fontWeight = 'bold';
+  labelTextEl.style.textAlign = 'center';
+  labelTextEl.style.userSelect = 'none';
+  labelDiv.appendChild(labelTextEl);
+  const label = new CSS2DObject(labelDiv);
+  label.position.set(0, 0, 0);
+  group.add(label);
+  // The CSS2DObject's own div (labelDiv) is positioned/transformed by
+  // CSS2DRenderer itself every frame - scaling it directly would fight
+  // that. The distance-scaling toggle below instead scales this INNER
+  // text div, which CSS2DRenderer never touches.
+  group.userData.labelText = labelTextEl;
+
   scene.add(group);
   draggablePlayers.push(group);
   return group;
 }
 
 for (const [zone, pos] of Object.entries(ZONE_POSITIONS)) {
-  createPlayerPuck(pos.x, pos.y, playerFill, Number(zone));
+  createPlayerPuck(pos.x, pos.y, playerFill, INITIAL_ZONE_ROLES[zone], Number(zone));
 }
-createPlayerPuck(benchX, COURT_SIZE / 2, liberoFill);
+createPlayerPuck(benchX, COURT_SIZE / 2, liberoFill, 'L');
 
 // Guide/violation/link lines (Phase 2.4) - reuses overlap.js's zone-based
 // rule checker (identical logic to the 2D renderer) fed with each on-court
@@ -491,11 +527,38 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Label distance scaling (setup.html's "3D Preview - Label Scaling"
+// setting, default "scale"): CSS2DObject text otherwise stays a fixed
+// screen size regardless of camera distance, unlike the pucks themselves
+// (which shrink/grow normally via perspective) - scaling the inner text
+// div's CSS transform by (reference distance / current distance) each
+// frame fakes the same perspective falloff for the labels. The reference
+// distance is measured once, at load, to whatever's roughly the middle of
+// the court, so labels look their designed (fontSettings) size there,
+// same as before this toggle existed.
+const labelScaleMode = getLabelScaleMode3D();
+const labelScaleReferenceDistance = camera.position.distanceTo(new THREE.Vector3(COURT_SIZE / 2, PUCK_HEIGHT / 2, COURT_SIZE / 2));
+
+function updateLabelScaling() {
+  for (const group of draggablePlayers) {
+    if (labelScaleMode !== 'scale') {
+      group.userData.labelText.style.transform = '';
+      continue;
+    }
+    const distance = camera.position.distanceTo(group.position);
+    const scale = Math.min(2.5, Math.max(0.4, labelScaleReferenceDistance / distance));
+    group.userData.labelText.style.transform = `scale(${scale})`;
+  }
+}
 
 function animate() {
   requestAnimationFrame(animate);
+  updateLabelScaling();
   renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
 }
 animate();
 

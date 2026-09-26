@@ -91,6 +91,10 @@ uncluttered. Currently includes:
   bench/Libero substitution area sits on in the [3D Preview](scene3d.html)
   page specifically (the 2D visualizer already places it automatically
   per net orientation, so it doesn't need this setting).
+- **3D Preview — Label Scaling** — choose whether player labels in the
+  [3D Preview](scene3d.html) shrink/grow with camera distance (matching
+  the pucks' own perspective scaling, the default) or stay a fixed screen
+  size regardless of distance.
 
 ## Project structure
 
@@ -122,11 +126,15 @@ js/main.js             Wires the UI controls to the above
 js/setup.js             Wires up the setup page's customization forms
 js/scene3d.js           Phase 2 3D scene (Three.js, loaded via an import map
                         from a CDN - court plane, lighting, camera,
-                        draggable player pucks via raycasting, and
+                        draggable player pucks via raycasting,
                         overlap-driven guide/violation/link lines using
-                        the Line2/LineMaterial "fat line" addon) for
-                        scene3d.html
+                        the Line2/LineMaterial "fat line" addon, a "Lock
+                        to Legal Positions" drag clamp, bench-warning
+                        feedback, and billboarded role-label text via
+                        CSS2DRenderer) for scene3d.html
 js/benchSideSettings.js Bench/Libero side persistence for the 3D scene only
+                        (shared by scene3d.html/setup.html)
+js/labelScaleSettings.js 3D player-label distance-scaling mode persistence
                         (shared by scene3d.html/setup.html)
 ```
 

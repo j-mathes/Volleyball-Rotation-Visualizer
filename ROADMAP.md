@@ -87,7 +87,7 @@ rework when the renderer changes later.
       warns (red tint) when the benched/Libero puck is dragged onto a
       court that already has its full 6 players, so it's never possible
       to end up with 7. Not yet in the 3D scene at all.
-- [ ] 2.8 Billboarded text labels via `CSS2DRenderer`.
+- [x] 2.8 Billboarded text labels via `CSS2DRenderer`.
 - [ ] 2.9 Camera controls (orbit/tilt).
 - [ ] 2.10 Floating 3D control UI + dashboard — 2D's fixed side panel
       doesn't work once the camera can move freely around the full 3D

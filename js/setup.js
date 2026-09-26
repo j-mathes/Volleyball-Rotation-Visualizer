@@ -7,6 +7,7 @@ import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
+import { getLabelScaleMode3D, saveLabelScaleMode3D } from './labelScaleSettings.js';
 
 applyColors();
 applyLineSettings();
@@ -683,4 +684,23 @@ benchSide3DRightBtn.addEventListener('click', () => {
   refreshBenchSide3DButtons();
 });
 refreshBenchSide3DButtons();
+
+const labelScale3DScaleBtn = document.getElementById('labelScale3DScale');
+const labelScale3DFixedBtn = document.getElementById('labelScale3DFixed');
+
+function refreshLabelScale3DButtons() {
+  const mode = getLabelScaleMode3D();
+  labelScale3DScaleBtn.classList.toggle('active', mode === 'scale');
+  labelScale3DFixedBtn.classList.toggle('active', mode === 'fixed');
+}
+
+labelScale3DScaleBtn.addEventListener('click', () => {
+  saveLabelScaleMode3D('scale');
+  refreshLabelScale3DButtons();
+});
+labelScale3DFixedBtn.addEventListener('click', () => {
+  saveLabelScaleMode3D('fixed');
+  refreshLabelScale3DButtons();
+});
+refreshLabelScale3DButtons();
 
