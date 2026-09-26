@@ -30,15 +30,35 @@ export const ROTATION_TRACKER_CENTER_X_CLASSIC = BENCH_CENTER_CLASSIC.x;
 
 
 
-// Base (legal, no-overlap) position for each zone.
-export const ZONE_POSITIONS = {
-  1: { x: 750, y: 750 }, // back right (server)
-  2: { x: 750, y: 150 }, // front right
-  3: { x: 450, y: 150 }, // front middle
-  4: { x: 150, y: 150 }, // front left
-  5: { x: 150, y: 750 }, // back left
-  6: { x: 450, y: 750 }, // back middle
+// Base (legal, no-overlap) position for each zone, expressed net-relative
+// ("depth" = distance from the net, growing away from it) rather than as
+// a raw world y - so a future second team on the opposite side of the
+// net (see court.js/renderer3d.js's full-court geometry) can reuse the
+// same table mirrored, instead of needing its own hand-authored copy.
+// x is unaffected by which side of the net a team is on.
+const ZONE_LOCAL_POSITIONS = {
+  1: { x: 750, depth: 750 }, // back right (server)
+  2: { x: 750, depth: 150 }, // front right
+  3: { x: 450, depth: 150 }, // front middle
+  4: { x: 150, depth: 150 }, // front left
+  5: { x: 150, depth: 750 }, // back left
+  6: { x: 450, depth: 750 }, // back middle
 };
+
+// Converts a zone's net-relative position into world (render) coordinates
+// for a given team side. 'near' (the default, today's only team) sits on
+// the y>0 half with the net at y=0, same as always. 'far' is for a future
+// second team on the mirrored y<0 half - not used anywhere yet.
+export function zoneWorldPosition(zone, side = 'near') {
+  const { x, depth } = ZONE_LOCAL_POSITIONS[zone];
+  return { x, y: side === 'near' ? depth : -depth };
+}
+
+// Today's single team's world positions - values unchanged from before
+// this was split out, so every existing caller keeps working as-is.
+export const ZONE_POSITIONS = Object.fromEntries(
+  Object.keys(ZONE_LOCAL_POSITIONS).map((zone) => [zone, zoneWorldPosition(Number(zone))])
+);
 
 // Which zone is in front of / behind / left of / right of which, used by
 // the overlap checker. Rows and columns share the layout above.

@@ -139,13 +139,17 @@ export function createClampLinesLayer(container) {
 }
 
 // Draws the static court lines (net, side/end lines, attack line) into the
-// given container and returns it for convenience.
+// given container and returns it for convenience. Like the 3D renderer,
+// this draws the FULL court (our half plus the opponent's half mirrored
+// across the net at y=0) rather than just our half - the opponent's half
+// simply falls outside the SVG viewBox (see setViewBox), so it goes
+// off-screen instead of being visible, but the geometry matches 3D.
 export function drawCourt(container) {
   const court = el('rect', {
     x: 0,
-    y: 0,
+    y: -COURT_SIZE,
     width: COURT_SIZE,
-    height: COURT_SIZE,
+    height: COURT_SIZE * 2,
     fill: 'var(--court-fill)',
     stroke: 'var(--line-colour)',
     'stroke-width': 6,
@@ -169,9 +173,18 @@ export function drawCourt(container) {
     y2: ATTACK_LINE_Y,
     stroke: 'var(--line-colour)',
     'stroke-width': 6,
-    'stroke-dasharray': '16,14',
   });
   container.appendChild(attackLine);
+
+  const opponentAttackLine = el('line', {
+    x1: 0,
+    y1: -ATTACK_LINE_Y,
+    x2: COURT_SIZE,
+    y2: -ATTACK_LINE_Y,
+    stroke: 'var(--line-colour)',
+    'stroke-width': 6,
+  });
+  container.appendChild(opponentAttackLine);
 
   return container;
 }

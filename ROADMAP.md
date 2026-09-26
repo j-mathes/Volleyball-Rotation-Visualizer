@@ -209,4 +209,45 @@ SAME shared elements the 2D view already had (no more duplicate UI); only
 genuinely 3D-only concepts (the ViewCube/camera, and the Bench Side
 toggle) remain 3D-specific, shown/hidden by the same "View Mode" section.
 
+## Phase 3 — Two-Team Support (planned, not started)
+
+Eventually show both teams on court at once (ours + an opponent on the
+mirrored far half of the net). Both renderers already draw the full
+court (see Phase 2.13's note above and the 2D full-court change that
+followed it), and a couple of small preparatory refactors have already
+landed ahead of time - see below - but the bulk of this is still design
++ implementation work, not yet started.
+
+**Already prepped, ahead of time** (behavior-preserving, verified no
+regressions):
+- `court.js`/`renderer3d.js` draw the FULL court (our half + the
+  opponent's half mirrored across the net), not just our half - the far
+  half is currently just cropped off-screen by the 2D viewBox, but the
+  geometry is there for a second team to occupy.
+- `config.js`'s `ZONE_POSITIONS` are now derived from a net-relative
+  source of truth (`ZONE_LOCAL_POSITIONS`, keyed by `{x, depth}` instead
+  of raw world `{x, y}`) via a new `zoneWorldPosition(zone, side)`
+  helper - `side: 'near'` (today's only team, unchanged values) or
+  `'far'` (mirrors depth to the opposite side of the net, not used yet).
+  A future second team's zone positions can reuse the same table instead
+  of a hand-authored duplicate.
+- `overlap.js` got a comment (no logic change) flagging that its front/
+  back check assumes near-side sign conventions (smaller y = closer to
+  net) and will need the far team's y negated back to net-relative depth
+  before being passed in - `checkOverlap` itself has no team/side concept.
+
+**Still needed when this is actually built** (not started):
+- Per-team state in `main.js` - currently exactly one `playersByRole`,
+  `rotationState`, `liberoState`, `benchedRole()`. Needs namespacing
+  (e.g. by team id) rather than module-level singletons.
+- A decision on zone-numbering mirroring - real volleyball mirrors each
+  team's zone numbers diagonally (each team's own zone 1 is opposite when
+  viewed from a fixed camera), not just a straight y-flip; `far` in
+  `zoneWorldPosition` only handles the y-flip so far.
+- A second bench (per team) in both renderers.
+- A second "Serving:"/rotation-tracker readout, or a combined one.
+- A `courtSetups.js` schema version bump - the save/load format currently
+  flattens to one team's role set (`positions: { S: {x,y}, ... }`) with
+  no team wrapper at all.
+
 

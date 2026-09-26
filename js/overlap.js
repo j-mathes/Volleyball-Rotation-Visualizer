@@ -34,7 +34,12 @@ const LEFT_RIGHT_CHECKS = [...pairs(FRONT_ROW), ...pairs(BACK_ROW)];
 //
 // `positionsByZone` is `{ zone: { x, y, role } }` for the current on-court
 // layout only - callers should exclude any benched player (e.g. someone
-// replaced by the Libero) before calling this.
+// replaced by the Libero) before calling this. The front/back check below
+// assumes smaller y = closer to the net (true for today's one team, which
+// sits on the y>0 half); a future far-side team (see config.js's
+// `zoneWorldPosition(zone, 'far')`, mirrored to y<0) would need its y
+// negated back to net-relative "depth" before calling this, since this
+// function has no team/side concept of its own.
 // Returns an array of { zoneA, zoneB, roleA, roleB, ok, message, axis }.
 // `axis` is 'horizontal' for left/right checks, 'vertical' for front/back
 // checks - useful for drawing a line along the violated direction.
