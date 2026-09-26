@@ -58,23 +58,23 @@ rework when the renderer changes later.
       `drawSeparatorLine`, `drawLinkLine`, `setRotationTrackerText`, etc.)
       so `main.js` stops talking to SVG-specifics directly — this is what
       lets Phase 2 plug in without another refactor.
-- [ ] 1.5 Configurable Libero bench side — the bench/Libero substitution
-      area's placement (currently hardcoded to one side) needs to be a
-      selectable setting independent of the net-orientation toggle, since
-      "which side" stops being an obvious single fixed answer once the
-      court can be viewed from multiple orientations.
 
 ## Phase 2 — 3D True Rendering Mode
 
 - [ ] 2.1 Add Three.js; build the scene (court plane, lighting, camera).
-- [ ] 2.2 Player representation (disc/cylinder or sprite) + drag via
+- [ ] 2.2 Configurable Libero bench side — a selectable setting for the
+      bench/Libero substitution area's placement in the 3D scene. Not
+      needed in 2D: the renderer.js interface already resolves bench
+      side automatically per net-orientation view angle (classic left /
+      top-right / top-left layouts), but a true 3D scene has no such
+      built-in "which side" derivation, so it needs its own explicit
+      setting.
+- [ ] 2.3 Player representation (disc/cylinder or sprite) + drag via
       raycasting onto the court plane.
-- [ ] 2.3 Guide/violation/link lines as 3D geometry — "fat line" technique
+- [ ] 2.4 Guide/violation/link lines as 3D geometry — "fat line" technique
       for thickness, `LineDashedMaterial` for dashed styles.
-- [ ] 2.4 Billboarded text labels via `CSS2DRenderer`.
-- [ ] 2.5 Camera controls (orbit/tilt).
-- [ ] 2.6 Wire the 3D renderer in as the 4th `viewMode` option behind the
+- [ ] 2.5 Billboarded text labels via `CSS2DRenderer`.
+- [ ] 2.6 Camera controls (orbit/tilt).
+- [ ] 2.7 Wire the 3D renderer in as the 4th `viewMode` option behind the
       Phase 1 interface.
-- [ ] 2.7 Carry the 1.5 configurable Libero bench side setting into the 3D
-      scene (bench placement in 3D space follows the same setting).
 
