@@ -70,6 +70,7 @@ export class Player3D {
     const labelObject = new CSS2DObject(labelDiv);
     labelObject.position.set(0, 0, 0);
     this.group.add(labelObject);
+    this.labelObject = labelObject;
 
     scene.add(this.group);
     raycastTargets.push(this.group);
@@ -226,6 +227,23 @@ export class Player3D {
 
   updateLabelScale(scale) {
     this.labelTextEl.style.transform = scale === null ? '' : `scale(${scale})`;
+  }
+
+  // Lifts the label above the puck by `offsetY` world units (ROADMAP
+  // 3.9) - at a steep/top-down camera angle a label right at the puck's
+  // own height already reads fine as "on it", but at a shallow/grazing
+  // angle (e.g. the R1/R2 first-person viewpoints) that same zero offset
+  // makes the label appear to merge into/hover confusingly at the puck's
+  // base instead of clearly sitting above it - renderer3d.js computes
+  // `offsetY` once per frame from the camera's current pitch.
+  updateLabelHeight(offsetY) {
+    this.labelObject.position.y = offsetY;
+  }
+
+  // Hides this label when a post/the net blocks the camera's line of
+  // sight to it - see renderer3d.js's updateLabelOcclusion.
+  setLabelOccluded(occluded) {
+    this.labelObject.element.style.display = occluded ? 'none' : '';
   }
 
   dispose() {

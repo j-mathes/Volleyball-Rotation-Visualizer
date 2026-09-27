@@ -14,6 +14,7 @@ import { getViewMode, saveViewMode } from './viewModeSettings.js';
 import { getBenchSide3D } from './benchSideSettings.js';
 import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
+import { getInvertPitch3D } from './firstPersonSettings.js';
 import { createQuadMenu } from './quadMenu.js';
 import { KEYBOARD_SHORTCUTS } from './shortcutsData.js';
 
@@ -50,6 +51,7 @@ const qmResetViewBtn = document.getElementById('qmResetView');
 const qmZoomExtentsBtn = document.getElementById('qmZoomExtents');
 const qmViewCubeSizeBtns = quadViewCameraSection.querySelectorAll('button[data-size]');
 const qmLabelScaleBtns = quadViewCameraSection.querySelectorAll('button[data-mode]');
+const qmInvertPitchToggle = document.getElementById('qmInvertPitchToggle');
 const qmOverlapGuideToggle = document.getElementById('qmOverlapGuideToggle');
 const qmPlayerLinkToggle = document.getElementById('qmPlayerLinkToggle');
 const qmClampToggle = document.getElementById('qmClampToggle');
@@ -90,7 +92,12 @@ const rotationState = new RotationState();
 
 // Role of the on-court player the Libero is currently replacing, or
 // null if the Libero is on the bench. Only ever a back-row role.
-const liberoState = { replacedRole: null };
+// `replacedRolePosition` remembers exactly where that player was
+// standing at the moment of swap-in (which may differ from its zone's
+// default position, e.g. if it had been dragged) - `player.x`/`.y`
+// can't be read back later for this since swapLiberoOn immediately
+// animates that player to the bench, overwriting its position.
+const liberoState = { replacedRole: null, replacedRolePosition: null };
 
 // True while the swap button is waiting for the user to click a back-row
 // player to complete a swap-in.
@@ -396,6 +403,7 @@ async function applyState(state, { animate = false, duration = 600 } = {}) {
   setAwaitingSelection(false);
   rotationState.zoneToRole = { ...state.zoneToRole };
   liberoState.replacedRole = state.liberoReplacedRole || null;
+  liberoState.replacedRolePosition = null;
   const benched = benchedRole();
   const animations = [];
   for (const [role, player] of Object.entries(playersByRole)) {
@@ -471,9 +479,14 @@ function setAwaitingSelection(active) {
 
 // Swaps the Libero onto the court for `role`. The outgoing player leaves
 // the court first so the court never shows more than 6 players at once.
+// The Libero takes over wherever that player CURRENTLY stands (not its
+// zone's default position, in case it had been dragged) - `role`'s exact
+// spot is remembered in `liberoState.replacedRolePosition` so swapLiberoOff
+// can later put it back exactly there too.
 async function swapLiberoOn(role) {
   clearHighlights();
-  const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
+  const { x, y } = playersByRole[role];
+  liberoState.replacedRolePosition = { x, y };
   const replacedPos = renderer.benchPositionReplaced();
   renderer.moveToBench(playersByRole[role]);
   await playersByRole[role].animateTo(replacedPos.x, replacedPos.y, 500);
@@ -484,7 +497,10 @@ async function swapLiberoOn(role) {
   runOverlapCheck();
 }
 
-// Swaps the Libero off the court, returning the player it replaced. Also
+// Swaps the Libero off the court, returning the player it replaced to
+// exactly where it stood before being benched (see swapLiberoOn) - falls
+// back to the zone's default position if that wasn't recorded (e.g.
+// right after loading a saved setup that was already mid-swap). Also
 // used automatically when that player is about to rotate to the front row.
 async function swapLiberoOff() {
   const role = liberoState.replacedRole;
@@ -492,13 +508,14 @@ async function swapLiberoOff() {
     return;
   }
   clearHighlights();
-  const { x, y } = ZONE_POSITIONS[rotationState.zoneOfRole(role)];
+  const { x, y } = liberoState.replacedRolePosition || ZONE_POSITIONS[rotationState.zoneOfRole(role)];
   const benchPos = renderer.benchPosition();
   renderer.moveToBench(playersByRole.L);
   await playersByRole.L.animateTo(benchPos.x, benchPos.y, 500);
   renderer.moveToCourt(playersByRole[role]);
   await playersByRole[role].animateTo(x, y, 500);
   liberoState.replacedRole = null;
+  liberoState.replacedRolePosition = null;
   refreshLiberoButtonLabel();
   runOverlapCheck();
 }
@@ -528,6 +545,7 @@ qmRotateCcwBtn.addEventListener('click', () => rotate(-1));
 function resetToBasePositions() {
   setAwaitingSelection(false);
   liberoState.replacedRole = null;
+  liberoState.replacedRolePosition = null;
   refreshLiberoButtonLabel();
   snapAllToZonePositions();
 }
@@ -767,6 +785,14 @@ qmLabelScaleBtns.forEach((button) => {
   });
 });
 
+function refreshInvertPitchButton() {
+  qmInvertPitchToggle.classList.toggle('active', getInvertPitch3D());
+}
+qmInvertPitchToggle.addEventListener('click', () => {
+  renderer.setInvertPitch3D?.(!getInvertPitch3D());
+  refreshInvertPitchButton();
+});
+
 // Calls straight through to renderer3d.js's exposed camera-preset
 // methods (3D-only) or the equivalent app-level function (both modes) -
 // matching each entry's `action` id in shortcutsData.js.
@@ -847,7 +873,7 @@ function onGlobalKeydown(event) {
     case '0':
       shortcutActions.resetToBase();
       break;
-    case 's':
+    case '/':
       shortcutActions.swapLibero();
       break;
     case 'g':
@@ -888,6 +914,7 @@ function wireRendererEvents() {
     refreshBenchSide3DButtons();
     refreshViewCubeSizeButtons();
     refreshLabelScaleButtons();
+    refreshInvertPitchButton();
     renderShortcutsList();
     quadMenu.open(event.clientX, event.clientY, viewMode === '3d');
   });

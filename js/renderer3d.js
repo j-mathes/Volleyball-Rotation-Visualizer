@@ -20,7 +20,7 @@ import * as THREE from 'three';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { COURT_SIZE, ATTACK_LINE_Y, BENCH_WIDTH, ZONE_POSITIONS } from './config.js';
 import { getLineSettings } from './lineSettings.js';
@@ -29,6 +29,7 @@ import { getEffectSettings } from './effectSettings.js';
 import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
 import { getLabelScaleMode3D, saveLabelScaleMode3D } from './labelScaleSettings.js';
 import { getViewCubeSize3D, saveViewCubeSize3D } from './viewCubeSizeSettings.js';
+import { getInvertPitch3D, saveInvertPitch3D } from './firstPersonSettings.js';
 import { Player3D, PLAYER_RADIUS_3D, PUCK_HEIGHT } from './player3d.js';
 
 // Reads a customizable color (see colors.js/setup.html) so the 3D court
@@ -49,6 +50,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   scene.background = new THREE.Color(cssColor('--court-bg', '#189a94'));
 
   const camera = new THREE.PerspectiveCamera(50, mountEl.clientWidth / mountEl.clientHeight, 1, 4000);
+  const DEFAULT_FOV = camera.fov;
   // Elevated behind the near end line, angled down at the court's center -
   // a typical broadcast-style volleyball camera position.
   camera.position.set(COURT_SIZE / 2, COURT_SIZE * 0.9, COURT_SIZE * 1.35);
@@ -103,7 +105,20 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // letting the existing `controls.update()` in `animate()` run
   // afterward "just works" with no desync.
   let cameraTween = null;
-  function flyCameraTo(endPosition, endTarget, durationMs = 400) {
+  // Whichever R1/R2 referee puck is currently hidden because the camera
+  // flew to its viewpoint (see selectViewpoint below) - restored here,
+  // at the top of every flyCameraTo call, so ANY other navigation action
+  // (Home, a ViewCube click, a keyboard shortcut, Alt+click re-anchoring,
+  // zoomExtents, or selecting a DIFFERENT viewpoint) automatically brings
+  // it back rather than needing its own separate restore call.
+  let hiddenViewpoint = null;
+  function flyCameraTo(endPosition, endTarget, durationMs = 400, onComplete) {
+    if (hiddenViewpoint) {
+      hiddenViewpoint.group.visible = true;
+      hiddenViewpoint.labelDiv.style.display = '';
+      hiddenViewpoint = null;
+    }
+    exitFirstPersonMode();
     cameraTween = {
       startPosition: camera.position.clone(),
       endPosition: endPosition.clone(),
@@ -111,6 +126,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
       endTarget: endTarget.clone(),
       startTime: performance.now(),
       durationMs,
+      onComplete,
     };
   }
   function updateCameraTween(nowMs) {
@@ -122,9 +138,224 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     camera.position.lerpVectors(cameraTween.startPosition, cameraTween.endPosition, eased);
     controls.target.lerpVectors(cameraTween.startTarget, cameraTween.endTarget, eased);
     if (t >= 1) {
+      const { onComplete } = cameraTween;
       cameraTween = null;
+      onComplete?.();
     }
   }
+
+  // First-person "look around" mode for a selected R1/R2 viewpoint
+  // (ROADMAP 3.5 follow-up) - the camera POSITION stays fixed at the
+  // referee's eyes; dragging rotates the look direction in place (like
+  // turning your head) instead of orbiting around a distant target. Only
+  // entered once `flyCameraTo`'s fly-in tween into the viewpoint finishes
+  // (via its `onComplete` callback - see selectViewpoint below), so the
+  // approach itself still uses the normal position+target tween.
+  let firstPersonMode = false;
+  const fpEyePosition = new THREE.Vector3();
+  // Where this viewpoint's eyes started (before any WASD movement) -
+  // `fpEyePosition` is clamped to a small radius around this, and R1's
+  // side-to-side offset is measured from its X coordinate.
+  const fpBasePosition = new THREE.Vector3();
+  // R2 (floor referee) can walk around a bit in any direction; R1 (on a
+  // fixed stand) can only shuffle side-to-side along the sideline - see
+  // applyWasdMovement below.
+  let fpCanWalk = false;
+  let fpYaw = 0;
+  let fpPitch = 0;
+  let fpDragging = false;
+  let fpLastPointer = null;
+  // A more natural (less fisheye-distorted) wide angle than the default
+  // 50 - still noticeably wider to help take in more of the court from a
+  // fixed, close-up vantage, without the extreme edge-stretching a very
+  // high FOV (e.g. 100+) causes.
+  const FIRST_PERSON_FOV = 75;
+  const FP_LOOK_SENSITIVITY = 0.005;
+  const FP_MAX_PITCH = Math.PI * 0.49;
+  const FP_WALK_SPEED = 120; // units/sec (~1.2 m/s, a slow walk)
+  const FP_STRAFE_LIMIT = 100; // R1's side-to-side range
+  const FP_WALK_LIMIT = 150; // R2's range in any direction
+  const PAN_SPEED = 300; // units/sec for WASD panning outside first-person mode
+  // Default (not inverted): dragging the mouse up pitches the view DOWN,
+  // toward the court - per explicit user preference. `setInvertPitch3D`
+  // (ROADMAP, quad-menu) flips this for players who prefer the opposite.
+  let invertPitch = getInvertPitch3D();
+  function setInvertPitch3D(invert) {
+    invertPitch = invert;
+    saveInvertPitch3D(invert);
+  }
+
+  function fpLookDirection() {
+    return new THREE.Vector3(Math.sin(fpYaw) * Math.cos(fpPitch), Math.sin(fpPitch), Math.cos(fpYaw) * Math.cos(fpPitch));
+  }
+  function updateFirstPersonCamera() {
+    camera.position.copy(fpEyePosition);
+    camera.lookAt(fpEyePosition.clone().add(fpLookDirection()));
+  }
+  function enterFirstPersonMode(eyePosition, lookAt, canWalk) {
+    firstPersonMode = true;
+    fpEyePosition.copy(eyePosition);
+    fpBasePosition.copy(eyePosition);
+    fpCanWalk = canWalk;
+    const direction = lookAt.clone().sub(eyePosition).normalize();
+    fpPitch = Math.asin(THREE.MathUtils.clamp(direction.y, -1, 1));
+    fpYaw = Math.atan2(direction.x, direction.z);
+    controls.enabled = false;
+    camera.fov = FIRST_PERSON_FOV;
+    camera.updateProjectionMatrix();
+    updateFirstPersonCamera();
+  }
+  function exitFirstPersonMode() {
+    if (!firstPersonMode) {
+      return;
+    }
+    firstPersonMode = false;
+    fpDragging = false;
+    controls.enabled = true;
+    camera.fov = DEFAULT_FOV;
+    camera.updateProjectionMatrix();
+  }
+  // Look-around dragging itself is folded into onPointerDownLeft below
+  // (it only engages as the LOWEST priority, after puck-drag and
+  // viewpoint-click both miss) - so players/other viewpoints stay
+  // clickable even while locked onto R1/R2, matching normal-mode
+  // priority instead of a separate always-wins handler.
+  function onFirstPersonPointerMove(event) {
+    if (!fpDragging) {
+      return;
+    }
+    const dx = event.clientX - fpLastPointer.x;
+    const dy = event.clientY - fpLastPointer.y;
+    fpLastPointer = { x: event.clientX, y: event.clientY };
+    fpYaw -= dx * FP_LOOK_SENSITIVITY;
+    const pitchDelta = dy * FP_LOOK_SENSITIVITY * (invertPitch ? -1 : 1);
+    fpPitch = THREE.MathUtils.clamp(fpPitch + pitchDelta, -FP_MAX_PITCH, FP_MAX_PITCH);
+    updateFirstPersonCamera();
+  }
+  function onFirstPersonPointerUp(event) {
+    if (!fpDragging) {
+      return;
+    }
+    fpDragging = false;
+    renderer.domElement.releasePointerCapture(event.pointerId);
+  }
+  renderer.domElement.addEventListener('pointermove', onFirstPersonPointerMove);
+  renderer.domElement.addEventListener('pointerup', onFirstPersonPointerUp);
+  renderer.domElement.addEventListener('pointercancel', onFirstPersonPointerUp);
+
+  // WASD movement - "walking around a bit" while locked onto R1/R2 (see
+  // applyWasdMovement below), and a keyboard alternative to Shift+drag
+  // panning the rest of the time. Held-key state, applied continuously
+  // in the animate() loop (not a one-shot per keydown) so movement is
+  // smooth and framerate-independent via `dt`.
+  const wasdKeys = { forward: false, backward: false, left: false, right: false };
+  function onWasdKeydown(event) {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    const focusedTag = document.activeElement?.tagName;
+    if (focusedTag === 'INPUT' || focusedTag === 'TEXTAREA') {
+      return;
+    }
+    switch (event.key.toLowerCase()) {
+      case 'w':
+        wasdKeys.forward = true;
+        break;
+      case 's':
+        wasdKeys.backward = true;
+        break;
+      case 'a':
+        wasdKeys.left = true;
+        break;
+      case 'd':
+        wasdKeys.right = true;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+  }
+  function onWasdKeyup(event) {
+    switch (event.key.toLowerCase()) {
+      case 'w':
+        wasdKeys.forward = false;
+        break;
+      case 's':
+        wasdKeys.backward = false;
+        break;
+      case 'a':
+        wasdKeys.left = false;
+        break;
+      case 'd':
+        wasdKeys.right = false;
+        break;
+      default:
+        return;
+    }
+  }
+  window.addEventListener('keydown', onWasdKeydown);
+  window.addEventListener('keyup', onWasdKeyup);
+
+  // Applied every frame (see animate() below) while any WASD key is held.
+  // In first-person mode this moves `fpEyePosition` itself - "forward"/
+  // "right" are always relative to whichever way you're CURRENTLY facing
+  // (`fpYaw`), exactly like WASD in an FPS (Quake etc.) rather than fixed
+  // world axes - R1 (fixed stand) only allows the strafe (A/D) component,
+  // never forward/back, but that strafe still turns with you as you look
+  // around; R2 (floor referee) allows both, walking freely. Both are
+  // clamped to a small radius around where you started. Outside first-
+  // person mode, the same keys instead pan the normal orbit camera
+  // (translating both `camera.position` and `controls.target` together,
+  // relative to the camera's current horizontal facing) - an unbounded,
+  // keyboard alternative to Shift+drag.
+  function applyWasdMovement(dt) {
+    let moveForward = 0;
+    let moveRight = 0;
+    if (wasdKeys.forward) {
+      moveForward += 1;
+    }
+    if (wasdKeys.backward) {
+      moveForward -= 1;
+    }
+    if (wasdKeys.left) {
+      moveRight -= 1;
+    }
+    if (wasdKeys.right) {
+      moveRight += 1;
+    }
+    if (moveForward === 0 && moveRight === 0) {
+      return;
+    }
+    if (firstPersonMode) {
+      const forward = new THREE.Vector3(Math.sin(fpYaw), 0, Math.cos(fpYaw));
+      const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+      const delta = new THREE.Vector3().addScaledVector(forward, fpCanWalk ? moveForward : 0).addScaledVector(right, moveRight);
+      if (delta.lengthSq() > 0) {
+        delta.normalize().multiplyScalar(FP_WALK_SPEED * dt);
+        fpEyePosition.add(delta);
+        const offset = fpEyePosition.clone().sub(fpBasePosition);
+        const limit = fpCanWalk ? FP_WALK_LIMIT : FP_STRAFE_LIMIT;
+        if (offset.length() > limit) {
+          fpEyePosition.copy(fpBasePosition).add(offset.setLength(limit));
+        }
+      }
+      updateFirstPersonCamera();
+      return;
+    }
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() === 0) {
+      forward.set(0, 0, -1);
+    }
+    forward.normalize();
+    const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+    const delta = new THREE.Vector3().addScaledVector(forward, moveForward).addScaledVector(right, moveRight);
+    delta.normalize().multiplyScalar(PAN_SPEED * dt);
+    camera.position.add(delta);
+    controls.target.add(delta);
+  }
+
 
   function resetToDefaultView() {
     flyCameraTo(DEFAULT_CAMERA_POSITION, DEFAULT_CONTROLS_TARGET);
@@ -434,6 +665,10 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     altHeld = false;
     shiftHeld = false;
     panCursorActive = false;
+    wasdKeys.forward = false;
+    wasdKeys.backward = false;
+    wasdKeys.left = false;
+    wasdKeys.right = false;
     updateLeftButtonMapping();
     updateCursor();
   }
@@ -530,7 +765,10 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   addCourtLine(0, -ATTACK_LINE_Y, COURT_SIZE, -ATTACK_LINE_Y); // opponent's attack line
 
   // Net line at z=0, a flat plane rather than another THREE.Line, since
-  // WebGL line width is capped at ~1px on most GPUs/browsers.
+  // WebGL line width is capped at ~1px on most GPUs/browsers. This is the
+  // court's actual painted center line marking (a real, distinct element
+  // of a volleyball court in its own right) - kept as-is even after
+  // adding the real vertical net mesh below, rather than replaced by it.
   const net = new THREE.Mesh(
     new THREE.PlaneGeometry(COURT_SIZE + 80, 10),
     new THREE.MeshBasicMaterial({ color: cssColor('--line-colour', '#ffffff') }),
@@ -538,6 +776,136 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   net.rotation.x = -Math.PI / 2;
   net.position.set(COURT_SIZE / 2, lineY, 0);
   scene.add(net);
+
+  // Net posts (regulation 2.55m, 0.75m outside each sideline - FIVB Rule
+  // 2.5.1's 0.5-1.0m range) + a real net (FIVB Rule 2.2/2.3/2.4): the net
+  // itself is only 1m tall - NOT ground-to-top - with its top edge at
+  // 2.43m, so its bottom edge floats at 1.43m (previously this mesh
+  // wrongly extended all the way down near the ground). 10cm black
+  // square mesh between a 7cm top band and a 5cm bottom band (both white
+  // canvas), plus a white side band directly above each sideline and a
+  // striped antenna at each side band's outer edge extending 80cm above
+  // the net.
+  const NET_TOP = 243;
+  const NET_TOTAL_HEIGHT = 100;
+  const NET_BOTTOM = NET_TOP - NET_TOTAL_HEIGHT;
+  const NET_TOP_BAND_HEIGHT = 7;
+  const NET_BOTTOM_BAND_HEIGHT = 5;
+  const NET_SPAN_WIDTH = 970; // ~9.7m, within the 9.5-10m spec
+  const POST_MARGIN = 75;
+  const POST_HEIGHT = 255;
+  const postMaterial = new THREE.MeshStandardMaterial({ color: cssColor('--line-colour', '#ffffff') });
+  // Solid meshes a label should be hidden behind if the camera's view of
+  // its puck is actually blocked by one of these (posts, the net) - see
+  // updateLabelOcclusion below. CSS2DObject labels otherwise always
+  // render on top of the WebGL scene regardless of what's in front of
+  // them (a separate DOM overlay, no shared depth test).
+  const labelOccluders = [];
+  function addNetPost(x) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, POST_HEIGHT, 16), postMaterial);
+    post.position.set(x, POST_HEIGHT / 2, 0);
+    scene.add(post);
+    labelOccluders.push(post);
+  }
+  addNetPost(-POST_MARGIN);
+  addNetPost(COURT_SIZE + POST_MARGIN);
+
+  // A small canvas-drawn square (10cm cells, black cord) repeated across
+  // the net's mesh section via texture wrapping.
+  function createNetMeshTexture() {
+    const size = 32;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(0, 0, size, size);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    const meshHeight = NET_TOTAL_HEIGHT - NET_TOP_BAND_HEIGHT - NET_BOTTOM_BAND_HEIGHT;
+    texture.repeat.set(NET_SPAN_WIDTH / 10, meshHeight / 10);
+    return texture;
+  }
+  const netMeshTexture = createNetMeshTexture();
+  const netBandMaterial = new THREE.MeshBasicMaterial({ color: cssColor('--line-colour', '#ffffff'), side: THREE.DoubleSide });
+  function addNetBand(y, height) {
+    const band = new THREE.Mesh(new THREE.PlaneGeometry(NET_SPAN_WIDTH, height), netBandMaterial);
+    band.position.set(COURT_SIZE / 2, y, 0);
+    scene.add(band);
+  }
+  addNetBand(NET_TOP - NET_TOP_BAND_HEIGHT / 2, NET_TOP_BAND_HEIGHT);
+  addNetBand(NET_BOTTOM + NET_BOTTOM_BAND_HEIGHT / 2, NET_BOTTOM_BAND_HEIGHT);
+  const netMeshHeight = NET_TOTAL_HEIGHT - NET_TOP_BAND_HEIGHT - NET_BOTTOM_BAND_HEIGHT;
+  const verticalNet = new THREE.Mesh(
+    new THREE.PlaneGeometry(NET_SPAN_WIDTH, netMeshHeight),
+    new THREE.MeshBasicMaterial({ map: netMeshTexture, transparent: true, side: THREE.DoubleSide }),
+  );
+  verticalNet.position.set(COURT_SIZE / 2, NET_BOTTOM + NET_BOTTOM_BAND_HEIGHT + netMeshHeight / 2, 0);
+  scene.add(verticalNet);
+  labelOccluders.push(verticalNet);
+
+  // Side bands (5cm wide, directly above each sideline, spanning the
+  // net's full height) + antennae (striped fiberglass rods at each side
+  // band's outer edge, 1.8m long: from the net's bottom edge to 80cm
+  // above its top edge).
+  function addSideBand(x) {
+    const band = new THREE.Mesh(new THREE.PlaneGeometry(5, NET_TOTAL_HEIGHT), netBandMaterial);
+    band.position.set(x, NET_TOP - NET_TOTAL_HEIGHT / 2, 0);
+    scene.add(band);
+  }
+  addSideBand(0);
+  addSideBand(COURT_SIZE);
+
+  const ANTENNA_LENGTH = 180;
+  function createAntennaTexture() {
+    const stripeCount = 18; // 10cm stripes over the 1.8m length
+    const canvas = document.createElement('canvas');
+    canvas.width = 4;
+    canvas.height = stripeCount;
+    const ctx = canvas.getContext('2d');
+    for (let i = 0; i < stripeCount; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#e74c3c' : '#ffffff';
+      ctx.fillRect(0, i, canvas.width, 1);
+    }
+    return new THREE.CanvasTexture(canvas);
+  }
+  const antennaTexture = createAntennaTexture();
+  function addAntenna(x) {
+    const antenna = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.75, 0.75, ANTENNA_LENGTH, 8),
+      new THREE.MeshBasicMaterial({ map: antennaTexture }),
+    );
+    antenna.position.set(x, NET_BOTTOM + ANTENNA_LENGTH / 2, 0);
+    scene.add(antenna);
+  }
+  addAntenna(0);
+  addAntenna(COURT_SIZE);
+
+  // The flexible cable (within the top band) and rope (within the bottom
+  // band) that fasten the net to the posts and keep it taut (Rule 2.2) -
+  // thin lines from each band's outer edge to its post, at the same
+  // height.
+  const cableMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
+  function addNetCable(x1, y, x2) {
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(x1, y, 0),
+      new THREE.Vector3(x2, y, 0),
+    ]);
+    scene.add(new THREE.Line(geometry, cableMaterial));
+  }
+  const netLeftEdge = COURT_SIZE / 2 - NET_SPAN_WIDTH / 2;
+  const netRightEdge = COURT_SIZE / 2 + NET_SPAN_WIDTH / 2;
+  addNetCable(netLeftEdge, NET_TOP, -POST_MARGIN);
+  addNetCable(netRightEdge, NET_TOP, COURT_SIZE + POST_MARGIN);
+  addNetCable(netLeftEdge, NET_BOTTOM, -POST_MARGIN);
+  addNetCable(netRightEdge, NET_BOTTOM, COURT_SIZE + POST_MARGIN);
+
+  // Alt+left-clicking the net (see onPointerDownAlt below) only retargets
+  // the orbit anchor here - no camera position jump, unlike selecting a
+  // player or an R1/R2 viewpoint.
+  const NET_ORBIT_ANCHOR = new THREE.Vector3(COURT_SIZE / 2, NET_TOP, 0);
 
   // Bench/Libero substitution area - a tinted strip running the depth of
   // OUR half only, immediately beside it on whichever side the "Bench
@@ -577,7 +945,59 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     saveBenchSide3D(side);
     benchX = benchSide === 'left' ? -BENCH_WIDTH / 2 : COURT_SIZE + BENCH_WIDTH / 2;
     bench.position.x = benchX;
+    repositionReferees();
   }
+
+  // R1 (stand referee, 3.2m) and R2 (floor referee, 1.8m) - selectable
+  // camera viewpoints (see selectableViewpoints/onPointerDownLeft below),
+  // not draggable like player pucks. Each stands 1.5m outside its own
+  // net post: R2 outside the bench-side post, R1 outside the opposite
+  // one - so both reposition via setBenchSide, like the bench itself.
+  const REFEREE_OFFSET = 150;
+  function createRefereePuck(label, height, radius, canWalk) {
+    const group = new THREE.Group();
+    const fill = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius, height, 16),
+      new THREE.MeshStandardMaterial({ color: 0x888888, transparent: true, opacity: 0.5 }),
+    );
+    fill.position.y = height / 2;
+    group.add(fill);
+    const labelDiv = document.createElement('div');
+    labelDiv.textContent = label;
+    labelDiv.style.color = cssColor('--line-colour', '#ffffff');
+    labelDiv.style.fontFamily = fontSettings.fontFamily;
+    labelDiv.style.fontSize = `${fontSettings.playerLabelSize}px`;
+    labelDiv.style.fontWeight = 'bold';
+    labelDiv.style.textAlign = 'center';
+    labelDiv.style.userSelect = 'none';
+    const labelObject = new CSS2DObject(labelDiv);
+    labelObject.position.set(0, height + 20, 0);
+    group.add(labelObject);
+    scene.add(group);
+    // `eyeHeight` approximates where this referee's eyes would be (near
+    // the top of the puck) - used by selectViewpoint below. `canWalk`
+    // distinguishes R2 (walks freely) from R1 (fixed stand, side-to-side
+    // only) - see applyWasdMovement. `labelDiv` is set/read directly
+    // (not just `group.visible`) when hiding/showing this viewpoint -
+    // CSS2DRenderer doesn't reliably skip an invisible ancestor's own
+    // CSS2DObject children in every case, so the label could otherwise
+    // stay visibly floating even once its puck is hidden. `labelHeight`
+    // is the label's local Y offset, used by updateLabelOcclusion to
+    // find its world position.
+    return { group, eyeHeight: height - 20, canWalk, labelDiv, labelHeight: height + 20 };
+  }
+  const r1 = createRefereePuck('R1', 320, 40, false);
+  const r2 = createRefereePuck('R2', 180, 35, true);
+  const selectableViewpoints = [r1, r2];
+
+  function repositionReferees() {
+    const benchPostX = benchSide === 'left' ? 0 : COURT_SIZE;
+    const oppositePostX = benchSide === 'left' ? COURT_SIZE : 0;
+    const benchOutwardSign = benchSide === 'left' ? -1 : 1;
+    r2.group.position.set(benchPostX + benchOutwardSign * REFEREE_OFFSET, 0, 0);
+    r1.group.position.set(oppositePostX - benchOutwardSign * REFEREE_OFFSET, 0, 0);
+  }
+  repositionReferees();
 
   // Player pucks (Phase 2.13 - positions/labels/roles are now entirely
   // driven by main.js via createCourtPlayer/createBenchPlayer, not a
@@ -728,10 +1148,33 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   const dragPoint = new THREE.Vector3();
   let draggingPlayer = null;
   let pointerDownAt = null;
+  // Tracks an R1/R2 puck hit on pointerdown until pointerup confirms it
+  // was a tap (not a drag - see endDrag) - mirrors draggingPlayer/
+  // pointerDownAt above, but referees never actually move.
+  let pendingViewpoint = null;
+  const VIEWPOINT_CLICK_THRESHOLD = 5;
   // Tracks whichever puck was last Alt+left-clicked (the current orbit
   // anchor) purely so `zoomExtents` (Z key) can frame it - independent of
   // main.js's own left-click "selectedRole" concept.
   let selectedPlayer = null;
+
+  // Flies the camera to eye height at an R1/R2 puck's position, looking
+  // DOWN toward the court surface's center (not level at eye height) -
+  // this natural downward tilt is what actually frames/centers the whole
+  // court from an elevated, off-to-one-side position, matching how a
+  // real elevated vantage point naturally looks - and hides that puck's
+  // mesh (and label) for the duration - restored automatically by the
+  // next flyCameraTo call (see its `hiddenViewpoint` handling above),
+  // whatever triggers it. Once the fly-in tween finishes, first-person
+  // look-around mode kicks in (see enterFirstPersonMode above).
+  function selectViewpoint(viewpoint) {
+    const eyePosition = new THREE.Vector3(viewpoint.group.position.x, viewpoint.eyeHeight, viewpoint.group.position.z);
+    const lookAt = new THREE.Vector3(COURT_SIZE / 2, 0, COURT_SIZE / 2);
+    flyCameraTo(eyePosition, lookAt, 500, () => enterFirstPersonMode(eyePosition, lookAt, viewpoint.canWalk));
+    viewpoint.group.visible = false;
+    viewpoint.labelDiv.style.display = 'none';
+    hiddenViewpoint = viewpoint;
+  }
 
   function updatePointerNDC(event) {
     const rect = renderer.domElement.getBoundingClientRect();
@@ -747,6 +1190,9 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // dragging a puck never also orbits the camera at the same time. Only
   // the left/primary button selects/drags pucks, and only while neither
   // Alt nor Shift is held (Alt+left orbits, Shift+left pans instead).
+  // Puck-drag and viewpoint-click both take priority over first-person
+  // look-around (checked last, only if neither hit) - so players and the
+  // other R1/R2 viewpoint stay clickable even while locked onto one.
   function onPointerDownLeft(event) {
     if (event.button !== 0 || altHeld || shiftHeld) {
       return;
@@ -754,19 +1200,35 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     updatePointerNDC(event);
     raycaster.setFromCamera(pointerNDC, camera);
     const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
-    if (!hit) {
+    if (hit) {
+      draggingPlayer = hit.object.parent.userData.player3d;
+      pointerDownAt = { x: event.clientX, y: event.clientY };
+      controls.enabled = false;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = 'grabbing';
       return;
     }
-    draggingPlayer = hit.object.parent.userData.player3d;
-    pointerDownAt = { x: event.clientX, y: event.clientY };
-    controls.enabled = false;
-    renderer.domElement.setPointerCapture(event.pointerId);
-    renderer.domElement.style.cursor = 'grabbing';
+    const viewpointHit = raycaster.intersectObjects(
+      selectableViewpoints.filter((v) => v.group.visible).map((v) => v.group),
+      true,
+    )[0];
+    if (viewpointHit) {
+      pendingViewpoint = selectableViewpoints.find((v) => v.group === viewpointHit.object.parent);
+      pointerDownAt = { x: event.clientX, y: event.clientY };
+      return;
+    }
+    if (firstPersonMode) {
+      fpDragging = true;
+      fpLastPointer = { x: event.clientX, y: event.clientY };
+      renderer.domElement.setPointerCapture(event.pointerId);
+    }
   }
   renderer.domElement.addEventListener('pointerdown', onPointerDownLeft, { capture: true });
 
   // Alt+left-click sets the orbit anchor for the gesture that follows:
   // Alt+clicking a puck re-targets `controls.target` onto it, Alt+
+  // clicking the net retargets to a fixed net-height anchor at court
+  // center (camera position unchanged - no fly/hide, unlike R1/R2), Alt+
   // clicking empty space resets the target back to the default court
   // center. Completely independent of plain left-click puck selection -
   // purely a camera pivot choice, made fresh on every Alt+click. Tweened
@@ -782,7 +1244,14 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     raycaster.setFromCamera(pointerNDC, camera);
     const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
     selectedPlayer = hit ? hit.object.parent.userData.player3d : null;
-    const endTarget = hit ? hit.object.parent.position.clone() : DEFAULT_CONTROLS_TARGET.clone();
+    let endTarget;
+    if (hit) {
+      endTarget = hit.object.parent.position.clone();
+    } else if (raycaster.intersectObject(verticalNet, true).length) {
+      endTarget = NET_ORBIT_ANCHOR.clone();
+    } else {
+      endTarget = DEFAULT_CONTROLS_TARGET.clone();
+    }
     flyCameraTo(camera.position.clone(), endTarget, 250);
   }
   renderer.domElement.addEventListener('pointerdown', onPointerDownAlt, { capture: true });
@@ -820,17 +1289,24 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // handler is what tells them apart, via `lastMoveDistance`, identically
   // for both renderers.
   function endDrag(event) {
-    if (!draggingPlayer) {
+    if (draggingPlayer) {
+      const player = draggingPlayer;
+      player.lastMoveDistance = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
+      player.onDragEnd?.(player);
+      player._fireClick();
+      renderer.domElement.releasePointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = '';
+      draggingPlayer = null;
+      controls.enabled = true;
       return;
     }
-    const player = draggingPlayer;
-    player.lastMoveDistance = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
-    player.onDragEnd?.(player);
-    player._fireClick();
-    renderer.domElement.releasePointerCapture(event.pointerId);
-    renderer.domElement.style.cursor = '';
-    draggingPlayer = null;
-    controls.enabled = true;
+    if (pendingViewpoint) {
+      const moveDistance = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
+      if (moveDistance <= VIEWPOINT_CLICK_THRESHOLD) {
+        selectViewpoint(pendingViewpoint);
+      }
+      pendingViewpoint = null;
+    }
   }
   renderer.domElement.addEventListener('pointerup', endDrag);
   renderer.domElement.addEventListener('pointercancel', endDrag);
@@ -889,6 +1365,66 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     }
   }
 
+  // Lifts every player's label above its puck more as the camera's pitch
+  // gets shallower/more grazing (ROADMAP 3.9) - ~0 extra at a top-down
+  // angle (a zero offset already reads fine looking straight down), up to
+  // `MAX_LABEL_LIFT` world units at a fully horizontal angle (the R1/R2
+  // first-person viewpoints are the most extreme case this fixes).
+  const MAX_LABEL_LIFT = 50;
+  const cameraDirectionScratch = new THREE.Vector3();
+  function updateLabelHeights() {
+    camera.getWorldDirection(cameraDirectionScratch);
+    const grazing = 1 - Math.abs(cameraDirectionScratch.y);
+    const offsetY = grazing * MAX_LABEL_LIFT;
+    for (const group of draggablePlayers) {
+      group.userData.player3d.updateLabelHeight(offsetY);
+    }
+  }
+
+  // CSS2DObject labels are a separate DOM overlay with no shared depth
+  // test against the WebGL scene - a label whose puck is actually behind
+  // a post/the net (from the camera's current position) would otherwise
+  // always render on top, "showing through" it. Raycasts from the camera
+  // to each label's world position and hides it if a post/net-mesh
+  // occludes that line of sight first. Reasserted every frame - see the
+  // reassert-after-labelRenderer.render() note near animate() below,
+  // same reasoning as the R1/R2 hidden-viewpoint label fix (CSS2DRenderer
+  // recomputes `style.display` itself on every render() call).
+  const labelOcclusionRaycaster = new THREE.Raycaster();
+  const labelWorldPosScratch = new THREE.Vector3();
+  const occludedPlayers = [];
+  const occludedViewpoints = [];
+  function isOccluded(targetPosition) {
+    const offset = targetPosition.clone().sub(camera.position);
+    const distance = offset.length();
+    if (distance < 1) {
+      return false;
+    }
+    labelOcclusionRaycaster.set(camera.position, offset.normalize());
+    labelOcclusionRaycaster.far = distance - 5;
+    return labelOcclusionRaycaster.intersectObjects(labelOccluders, false).length > 0;
+  }
+  function updateLabelOcclusion() {
+    occludedPlayers.length = 0;
+    for (const group of draggablePlayers) {
+      const player = group.userData.player3d;
+      player.labelObject.getWorldPosition(labelWorldPosScratch);
+      if (isOccluded(labelWorldPosScratch)) {
+        occludedPlayers.push(player);
+      }
+    }
+    occludedViewpoints.length = 0;
+    for (const viewpoint of selectableViewpoints) {
+      if (!viewpoint.group.visible) {
+        continue;
+      }
+      labelWorldPosScratch.copy(viewpoint.group.position).setY(viewpoint.group.position.y + viewpoint.labelHeight);
+      if (isOccluded(labelWorldPosScratch)) {
+        occludedViewpoints.push(viewpoint);
+      }
+    }
+  }
+
   // Glow/pulse selection highlight (Phase 2.11) - reuses the same
   // effectSettings.js values 2D's setup.html panel edits, reinterpreted
   // as MeshStandardMaterial emissive-intensity units (no CSS filter/blur
@@ -919,15 +1455,42 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   resizeObserver.observe(mountEl);
 
   let rafId = null;
+  let lastFrameMs = null;
   function animate(nowMs) {
     rafId = requestAnimationFrame(animate);
+    const dt = lastFrameMs === null ? 0 : (nowMs - lastFrameMs) / 1000;
+    lastFrameMs = nowMs;
     updateCameraTween(nowMs);
-    controls.update();
+    applyWasdMovement(dt);
+    if (firstPersonMode) {
+      updateFirstPersonCamera();
+    } else {
+      controls.update();
+    }
     updateLabelScaling();
+    updateLabelHeights();
+    updateLabelOcclusion();
     updateSelectionGlow(nowMs);
     updateViewCubeOrientation();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
+    // CSS2DRenderer recomputes each CSS2DObject's own `style.display`
+    // (frustum-culling-based) on every render() call above, which can
+    // override a hidden R1/R2 label's display back to visible once it's
+    // back in view (e.g. looking up brings it back into frustum) -
+    // reassert it every frame, after that render, so it stays hidden for
+    // the entire time its viewpoint is the active one, and likewise for
+    // any label updateLabelOcclusion just determined is behind a post/
+    // the net this frame.
+    if (hiddenViewpoint) {
+      hiddenViewpoint.labelDiv.style.display = 'none';
+    }
+    for (const player of occludedPlayers) {
+      player.setLabelOccluded(true);
+    }
+    for (const viewpoint of occludedViewpoints) {
+      viewpoint.labelDiv.style.display = 'none';
+    }
   }
   animate(0);
 
@@ -940,6 +1503,8 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     window.removeEventListener('keydown', onKeydown);
     window.removeEventListener('keydown', onModifierKeydown);
     window.removeEventListener('keyup', onModifierKeyup);
+    window.removeEventListener('keydown', onWasdKeydown);
+    window.removeEventListener('keyup', onWasdKeyup);
     window.removeEventListener('blur', onWindowBlur);
     document.removeEventListener('click', onDocumentClickForViewMenu);
     controls.dispose();
@@ -956,6 +1521,8 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
         object.material?.dispose();
       }
     });
+    netMeshTexture.dispose();
+    antennaTexture.dispose();
   }
 
   return {
@@ -979,6 +1546,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     zoomExtents,
     setViewCubeSize,
     setLabelScaleMode,
+    setInvertPitch3D,
     destroy,
   };
 }

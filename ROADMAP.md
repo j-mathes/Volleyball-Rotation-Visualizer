@@ -209,6 +209,22 @@ SAME shared elements the 2D view already had (no more duplicate UI); only
 genuinely 3D-only concepts (the ViewCube/camera, and the Bench Side
 toggle) remain 3D-specific, shown/hidden by the same "View Mode" section.
 
+**Bug fix (found/fixed later, during Phase 3.5 testing):** dragging an
+on-court player off its default zone spot, then swapping the Libero in
+for it, snapped the Libero to the DEFAULT zone position instead of
+wherever that player had actually been dragged to - and swapping back
+out did the same in reverse (the original player snapped back to the
+default position, losing its dragged spot entirely). Root cause:
+`swapLiberoOn`/`swapLiberoOff` in main.js both read `ZONE_POSITIONS[...]`
+directly instead of the player's actual current `.x`/`.y`. Fixed by
+capturing the replaced role's exact position into a new
+`liberoState.replacedRolePosition` at the moment of swap-in (before it's
+animated to the bench, which would otherwise overwrite `.x`/`.y`), and
+having swap-out read that back (falling back to the zone default only if
+it's null, e.g. right after loading a saved setup that was already mid-
+swap). Reset alongside `replacedRole` in `resetToBasePositions`/
+`applyState` so no stale position lingers across an unrelated reset/load.
+
 ## Phase 3 — Control Layout Overhaul, Quad-Menu, Referee/Net Viewpoints (in progress)
 
 Replaces the vertical right-side panel with a horizontal top bar (an
@@ -340,7 +356,7 @@ only the applicable options shown per mode.
       no longer filters by mode or takes a `mode` param; it just renders
       `[...KEYBOARD_SHORTCUTS, ...MOUSE_CONTROLS]` once, each row's
       checkmark cells computed from `entry.appliesTo`.
-- [ ] 3.5 New 3D objects: net posts (at the sidelines, z=0) + a real
+- [x] 3.5 New 3D objects: net posts (at the sidelines, z=0) + a real
       vertical net (canvas-textured grid plane, 2.43m tall, between the
       posts - today's "net" is just a flat ground-level line marker with
       no vertical mesh at all) + an R2 floor-referee puck (1.8m tall,
@@ -356,6 +372,172 @@ only the applicable options shown per mode.
       orbit anchor (COURT_SIZE/2, 243, 0) - camera position unchanged, no
       hide/jump. Both R1/R2 reposition via the existing `setBenchSide`
       mechanism, extended to also move them (not just the bench mesh).
+      Implementation notes: the pre-existing flat ground-level "net" line
+      (the court's actual painted center line marking) was deliberately
+      KEPT as-is, not replaced - it's a real, distinct element of a
+      volleyball court in its own right, separate from the vertical net
+      mesh added here. R1/R2 are plain cylinder "pucks" (not full
+      `Player3D` instances - no drag, no role/rotation involvement) with
+      a CSS2DObject label, built by a small `createRefereePuck(label,
+      height, radius)` helper; `eyeHeight` for the fly-to target
+      approximates `height - 20` (near the top of the puck). Viewpoint
+      tap-vs-drag detection mirrors the existing puck pattern
+      (`pendingViewpoint`/`pointerDownAt` set on `onPointerDownLeft`,
+      resolved on `endDrag`'s pointerup against a 5px move threshold) -
+      referees themselves never move, unlike a real puck drag.
+      Follow-up (net redesign to match FIVB Rule 2 exactly, per the user
+      quoting the rulebook directly): the net is NOT ground-to-top - it's
+      only 1m tall in its own right, with its top edge at 2.43m, so its
+      bottom edge floats at 1.43m (the original version wrongly extended
+      the mesh all the way down near the ground). Rebuilt as: a 10cm
+      black square mesh (`createNetMeshTexture`, a canvas-drawn
+      `strokeRect` repeated via `RepeatWrapping` - previously a diamond
+      crosshatch, corrected to actual squares per "made of 10cm square
+      black mesh") between a 7cm white top band and a 5cm white bottom
+      band (both `MeshBasicMaterial`, previously tan-colored while
+      testing the initial "3ds Max style" 2D reference image, corrected
+      to white per Rule 2.2's "two-fold white canvas"), plus a 5cm white
+      side band directly above each sideline (Rule 2.3) and a red/white-
+      striped 1.8m fiberglass antenna at each side band's outer edge,
+      extending from the net's bottom edge to 80cm above its top edge
+      (Rule 2.4 - `createAntennaTexture` draws 18 alternating 10cm
+      stripes into a tiny canvas, mapped along a thin cylinder's length).
+      Posts moved from sitting exactly on the sidelines to 0.75m outside
+      them (Rule 2.5.1's 0.5-1.0m range). Net span width 970 units/9.7m
+      (within Rule 2.2's 9.5-10m spec), between (not touching) the posts.
+      R1/R2 changed to a neutral gray, 50%-transparent material (was the
+      app's dark navy accent color) and moved back to 1.5m outside their
+      posts (was 0.5m).
+      Follow-up (cables + thinner posts): added the flexible cable (top
+      band) and rope (bottom band) that fasten the net to the posts and
+      keep it taut (Rule 2.2, `addNetCable` - thin dark `THREE.Line`s from
+      each band's outer edge to its post, at the same height) - missing
+      from the initial rebuild. Post diameter halved (radius 8 -> 4).
+      Follow-up (first-person look for R1/R2): added a dedicated
+      first-person "look around in place" mode, entered once the fly-in
+      tween to a selected viewpoint finishes (`flyCameraTo`'s new
+      `onComplete` callback parameter) - `controls.enabled = false` and a
+      new drag handler (`onFirstPersonPointerMove`) rotates the camera's
+      look direction via manual yaw/pitch spherical math while
+      `camera.position` stays pinned exactly at the referee's eye point,
+      rather than OrbitControls' normal orbit-around-a-distant-target
+      behavior (which would otherwise move the camera itself as you
+      drag). Camera FOV temporarily widens (`FIRST_PERSON_FOV`, from the
+      default 50°) while locked on, so the full court stays visible from
+      a fixed close-up vantage; restored via the same centralized
+      `exitFirstPersonMode()` called at the top of every `flyCameraTo`,
+      alongside the existing hidden-viewpoint restore. `onPointerDownLeft`/
+      `onPointerDownAlt` (puck drag/selection, Alt-anchor changes) are
+      disabled entirely while first-person mode is active.
+      Follow-up (more natural FOV + antenna size + WASD movement/pan):
+      `FIRST_PERSON_FOV` reduced from 100 to 75 - very wide FOVs cause
+      pronounced perspective/"fisheye" distortion (edges of the frame
+      stretch outward much more than the center), which read as
+      "distorted" per user feedback; 75° keeps most of the extra
+      coverage with far less of that stretching. Antenna radius reduced
+      75% (3 -> 0.75). Added WASD movement: while locked onto R1/R2, it
+      moves `fpEyePosition` itself ("walking around a bit") - R2 (floor
+      referee) walks freely in any direction relative to whichever way
+      you're currently facing, clamped to a small radius
+      (`FP_WALK_LIMIT`) around where you started; R1 (fixed stand) only
+      allows the strafe component (no forward/back - a stand has nowhere
+      to walk into), clamped to `FP_STRAFE_LIMIT`. A new `canWalk` flag on
+      each `createRefereePuck` result distinguishes the two. Outside
+      first-person mode, the same WASD keys instead pan the normal orbit
+      camera (translating `camera.position` and `controls.target`
+      together, relative to the camera's current horizontal facing) - a
+      keyboard alternative to Shift+drag. All movement is continuous
+      (held-key state applied every frame via a new per-frame `dt` in
+      `animate()`), not a single key-press step. Freed up `S` for this by
+      moving the "Swap Libero" shortcut to `/` instead
+      (`shortcutsData.js`, main.js's `onGlobalKeydown`, and the quad-menu
+      button label) - `S` would otherwise have triggered a Libero swap on
+      every "move backward"/"strafe left" press.
+      Follow-up (Quake-style strafe fix + natural downward gaze + full-
+      court framing): fixed a real bug where R1's A/D strafe moved along
+      a fixed WORLD X axis rather than relative to the current view
+      direction - since R1's look-at target wasn't purely perpendicular
+      to that world axis, pressing A visibly moved the camera CLOSER to
+      the net (behaving like W) instead of purely sideways. Fixed by
+      using the exact same yaw-relative forward/right vectors as R2 for
+      BOTH viewpoints, just zeroing the forward component for R1 - this
+      also directly matches standard FPS ("Quake-style") movement
+      conventions the user asked about: mouse-drag changes look
+      direction (yaw = left/right, pitch = up/down, independent of each
+      other), while WASD/strafe always moves relative to the CURRENT yaw,
+      never a fixed world axis. Separately, `selectViewpoint`'s look-at
+      target changed from eye-height-level (looking level with your own
+      eyes toward court center) to ground-level
+      (`(COURT_SIZE/2, 0, COURT_SIZE/2)`, i.e. the actual court surface's
+      center point) - this produces a natural downward tilt (like a real
+      elevated vantage looking down at the action) which, combined with
+      the existing FOV, now frames the ENTIRE court (all 6 on-court
+      players, confirmed visible in-frame simultaneously from both R1 and
+      R2) - previously 2 of 6 were clipped off-screen from R1's default
+      orientation. Verified via user-provided screenshot comparison
+      (a manually-orbited "elevated, centered, looking across" view was
+      given as the target look-and-feel) plus live Playwright screenshots
+      from both R1 and R2 post-fix, which visibly matched much more
+      closely (full court visible, comparable tilt, no obvious fisheye
+      stretching).
+      Follow-up (invert-pitch setting): added `js/firstPersonSettings.js`
+      (`getInvertPitch3D`/`saveInvertPitch3D`, localStorage-backed, same
+      pattern as `benchSideSettings.js` etc.) + a new View-quadrant toggle
+      (`qmInvertPitchToggle`) and `renderer.setInvertPitch3D(invert)` live
+      setter - flips the sign of the pitch half of first-person mouse-
+      look (`dy * FP_LOOK_SENSITIVITY * (invertPitch ? -1 : 1)`) per
+      explicit user preference (mouse-up should look down) - yaw
+      (left/right) is unaffected.
+      Follow-up (puck/viewpoint clicks blocked during first-person mode):
+      fixed a real bug where `onPointerDownLeft`/`onPointerDownAlt` both
+      unconditionally early-returned whenever `firstPersonMode` was true,
+      making it impossible to drag players or click the OTHER R1/R2
+      viewpoint while locked onto one. Restructured `onPointerDownLeft`
+      into a single priority chain that works identically in both modes -
+      puck hit takes priority (drag it, same as normal), then a
+      viewpoint hit (switch to it, same tap-vs-drag threshold as before),
+      and ONLY if neither hits does first-person look-around engage (the
+      separate `onFirstPersonPointerDown` handler was removed entirely,
+      folded into this one, since two competing capture-phase
+      `pointerdown` listeners on the same element made this priority
+      ordering impossible to express safely before). `onPointerDownAlt`'s
+      `firstPersonMode` guard was removed too, since Alt+click already
+      cleanly exits first-person mode via `flyCameraTo`'s existing
+      restore logic.
+      Follow-up (R1/R2 label still visible after selecting/looking
+      around): the explicit `group.visible = false`/`labelDiv.style.
+      display = 'none'` set once on selection wasn't enough - three.js's
+      CSS2DRenderer recomputes each CSS2DObject's own `style.display`
+      itself on EVERY `labelRenderer.render()` call (frustum-culling-
+      based), silently overwriting that one-time assignment back to
+      visible once the object re-entered the camera's frustum (e.g.
+      looking up or around brought the hidden puck back into view).
+      Fixed by reasserting `display = 'none'` every animate() frame,
+      immediately AFTER `labelRenderer.render()` runs (not before) -
+      confirmed via Playwright that the label now stays hidden even after
+      dragging to look straight up/around repeatedly.
+      Follow-up (labels showing through solid objects, e.g. a post): a
+      SEPARATE, more general limitation of the same root cause -
+      CSS2DObject labels are a DOM overlay with NO shared depth test
+      against the WebGL scene at all, so a label whose puck is actually
+      BEHIND an opaque object (from the camera's current position/angle)
+      always rendered on top of it regardless, reading as "showing
+      through" the post/net. Fixed with a real per-frame occlusion check:
+      a new `labelOccluders` array (the 2 net posts + the vertical net
+      mesh) is populated as those objects are created;
+      `updateLabelOcclusion()` (called once per animate() frame, before
+      rendering) raycasts from the camera to each player's and each
+      visible R1/R2 viewpoint's label world position, and if a ray hits
+      an occluder before reaching the label (`raycaster.far = distance -
+      5`, a small epsilon so the target itself doesn't self-occlude), that
+      label is queued into `occludedPlayers`/`occludedViewpoints` and its
+      `display` is forced to `'none'` in the SAME post-render reassert
+      step as the hidden-viewpoint fix above (since CSS2DRenderer would
+      otherwise un-hide it too). New `Player3D.setLabelOccluded(occluded)`
+      mirrors `updateLabelHeight`'s pattern. Scoped deliberately to just
+      posts + net (the specific occluders users actually reported) rather
+      than every mesh in the scene (e.g. other players' pucks), to keep
+      the added per-frame raycasting cost minimal and the fix focused.
 - [ ] 3.6 setup.html cleanup - rename the 3 "3D Preview" headings to
       "3D View" and fix the 2 stale links to the retired `scene3d.html`
       to point at `index.html` instead.
@@ -372,7 +554,7 @@ only the applicable options shown per mode.
       forward, Left Arrow = step backward (new - `goToPlaylistStep`
       already wraps negative indices correctly, so this is a trivial
       addition).
-- [ ] 3.9 Label vertical-offset fix for low camera angles - CSS2DObject
+- [x] 3.9 Label vertical-offset fix for low camera angles - CSS2DObject
       labels are anchored at a fixed world-space height, which at
       shallow/grazing camera pitch reads as "floating in front of" the
       puck instead of "sitting on top". Fix: compute the camera's polar
@@ -380,6 +562,16 @@ only the applicable options shown per mode.
       (larger at grazing angles, ~0 extra at top-down angles) via a new
       `updateLabelHeight(offsetY)` on `Player3D`, mirroring the existing
       `updateLabelScale(scale)` pattern.
+      Implemented as: `renderer3d.js`'s new `updateLabelHeights()`
+      (called every animate() frame) derives a single `grazing` factor
+      from `camera.getWorldDirection()`'s Y component (`1 -
+      Math.abs(direction.y)` - 0 when looking straight down/up, 1 when
+      fully horizontal) and applies `grazing * MAX_LABEL_LIFT` (50 units)
+      to every player's label via the new `Player3D.updateLabelHeight`.
+      Triggered by the same user session that hit this exact issue live
+      via the R1/R2 first-person views (grazing near-horizontal angles),
+      where a label at zero Y-offset visually merges with/hovers
+      confusingly at a puck's base instead of clearly sitting above it.
 - [x] 3.10 Front/Back Row Link toggles + top-bar cleanup - two new
       quad-menu-only toggles (View quadrant, grouped with Overlap Guides/
       Player Links/Lock to Legal): "Front Row Link" (`F`) draws a solid
