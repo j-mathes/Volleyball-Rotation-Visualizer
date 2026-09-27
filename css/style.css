@@ -202,59 +202,164 @@ h1 {
   background: var(--court-bg);
 }
 
+/* True 3ds Max-style quad-menu: a zero-size anchor positioned exactly at
+   the cursor (see js/quadMenu.js), with each .quad-section expanding
+   outward from that point into its own corner, plus a crosshair (the two
+   .quad-line divs) marking the four quadrant boundaries through it. */
 .quad-menu {
   position: fixed;
   z-index: 20;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  max-width: 640px;
-  background: var(--panel-bg);
-  border-radius: 8px;
-  padding: 14px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  width: 0;
+  height: 0;
 }
 
-/* `display: flex` above otherwise beats the browser's default
-   `[hidden] { display: none }` UA rule, since author styles always win
-   over UA styles regardless of selector specificity. */
+/* `width/height: 0` above has no `display` to conflict with the browser's
+   default `[hidden] { display: none }` UA rule, but this stays explicit
+   for the same reason `.view-menu[hidden]` is - author styles always win
+   over UA styles regardless of selector specificity, so any future
+   `display` added to `.quad-menu` needs this override to still hide it. */
 .quad-menu[hidden] {
   display: none;
 }
 
+.quad-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.7);
+}
+.quad-line-h {
+  left: 0;
+  top: 0;
+  height: 1px;
+}
+.quad-line-v {
+  left: 0;
+  top: 0;
+  width: 1px;
+}
+
 .quad-section {
-  flex: 1 1 220px;
-  min-width: 200px;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: max-content;
+  max-width: 190px;
+  font-size: 0.68rem;
+  background: var(--panel-bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+/* Same `[hidden]`-vs-`display` override this file already needs for
+   `.quad-menu`/`.view-menu` - author styles beat the UA `[hidden]` rule
+   regardless of specificity, so the 3D-only sections would otherwise stay
+   visible in 2D despite `hidden` being set on them. */
+.quad-section[hidden] {
+  display: none;
+}
+/* Top quadrants expand upward (reversed stacking so the title stays
+   nearest the cursor); bottom quadrants expand downward normally. Left
+   quadrants right-align their text (nearest the cursor on their side);
+   right quadrants left-align. */
+.quad-tl, .quad-tr {
+  flex-direction: column-reverse;
+  bottom: 4px;
+}
+.quad-bl, .quad-br {
+  top: 4px;
+}
+.quad-tl, .quad-bl {
+  right: 4px;
+  align-items: flex-end;
+  text-align: right;
+}
+.quad-tr, .quad-br {
+  left: 4px;
+  align-items: flex-start;
+  text-align: left;
 }
 
-.quad-section h3 {
-  font-size: 0.9rem;
-  margin: 0 0 8px;
+.quad-title {
+  font-size: 0.62rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7fb3e0;
+}
+
+.quad-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Each logical cluster (e.g. Reset+Extents, or the ViewCube size trio) is
+   its own tightly-spaced group; the larger gap above is only BETWEEN
+   groups, so related buttons visually "belong together". */
+.quad-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+/* Same `[hidden]`-vs-`display` override this file already needs
+   elsewhere (`.quad-menu`/`.quad-section`/`.view-menu`) - `.quad-group`
+   sets its own `display: flex` too, so a `.quad-3d-only` group hidden in
+   2D would otherwise stay visible despite the `hidden` attribute. */
+.quad-group[hidden] {
+  display: none;
+}
+.quad-tl .quad-group, .quad-bl .quad-group {
+  align-items: flex-end;
+}
+.quad-tr .quad-group, .quad-br .quad-group {
+  align-items: flex-start;
+}
+.quad-items button {
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  min-width: 0;
+  flex: none;
+  white-space: nowrap;
+}
+.quad-items .text-input {
+  font-size: 0.7rem;
+  padding: 4px 6px;
+  margin-bottom: 0;
+  width: 130px;
+}
+.quad-items .hint {
+  font-size: 0.62rem;
+  margin: 0;
+}
+.quad-items a {
   color: var(--accent);
+  font-size: 0.68rem;
 }
 
-.quad-view-presets button {
-  font-size: 0.72rem;
-  padding: 6px 2px;
+#quadShortcutsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .shortcuts-list {
   list-style: none;
-  margin: 0 0 8px;
+  margin: 0;
   padding: 0;
-  font-size: 0.78rem;
-  color: var(--accent);
+  font-size: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .shortcuts-list li {
-  padding: 3px 0;
+  padding: 0;
 }
 
 .shortcuts-list button {
   width: 100%;
-  text-align: left;
-  font-size: 0.78rem;
-  padding: 5px 8px;
+  text-align: inherit;
+  font-size: 0.7rem;
+  padding: 4px 8px;
 }
 
 .view-cube-wrap {

@@ -15,7 +15,7 @@ import { getBenchSide3D } from './benchSideSettings.js';
 import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
 import { createQuadMenu } from './quadMenu.js';
-import { KEYBOARD_SHORTCUTS, MOUSE_CONTROLS } from './shortcutsData.js';
+import { KEYBOARD_SHORTCUTS } from './shortcutsData.js';
 
 applyColors();
 applyLineSettings();
@@ -50,9 +50,18 @@ const quadSceneSetupSection = document.getElementById('quadSceneSetup');
 const quadShortcutsListEl = document.getElementById('quadShortcutsList');
 const qmResetViewBtn = document.getElementById('qmResetView');
 const qmZoomExtentsBtn = document.getElementById('qmZoomExtents');
-const qmViewPresetBtns = quadViewCameraSection.querySelectorAll('button[data-view]');
 const qmViewCubeSizeBtns = quadViewCameraSection.querySelectorAll('button[data-size]');
 const qmLabelScaleBtns = quadViewCameraSection.querySelectorAll('button[data-mode]');
+const qmOverlapGuideToggle = document.getElementById('qmOverlapGuideToggle');
+const qmPlayerLinkToggle = document.getElementById('qmPlayerLinkToggle');
+const qmClampToggle = document.getElementById('qmClampToggle');
+const qmRotateCwBtn = document.getElementById('qmRotateCw');
+const qmRotateCcwBtn = document.getElementById('qmRotateCcw');
+const qmResetToBaseBtn = document.getElementById('qmResetToBase');
+const qmSwapLiberoBtn = document.getElementById('qmSwapLibero');
+const qmSceneGuideToggle = document.getElementById('qmSceneGuideToggle');
+const qmSceneLinkToggle = document.getElementById('qmSceneLinkToggle');
+const qmSceneClampToggle = document.getElementById('qmSceneClampToggle');
 
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
@@ -472,14 +481,22 @@ async function rotate(direction) {
 
 document.getElementById('rotateCw').addEventListener('click', () => rotate(1));
 document.getElementById('rotateCcw').addEventListener('click', () => rotate(-1));
-document.getElementById('resetBtn').addEventListener('click', () => {
+qmRotateCwBtn.addEventListener('click', () => rotate(1));
+qmRotateCcwBtn.addEventListener('click', () => rotate(-1));
+
+function resetToBasePositions() {
   setAwaitingSelection(false);
   liberoState.replacedRole = null;
   refreshLiberoButtonLabel();
   snapAllToZonePositions();
-});
+}
+document.getElementById('resetBtn').addEventListener('click', resetToBasePositions);
+qmResetToBaseBtn.addEventListener('click', resetToBasePositions);
 
-liberoSwapBtn.addEventListener('click', async () => {
+// Swaps the Libero off if it's currently in, otherwise toggles "awaiting
+// selection" mode - the same behavior whether triggered from the button
+// or the "S" keyboard shortcut.
+async function triggerLiberoSwap() {
   if (liberoState.replacedRole) {
     liberoSwapBtn.disabled = true;
     await swapLiberoOff();
@@ -487,7 +504,9 @@ liberoSwapBtn.addEventListener('click', async () => {
     return;
   }
   setAwaitingSelection(!awaitingSelection);
-});
+}
+liberoSwapBtn.addEventListener('click', triggerLiberoSwap);
+qmSwapLiberoBtn.addEventListener('click', triggerLiberoSwap);
 
 // Clicking a highlighted back-row player while awaiting selection completes
 // the swap-in for that player; otherwise (or once resolved) falls through
@@ -544,29 +563,46 @@ function wirePlayerClickHandlers() {
 }
 
 
-overlapGuideToggle.addEventListener('click', () => {
+// Each of these three toggles has a duplicate button in BOTH the
+// quad-menu's View quadrant AND its Scene quadrant (ROADMAP Phase 3.3
+// follow-ups), alongside the original top-bar one - all call the same
+// function and get their `.active` state refreshed together, so no copy
+// can ever fall out of sync.
+function toggleOverlapGuides() {
   guidesEnabled = !guidesEnabled;
   overlapGuideToggle.classList.toggle('active', guidesEnabled);
+  qmOverlapGuideToggle.classList.toggle('active', guidesEnabled);
+  qmSceneGuideToggle.classList.toggle('active', guidesEnabled);
   if (!guidesEnabled && !linksEnabled) {
     selectedRole = null;
     selectionLocked = false;
   }
   runOverlapCheck();
-});
+}
+overlapGuideToggle.addEventListener('click', toggleOverlapGuides);
+qmOverlapGuideToggle.addEventListener('click', toggleOverlapGuides);
+qmSceneGuideToggle.addEventListener('click', toggleOverlapGuides);
 
-playerLinkToggle.addEventListener('click', () => {
+function togglePlayerLinks() {
   linksEnabled = !linksEnabled;
   playerLinkToggle.classList.toggle('active', linksEnabled);
+  qmPlayerLinkToggle.classList.toggle('active', linksEnabled);
+  qmSceneLinkToggle.classList.toggle('active', linksEnabled);
   if (!guidesEnabled && !linksEnabled) {
     selectedRole = null;
     selectionLocked = false;
   }
   runOverlapCheck();
-});
+}
+playerLinkToggle.addEventListener('click', togglePlayerLinks);
+qmPlayerLinkToggle.addEventListener('click', togglePlayerLinks);
+qmSceneLinkToggle.addEventListener('click', togglePlayerLinks);
 
-clampToggle.addEventListener('click', () => {
+function toggleClamp() {
   clampEnabled = !clampEnabled;
   clampToggle.classList.toggle('active', clampEnabled);
+  qmClampToggle.classList.toggle('active', clampEnabled);
+  qmSceneClampToggle.classList.toggle('active', clampEnabled);
   if (clampEnabled) {
     // Snaps every on-court player back inside bounds immediately, in case
     // it was already mid-fault when the toggle was switched on.
@@ -577,7 +613,10 @@ clampToggle.addEventListener('click', () => {
     }
     runOverlapCheck();
   }
-});
+}
+clampToggle.addEventListener('click', toggleClamp);
+qmClampToggle.addEventListener('click', toggleClamp);
+qmSceneClampToggle.addEventListener('click', toggleClamp);
 
 // Bench Side (3D-only - the 2D view already places the bench
 // automatically). `renderer.setBenchSide` only exists on the 3D
@@ -605,16 +644,10 @@ benchSide3DRightBtn.addEventListener('click', () => applyBenchSide3D('right'));
 // many shown as apply to the current view mode. js/quadMenu.js owns the
 // generic open/close/positioning mechanics; everything below is what
 // each button actually does.
-const quadMenu = createQuadMenu(quadMenuEl, quadViewCameraSection, quadSceneSetupSection);
+const quadMenu = createQuadMenu(quadMenuEl);
 
 qmResetViewBtn.addEventListener('click', () => { renderer.resetToDefaultView?.(); quadMenu.close(); });
 qmZoomExtentsBtn.addEventListener('click', () => { renderer.zoomExtents?.(); quadMenu.close(); });
-qmViewPresetBtns.forEach((button) => {
-  button.addEventListener('click', () => {
-    renderer.snapToPresetView?.(button.dataset.view);
-    quadMenu.close();
-  });
-});
 
 function refreshViewCubeSizeButtons() {
   const size = getViewCubeSize3D();
@@ -639,42 +672,101 @@ qmLabelScaleBtns.forEach((button) => {
 });
 
 // Calls straight through to renderer3d.js's exposed camera-preset
-// methods - all 3D-only today, matching KEYBOARD_SHORTCUTS' `appliesTo`.
+// methods (3D-only) or the equivalent app-level function (both modes) -
+// matching each entry's `action` id in shortcutsData.js.
 const shortcutActions = {
   resetView: () => renderer.resetToDefaultView?.(),
   viewTop: () => renderer.snapToPresetView?.('0,1,0'),
   viewEndline: () => renderer.snapToPresetView?.('0,0,1'),
+  viewNet: () => renderer.snapToPresetView?.('0,0,-1'),
   viewLeft: () => renderer.snapToPresetView?.('-1,0,0'),
+  viewRight: () => renderer.snapToPresetView?.('1,0,0'),
   zoomExtents: () => renderer.zoomExtents?.(),
+  rotateCw: () => rotate(1),
+  rotateCcw: () => rotate(-1),
+  resetToBase: () => resetToBasePositions(),
+  swapLibero: () => triggerLiberoSwap(),
+  toggleGuides: () => toggleOverlapGuides(),
+  toggleLinks: () => togglePlayerLinks(),
+  toggleClamp: () => toggleClamp(),
 };
 
-// Renders the quad-menu's Keyboard & Mouse section from shortcutsData.js,
-// filtered to whichever entries apply to the current view mode. Entries
-// with a mapped action become clickable buttons; the rest (mostly mouse
-// gestures, which aren't "clickable") are plain list text.
+// Renders the quad-menu's Keys section from shortcutsData.js - just the
+// clickable subset (key + short label, full description in the `title`
+// tooltip); non-actionable entries and mouse gestures aren't "clickable"
+// so they're left for the full reference page instead, per the "keep the
+// menu itself minimal" ask. Only 3D camera shortcuts remain here now -
+// the both-modes ones (rotate/reset/libero/overlap toggles) moved to
+// dedicated Scene-quadrant buttons per user request.
 function renderShortcutsList() {
   quadShortcutsListEl.innerHTML = '';
-  for (const entry of [...KEYBOARD_SHORTCUTS, ...MOUSE_CONTROLS]) {
-    if (entry.appliesTo !== 'both' && entry.appliesTo !== viewMode) {
+  const list = document.createElement('ul');
+  list.className = 'shortcuts-list';
+  for (const entry of KEYBOARD_SHORTCUTS) {
+    if (entry.appliesTo !== viewMode) {
+      continue;
+    }
+    const action = entry.action && shortcutActions[entry.action];
+    if (!action) {
       continue;
     }
     const item = document.createElement('li');
-    const text = 'key' in entry ? `${entry.key} \u2014 ${entry.label}` : `${entry.input} \u2014 ${entry.label}`;
-    const action = entry.action && shortcutActions[entry.action];
-    if (action) {
-      const button = document.createElement('button');
-      button.textContent = text;
-      button.addEventListener('click', () => {
-        action();
-        quadMenu.close();
-      });
-      item.appendChild(button);
-    } else {
-      item.textContent = text;
-    }
-    quadShortcutsListEl.appendChild(item);
+    const button = document.createElement('button');
+    button.textContent = `${entry.shortLabel} (${entry.key})`;
+    button.title = entry.label;
+    button.addEventListener('click', () => {
+      action();
+      quadMenu.close();
+    });
+    item.appendChild(button);
+    list.appendChild(item);
+  }
+  if (list.children.length) {
+    quadShortcutsListEl.appendChild(list);
   }
 }
+
+// Both-modes keyboard shortcuts (rotate/reset/libero/overlap toggles) -
+// unlike renderer3d.js's own onKeydown (3D camera shortcuts only), these
+// work in 2D too, so they're wired here once rather than per-renderer.
+// Guarded like renderer3d.js's onKeydown: ignored while Ctrl/Alt/Meta is
+// held (Alt is the 3D orbit modifier) or a text input has focus.
+function onGlobalKeydown(event) {
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
+  const focusedTag = document.activeElement?.tagName;
+  if (focusedTag === 'INPUT' || focusedTag === 'TEXTAREA') {
+    return;
+  }
+  switch (event.key.toLowerCase()) {
+    case ']':
+      shortcutActions.rotateCw();
+      break;
+    case '[':
+      shortcutActions.rotateCcw();
+      break;
+    case '0':
+      shortcutActions.resetToBase();
+      break;
+    case 's':
+      shortcutActions.swapLibero();
+      break;
+    case 'g':
+      shortcutActions.toggleGuides();
+      break;
+    case 'j':
+      shortcutActions.toggleLinks();
+      break;
+    case 'c':
+      shortcutActions.toggleClamp();
+      break;
+    default:
+      return;
+  }
+  event.preventDefault();
+}
+window.addEventListener('keydown', onGlobalKeydown);
 
 // Clicking anywhere on the court that isn't a player deselects the
 // currently previewed player - re-registered on every renderer instance
@@ -816,7 +908,8 @@ let playlistTimer = null;
 
 function refreshPlaylistUI() {
   const states = getPlaylistStates();
-  playlistPlayBtn.textContent = playlistPlaying ? 'Pause Playlist' : 'Play Playlist';
+  playlistPlayBtn.textContent = playlistPlaying ? '\u23F8 Pause' : '\u25B6 Play';
+  playlistPlayBtn.title = playlistPlaying ? 'Pause Playlist' : 'Play Playlist';
   playlistPlayBtn.classList.toggle('active', playlistPlaying);
   playlistStepBtn.disabled = states.length === 0;
   playlistPlayBtn.disabled = states.length === 0;

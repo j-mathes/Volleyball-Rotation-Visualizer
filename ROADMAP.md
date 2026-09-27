@@ -237,6 +237,11 @@ only the applicable options shown per mode.
       to it; empty space -> reset to default court center). Add
       `onContextMenu(handler)` to both renderer.js and renderer3d.js
       interfaces, mirroring the existing `onBackgroundClick` pattern.
+      Follow-up: Shift+LEFT-drag pans the camera the same way (`controls.
+      enablePan` turned on, `controls.mouseButtons.LEFT` now toggles
+      between `ROTATE`/`PAN`/`null` based on which modifier - if either -
+      is currently held, Shift taking precedence in the rare case both are
+      held at once).
 - [x] 3.3 Quad-menu (new `js/quadMenu.js`) - simplified fixed layout (not
       true cursor-quadrant flyouts), showing only as many of up to 4
       sections as are applicable per view mode:
@@ -254,6 +259,21 @@ only the applicable options shown per mode.
       `zoomExtents`, and new live setters `setViewCubeSize(size)`/
       `setLabelScaleMode(mode)` (mirroring `setBenchSide`'s existing live-
       update pattern) on renderer3d.js's returned interface.
+      Follow-up (per user feedback after first landing): rebuilt as a
+      TRUE cursor-centered radial layout (each quadrant expands outward
+      from the right-click point, not a fixed 4-box grid), with icon+word
+      buttons instead of bare letters, grouped into `.quad-group` clusters
+      with extra spacing BETWEEN groups; the 6 preset-view buttons were
+      then removed entirely (redundant with the always-visible ViewCube);
+      Overlap Guides/Player Links/Lock to Legal Positions got duplicate
+      quick-access buttons here too (both modes, alongside the top bar's
+      originals, sharing the same toggle functions so neither copy can
+      drift out of sync) and moved into the View quadrant (which is no
+      longer entirely 3D-only - individual `.quad-3d-only`-marked groups
+      within it still hide in 2D, generalized in `js/quadMenu.js` beyond
+      just whole-section hiding); ViewCube-size buttons got a small cube
+      emoji suffix and label-scale buttons a script-F suffix, so their
+      purpose reads at a glance.
 - [x] 3.4 Shared `js/shortcutsData.js` (canonical list tagged
       `2d`/`3d`/`both`) + new `reference.html`/`js/reference.js` page
       (setup.html-style chrome) listing keyboard shortcuts and mouse
@@ -261,6 +281,46 @@ only the applicable options shown per mode.
       today (Alt-orbit, right-click-menu, the 3D keyboard shortcuts); 3.8
       will ADD its new playlist shortcuts to this same data file once
       built, not restructure it.
+      Follow-up: greatly expanded past the original "camera only" scope -
+      added Bottom/Net/Right 3D view shortcuts (B/N/R, filling the gap
+      left by removing their quad-menu buttons) and a full set of
+      both-modes app shortcuts (Rotate CW/CCW = `]`/`[`, Reset to Base =
+      `0`, Swap Libero = `S`, Overlap Guides/Player Links/Lock to Legal =
+      `G`/`J`/`C`), wired via a new `onGlobalKeydown` listener in main.js
+      (guarded like renderer3d.js's own `onKeydown`) plus a
+      `shortcutActions` map shared with the quad-menu's Keys section,
+      which now renders two grouped lists (camera shortcuts vs. app
+      shortcuts) instead of one flat one. Shift+drag pan also documented
+      in `MOUSE_CONTROLS`.
+      Follow-up (cursor feedback): fixed a real bug where Shift+drag
+      still rotated instead of panning - three.js's OrbitControls has
+      built-in Shift handling that flips ROTATE<->PAN symmetrically, so
+      mapping `LEFT` to `PAN` directly while Shift was held triggered its
+      OWN reverse flip back to rotate; the fix maps `LEFT` to `ROTATE`
+      for both Alt and Shift and lets OrbitControls' native
+      `event.shiftKey` check pick rotate-vs-pan itself. Also added cursor
+      feedback: `grab`/`grabbing` while Shift/pan is ready/active, and
+      `all-scroll` while Alt/orbit is held (no standard CSS keyword is
+      literally "rotate" - `all-scroll`'s four-way-arrow look is the
+      closest conventional stand-in for free camera movement).
+      Follow-up 2: the 7 both-modes app shortcuts (Rotate CW/CCW/Reset to
+      Base/Swap Libero/Overlap Guides/Player Links/Lock to Legal) moved
+      out of the Keys quadrant's dynamic list into dedicated static
+      buttons in the Scene quadrant instead (per user request), which -
+      like View before it - is no longer entirely 3D-only: only its Bench
+      Side group still carries `.quad-3d-only`. Keys reverted to a single
+      flat list (camera shortcuts only, since the both-modes group moved
+      out). The `]`/`[` button labels also gained a space around the
+      bracket character ("Rotate CW ( ] )") since they looked visually
+      crowded without one.
+      Follow-up 3: Endline's shortcut changed from `F` to `E` (more
+      mnemonic); the Bottom view preset was removed entirely - keyboard
+      shortcut, ViewCube face, ViewCube edges/corners involving it, and
+      the view-picker dropdown's "Bottom" button all deleted, since the
+      camera's polar-angle clamp (`controls.maxPolarAngle`) makes a true
+      underneath view unreachable anyway - clicking/pressing it just
+      clamped to the same near-horizontal angle other low-angle presets
+      already reach, so it never did anything genuinely distinct.
 - [ ] 3.5 New 3D objects: net posts (at the sidelines, z=0) + a real
       vertical net (canvas-textured grid plane, 2.43m tall, between the
       posts - today's "net" is just a flat ground-level line marker with

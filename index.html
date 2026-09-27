@@ -55,7 +55,6 @@
               <div class="view-cube"></div>
               <div class="view-menu" hidden>
                 <button type="button" data-view="0,1,0">Top</button>
-                <button type="button" data-view="0,-1,0">Bottom</button>
                 <button type="button" data-view="0,0,1">Endline</button>
                 <button type="button" data-view="0,0,-1">Net</button>
                 <button type="button" data-view="-1,0,0">Left</button>
@@ -67,63 +66,88 @@
         </div>
       </div>
 
-      <!-- Right-click (2D and 3D) opens this at the cursor - see
-           js/quadMenu.js. Sections hidden/shown per view mode on open(). -->
+      <!-- Right-click (2D and 3D) opens this centered at the cursor - see
+           js/quadMenu.js. Each quad-section expands outward from that
+           point (3ds Max quad-menu style); anything marked
+           `quad-3d-only` (whole sections or just a sub-group) is
+           hidden/shown per view mode on open(). -->
       <div id="quadMenu" class="quad-menu" hidden>
-        <div class="quad-section" id="quadViewCamera">
-          <h3>View &amp; Camera</h3>
-          <div class="button-row">
-            <button id="qmResetView" class="full-width">Reset View</button>
-            <button id="qmZoomExtents" class="full-width">Zoom Extents</button>
-          </div>
-          <div class="button-row quad-view-presets">
-            <button data-view="0,1,0">Top</button>
-            <button data-view="0,-1,0">Bottom</button>
-            <button data-view="0,0,1">Endline</button>
-            <button data-view="0,0,-1">Net</button>
-            <button data-view="-1,0,0">Left</button>
-            <button data-view="1,0,0">Right</button>
-          </div>
-          <p class="hint">ViewCube Size</p>
-          <div class="button-row">
-            <button id="qmViewCubeSmall" data-size="small" class="full-width">Small</button>
-            <button id="qmViewCubeMedium" data-size="medium" class="full-width">Medium</button>
-            <button id="qmViewCubeLarge" data-size="large" class="full-width">Large</button>
-          </div>
-          <p class="hint">Player Label Scaling</p>
-          <div class="button-row">
-            <button id="qmLabelScaleOn" data-mode="scale" class="full-width">Scale with Distance</button>
-            <button id="qmLabelScaleOff" data-mode="fixed" class="full-width">Fixed Size</button>
+        <div class="quad-line quad-line-h"></div>
+        <div class="quad-line quad-line-v"></div>
+
+        <div class="quad-section quad-tl" id="quadViewCamera">
+          <div class="quad-title">View</div>
+          <div class="quad-items">
+            <div class="quad-group">
+              <button id="qmOverlapGuideToggle">Overlap Guides</button>
+              <button id="qmPlayerLinkToggle">Player Links</button>
+              <button id="qmClampToggle">Lock to Legal</button>
+            </div>
+            <div class="quad-group quad-3d-only">
+              <button id="qmResetView">&#8962; Reset</button>
+              <button id="qmZoomExtents">&#10530; Extents</button>
+            </div>
+            <div class="quad-group quad-3d-only">
+              <button id="qmViewCubeSmall" data-size="small">Small &#x1F9CA;</button>
+              <button id="qmViewCubeMedium" data-size="medium">Medium &#x1F9CA;</button>
+              <button id="qmViewCubeLarge" data-size="large">Large &#x1F9CA;</button>
+            </div>
+            <div class="quad-group quad-3d-only">
+              <button id="qmLabelScaleOn" data-mode="scale">Scale &#x2131;</button>
+              <button id="qmLabelScaleOff" data-mode="fixed">Fixed &#x2131;</button>
+            </div>
           </div>
         </div>
 
-        <div class="quad-section" id="quadSceneSetup">
-          <h3>Scene Setup</h3>
-          <p class="hint">Bench Side</p>
-          <div class="button-row">
-            <button id="benchSide3DLeft" class="full-width">Left</button>
-            <button id="benchSide3DRight" class="full-width">Right</button>
+        <div class="quad-section quad-tr" id="quadSceneSetup">
+          <div class="quad-title">Scene</div>
+          <div class="quad-items">
+            <div class="quad-group">
+              <button id="qmRotateCw">Rotate CW ( ] )</button>
+              <button id="qmRotateCcw">Rotate CCW ( [ )</button>
+            </div>
+            <div class="quad-group">
+              <button id="qmResetToBase">Reset to Base (0)</button>
+            </div>
+            <div class="quad-group">
+              <button id="qmSwapLibero">Swap Libero (S)</button>
+            </div>
+            <div class="quad-group">
+              <button id="qmSceneGuideToggle">Overlap Guides (G)</button>
+              <button id="qmSceneLinkToggle">Player Links (J)</button>
+              <button id="qmSceneClampToggle">Lock to Legal (C)</button>
+            </div>
+            <div class="quad-group quad-3d-only">
+              <button id="benchSide3DLeft">&#8592; Bench Left</button>
+              <button id="benchSide3DRight">Bench Right &#8594;</button>
+            </div>
           </div>
         </div>
 
-        <div class="quad-section" id="quadCourtSetups">
-          <h3>Court Setups &amp; Playlist</h3>
-          <input type="text" id="setupNameInput" class="text-input" placeholder="Setup name">
-          <button id="saveSetupBtn" class="full-width">Save Current Setup</button>
-          <input type="text" id="quickLoadInput" class="text-input" list="quickLoadOptions" placeholder="Quick load a saved setup…">
-          <datalist id="quickLoadOptions"></datalist>
-          <button id="quickLoadBtn" class="full-width">Load</button>
-          <div class="button-row">
-            <button id="playlistPlayBtn" class="full-width">Play Playlist</button>
-            <button id="playlistStepBtn" class="full-width">Step</button>
+        <div class="quad-section quad-bl" id="quadCourtSetups">
+          <div class="quad-title">Setups</div>
+          <div class="quad-items">
+            <div class="quad-group">
+              <input type="text" id="setupNameInput" class="text-input" placeholder="Name">
+              <button id="saveSetupBtn">&#128190; Save</button>
+              <input type="text" id="quickLoadInput" class="text-input" list="quickLoadOptions" placeholder="Load&hellip;">
+              <datalist id="quickLoadOptions"></datalist>
+              <button id="quickLoadBtn">&#128194; Load</button>
+            </div>
+            <div class="quad-group">
+              <button id="playlistPlayBtn">&#9654; Play</button>
+              <button id="playlistStepBtn">&#9197; Step</button>
+              <p id="playlistStatus" class="hint"></p>
+            </div>
           </div>
-          <p id="playlistStatus" class="hint"></p>
         </div>
 
-        <div class="quad-section" id="quadShortcuts">
-          <h3>Keyboard &amp; Mouse</h3>
-          <ul id="quadShortcutsList" class="shortcuts-list"></ul>
-          <a href="reference.html" target="_blank">Full reference page</a>
+        <div class="quad-section quad-br" id="quadShortcuts">
+          <div class="quad-title">Keys</div>
+          <div class="quad-items">
+            <div id="quadShortcutsList" class="quad-group"></div>
+            <a href="reference.html" target="_blank">&#128214; Full Reference</a>
+          </div>
         </div>
       </div>
     </div>

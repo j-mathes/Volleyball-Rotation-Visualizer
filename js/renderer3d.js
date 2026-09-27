@@ -66,23 +66,25 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   mountEl.appendChild(renderer.domElement);
 
   // Camera controls (Phase 2.9) - orbit (drag) + tilt (also drag, via the
-  // polar angle) + zoom (wheel), focused on the court center. Panning is
-  // disabled to keep that focus point fixed; polar angle is capped just
-  // short of the ground plane so the camera can't end up underneath the
-  // court looking up through it.
+  // polar angle) + zoom (wheel) + pan (Shift+drag, see below), focused by
+  // default on the court center; polar angle is capped just short of the
+  // ground plane so the camera can't end up underneath the court looking
+  // up through it.
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(COURT_SIZE / 2, 0, COURT_SIZE / 2);
   controls.enableDamping = true;
-  controls.enablePan = false;
+  controls.enablePan = true;
   controls.minDistance = 200;
   controls.maxDistance = 3000;
   controls.maxPolarAngle = Math.PI * 0.49;
-  // Left button is reserved for selecting/dragging pucks; holding Alt
-  // temporarily turns left-drag into orbiting instead (Maya/Houdini
-  // convention - see the keydown/keyup listeners below, which live-toggle
-  // `controls.mouseButtons.LEFT` between ROTATE and null), so plain
-  // left-click never has a camera side effect. Right-click is reserved
-  // for the quad-menu (ROADMAP Phase 3.3) rather than orbiting.
+  // Left button is reserved for selecting/dragging pucks; holding Alt or
+  // Shift temporarily turns left-drag into orbiting/panning instead
+  // (Maya/Houdini convention - see the keydown/keyup listeners below,
+  // which live-toggle `controls.mouseButtons.LEFT` between ROTATE/null -
+  // OrbitControls itself picks rotate vs. pan per its own built-in Shift
+  // handling, see that comment for why), so plain left-click never has a
+  // camera side effect. Right-click is reserved for the quad-menu
+  // (ROADMAP Phase 3.3) rather than orbiting.
   controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null };
   controls.update();
 
@@ -130,9 +132,11 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
 
   // Converts a preset view direction (e.g. "top-endline-right" = (1,1,1))
   // into a camera position at the current orbit distance from `target`,
-  // clamped to the same polar-angle limits normal dragging respects (so,
-  // e.g., "Bottom" snaps to the lowest angle the ground plane still
-  // allows, rather than an unreachable literal underside view).
+  // clamped to the same polar-angle limits normal dragging respects (so
+  // a near-ground-level direction snaps to the lowest angle the ground
+  // plane still allows, rather than an unreachable literal underside
+  // view - this is also why there's no "Bottom" preset at all, see the
+  // ViewCube/keyboard-shortcut comments below).
   function directionToCameraPosition(direction, target, distance) {
     const spherical = new THREE.Spherical().setFromVector3(direction.clone().normalize());
     spherical.phi = THREE.MathUtils.clamp(spherical.phi, controls.minPolarAngle, controls.maxPolarAngle);
@@ -212,17 +216,24 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
 
   const VIEW_CUBE_FACES = [
     { label: 'TOP', dir: [0, 1, 0], transform: 'rotateX(90deg) translateZ(var(--vc-half))' },
-    { label: 'BOTTOM', dir: [0, -1, 0], transform: 'rotateX(-90deg) translateZ(var(--vc-half))' },
     { label: 'ENDLINE', dir: [0, 0, 1], transform: 'translateZ(var(--vc-half))' },
     { label: 'NET', dir: [0, 0, -1], transform: 'rotateY(180deg) translateZ(var(--vc-half))' },
     { label: 'LEFT', dir: [-1, 0, 0], transform: 'rotateY(-90deg) translateZ(var(--vc-half))' },
     { label: 'RIGHT', dir: [1, 0, 0], transform: 'rotateY(90deg) translateZ(var(--vc-half))' },
   ];
-  // Edges: exactly one axis is zero. Corners: none are zero.
+  // Edges: exactly one axis is zero. Corners: none are zero. Excludes any
+  // direction with y=-1 (Bottom and its adjoining edges/corners) - the
+  // camera's polar angle is clamped just short of the ground plane (see
+  // `controls.maxPolarAngle` above), so a true underneath view is never
+  // reachable; the upper-hemisphere faces/edges/corners already cover
+  // every angle that's actually possible.
   const VIEW_CUBE_EDGES_AND_CORNERS = [];
   for (const x of [-1, 0, 1]) {
     for (const y of [-1, 0, 1]) {
       for (const z of [-1, 0, 1]) {
+        if (y === -1) {
+          continue;
+        }
         const nonZeroCount = [x, y, z].filter((n) => n !== 0).length;
         if (nonZeroCount === 2 || nonZeroCount === 3) {
           VIEW_CUBE_EDGES_AND_CORNERS.push({ dir: [x, y, z], kind: nonZeroCount === 2 ? 'vc-edge' : 'vc-corner' });
@@ -313,9 +324,12 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   document.addEventListener('click', onDocumentClickForViewMenu);
 
   // Keyboard shortcuts, modeled on 3ds Max's view navigation: P/Home
-  // (perspective/home), T/F/L (top/endline/left), V (view picker menu), Z
-  // (zoom extents). Ignored while a modifier key is held or a text input
-  // has focus.
+  // (perspective/home), T/E/N/L/R (top/endline/net/left/right), V (view
+  // picker menu), Z (zoom extents). No Bottom shortcut - the camera's
+  // polar angle is clamped just short of the ground plane (see
+  // `controls.maxPolarAngle` above), so a true underneath view is never
+  // reachable. Ignored while a modifier key is held or a text input has
+  // focus.
   function onKeydown(event) {
     if (event.ctrlKey || event.metaKey || event.altKey) {
       return;
@@ -332,11 +346,17 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
       case 't':
         snapToViewDirection(new THREE.Vector3(0, 1, 0));
         break;
-      case 'f':
+      case 'e':
         snapToViewDirection(new THREE.Vector3(0, 0, 1));
         break;
       case 'l':
         snapToViewDirection(new THREE.Vector3(-1, 0, 0));
+        break;
+      case 'n':
+        snapToViewDirection(new THREE.Vector3(0, 0, -1));
+        break;
+      case 'r':
+        snapToViewDirection(new THREE.Vector3(1, 0, 0));
         break;
       case 'z':
         zoomExtents();
@@ -351,35 +371,105 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   }
   window.addEventListener('keydown', onKeydown);
 
-  // Holding Alt temporarily turns left-drag into orbiting (see the
-  // `controls.mouseButtons` comment above) - toggled live rather than a
-  // fixed mapping so plain left-click keeps selecting/dragging pucks the
-  // rest of the time. `onPointerDownLeft` below checks `altHeld` and
-  // no-ops while it's true, letting OrbitControls own the drag entirely.
-  // The 'blur' listener guards against Alt getting "stuck" held if the
-  // user Alt-tabs away mid-drag (no keyup ever fires in that case).
+  // Holding Alt or Shift temporarily turns left-drag into orbiting/
+  // panning (see the `controls.mouseButtons` comment above) - toggled
+  // live rather than a fixed mapping so plain left-click keeps
+  // selecting/dragging pucks the rest of the time. `onPointerDownLeft`
+  // below checks both flags and no-ops while either is true, letting
+  // OrbitControls own the drag entirely. The 'blur' listener guards
+  // against a modifier getting "stuck" held if the user Alt/Shift-tabs
+  // away mid-drag (no keyup ever fires in that case).
+  //
+  // Both modifiers map `LEFT` to the SAME `THREE.MOUSE.ROTATE` value -
+  // not `PAN` for Shift, despite that being the intuitive-looking
+  // choice. OrbitControls has its own built-in Shift handling baked into
+  // `onMouseDown`: whenever `mouseButtons.LEFT` is `ROTATE`, a Shift-held
+  // click automatically becomes a pan instead (and, confusingly, the
+  // reverse also happens if `LEFT` is set to `PAN` directly - a
+  // Shift-held click on a `PAN`-mapped button flips BACK to rotate).
+  // Setting `LEFT` to `PAN` ourselves while Shift is down was exactly
+  // backwards - it triggered that reverse flip, so Shift+drag rotated
+  // instead of panning. Leaving `LEFT` as `ROTATE` for both modifiers and
+  // letting OrbitControls' own `event.shiftKey` check pick rotate-vs-pan
+  // is the correct/only way to get this behavior.
   let altHeld = false;
-  function onAltKeydown(event) {
-    if (event.key !== 'Alt' || altHeld) {
-      return;
-    }
-    altHeld = true;
-    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+  let shiftHeld = false;
+  function updateLeftButtonMapping() {
+    controls.mouseButtons.LEFT = (altHeld || shiftHeld) ? THREE.MOUSE.ROTATE : null;
   }
-  function onAltKeyup(event) {
-    if (event.key !== 'Alt') {
+  // No standard CSS cursor keyword is literally "rotate", so orbit
+  // (Alt) uses 'all-scroll' (four-way arrows - the closest conventional
+  // stand-in for free camera movement) while pan (Shift) uses 'grab',
+  // upgraded to 'grabbing' for the duration of an actual pan drag (see
+  // the pointerdown/up listeners below) - orbit has no equivalent
+  // "actively dragging" cursor since there's no closed-fist-style
+  // rotate icon in the standard set, so 'all-scroll' just stays as-is
+  // for the whole gesture.
+  function updateCursor() {
+    renderer.domElement.style.cursor = shiftHeld ? 'grab' : altHeld ? 'all-scroll' : '';
+  }
+  function onModifierKeydown(event) {
+    if (event.key === 'Alt') {
+      altHeld = true;
+    } else if (event.key === 'Shift') {
+      shiftHeld = true;
+    } else {
       return;
     }
-    altHeld = false;
-    controls.mouseButtons.LEFT = null;
+    updateLeftButtonMapping();
+    updateCursor();
+  }
+  function onModifierKeyup(event) {
+    if (event.key === 'Alt') {
+      altHeld = false;
+    } else if (event.key === 'Shift') {
+      shiftHeld = false;
+    } else {
+      return;
+    }
+    updateLeftButtonMapping();
+    updateCursor();
   }
   function onWindowBlur() {
     altHeld = false;
-    controls.mouseButtons.LEFT = null;
+    shiftHeld = false;
+    panCursorActive = false;
+    updateLeftButtonMapping();
+    updateCursor();
   }
-  window.addEventListener('keydown', onAltKeydown);
-  window.addEventListener('keyup', onAltKeyup);
+  window.addEventListener('keydown', onModifierKeydown);
+  window.addEventListener('keyup', onModifierKeyup);
   window.addEventListener('blur', onWindowBlur);
+
+  // Upgrades the pan cursor to 'grabbing' for the duration of an actual
+  // Shift+left drag, reverting to whichever "ready" cursor (or none)
+  // applies once released - mirrors the puck-drag cursor in
+  // onPointerDownLeft/endDrag further down. Reasserted on every
+  // pointermove (not just once on pointerdown) because browsers only
+  // repaint the actual cursor glyph in response to pointer movement, so
+  // a style change made at the instant of mousedown (before any drag
+  // motion) can visually appear to not take effect until the pointer
+  // moves.
+  let panCursorActive = false;
+  function onPointerDownForPanCursor(event) {
+    if (event.button === 0 && shiftHeld) {
+      panCursorActive = true;
+      renderer.domElement.style.cursor = 'grabbing';
+    }
+  }
+  function onPointerMoveForPanCursor() {
+    if (panCursorActive) {
+      renderer.domElement.style.cursor = 'grabbing';
+    }
+  }
+  function onPointerUpForPanCursor() {
+    panCursorActive = false;
+    updateCursor();
+  }
+  renderer.domElement.addEventListener('pointerdown', onPointerDownForPanCursor);
+  renderer.domElement.addEventListener('pointermove', onPointerMoveForPanCursor);
+  renderer.domElement.addEventListener('pointerup', onPointerUpForPanCursor);
+  renderer.domElement.addEventListener('pointercancel', onPointerUpForPanCursor);
 
   // Billboarded (always-facing-camera) text labels (Phase 2.8) - a DOM
   // overlay positioned by each label's Object3D world transform. Sits on
@@ -654,10 +744,10 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // (bubble-phase) pointerdown listener on the same element - letting us
   // disable orbiting for this gesture before OrbitControls sees it, so
   // dragging a puck never also orbits the camera at the same time. Only
-  // the left/primary button selects/drags pucks, and only while Alt isn't
-  // held (Alt+left orbits instead - see below).
+  // the left/primary button selects/drags pucks, and only while neither
+  // Alt nor Shift is held (Alt+left orbits, Shift+left pans instead).
   function onPointerDownLeft(event) {
-    if (event.button !== 0 || altHeld) {
+    if (event.button !== 0 || altHeld || shiftHeld) {
       return;
     }
     updatePointerNDC(event);
@@ -847,8 +937,8 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     cancelAnimationFrame(rafId);
     resizeObserver.disconnect();
     window.removeEventListener('keydown', onKeydown);
-    window.removeEventListener('keydown', onAltKeydown);
-    window.removeEventListener('keyup', onAltKeyup);
+    window.removeEventListener('keydown', onModifierKeydown);
+    window.removeEventListener('keyup', onModifierKeyup);
     window.removeEventListener('blur', onWindowBlur);
     document.removeEventListener('click', onDocumentClickForViewMenu);
     controls.dispose();
