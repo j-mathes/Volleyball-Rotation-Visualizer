@@ -111,6 +111,25 @@ export class Player {
     this.group.classList.toggle('bench-warning', isWarning);
   }
 
+  // Adds/removes a second, smaller line under the label showing this
+  // player's current zone (ROADMAP 3.7), e.g. "MB1" / "(Z6)" - pass null
+  // to hide it (used for the benched player, and whenever the toggle is
+  // off). The zone tspan uses an absolute y (not a relative dy) so its
+  // position doesn't depend on how `dominant-baseline: central` happens
+  // to apply to a multi-line <text> (inconsistent across engines).
+  setShowZone(zone) {
+    if (zone === null) {
+      this.zoneTspan?.remove();
+      this.zoneTspan = null;
+      return;
+    }
+    if (!this.zoneTspan) {
+      this.zoneTspan = el('tspan', { x: 0, y: 22, class: 'zone-label' });
+      this.text.appendChild(this.zoneTspan);
+    }
+    this.zoneTspan.textContent = `(Z${zone})`;
+  }
+
   // Animates to (x, y) over `duration` ms, returning a Promise that
   // resolves when the animation completes.
   animateTo(x, y, duration = 500) {

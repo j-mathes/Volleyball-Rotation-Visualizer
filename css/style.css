@@ -1063,3 +1063,7 @@ select {
   font-size: var(--player-label-size);
   pointer-events: none;
 }
+
+.player text .zone-label {
+  font-size: 0.55em;
+}

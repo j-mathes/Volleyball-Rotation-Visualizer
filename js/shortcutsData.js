@@ -25,6 +25,7 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'C', shortLabel: 'Lock to Legal', label: 'Toggle Lock to Legal Positions', appliesTo: 'both', action: 'toggleClamp' },
   { key: 'F', shortLabel: 'Front Row Link', label: 'Toggle Front Row Link (links all 3 front-row players together, solid line; disables Player Links)', appliesTo: 'both', action: 'toggleFrontRowLink' },
   { key: 'B', shortLabel: 'Back Row Link', label: 'Toggle Back Row Link (links all 3 back-row players together, dashed line; disables Player Links)', appliesTo: 'both', action: 'toggleBackRowLink' },
+  { key: 'K', shortLabel: 'Zone Labels', label: 'Toggle Zone Labels (shows each on-court player\u2019s current zone under its label)', appliesTo: 'both', action: 'toggleZoneLabels' },
 ];
 
 export const MOUSE_CONTROLS = [

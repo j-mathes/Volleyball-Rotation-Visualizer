@@ -67,6 +67,17 @@ export class Player3D {
     this.labelTextEl.style.textAlign = 'center';
     this.labelTextEl.style.userSelect = 'none';
     labelDiv.appendChild(this.labelTextEl);
+    // Second, smaller line showing this player's current zone (ROADMAP
+    // 3.7) - hidden by default, only shown while the toggle is on and
+    // never for the benched player (see main.js's runOverlapCheck).
+    this.zoneLabelEl = document.createElement('div');
+    this.zoneLabelEl.style.color = colors.playerOutline;
+    this.zoneLabelEl.style.fontFamily = fontSettings.fontFamily;
+    this.zoneLabelEl.style.fontSize = `${fontSettings.playerLabelSize * 0.55}px`;
+    this.zoneLabelEl.style.textAlign = 'center';
+    this.zoneLabelEl.style.userSelect = 'none';
+    this.zoneLabelEl.style.display = 'none';
+    labelDiv.appendChild(this.zoneLabelEl);
     const labelObject = new CSS2DObject(labelDiv);
     labelObject.position.set(0, 0, 0);
     this.group.add(labelObject);
@@ -97,6 +108,14 @@ export class Player3D {
   // enough to just support directly.
   setLabel(label) {
     this.labelTextEl.textContent = label;
+  }
+
+  // Mirrors Player (2D)'s setShowZone(zone|null) - see its comment.
+  setShowZone(zone) {
+    this.zoneLabelEl.style.display = zone === null ? 'none' : '';
+    if (zone !== null) {
+      this.zoneLabelEl.textContent = `(Z${zone})`;
+    }
   }
 
   animateTo(x, y, duration = 500) {

@@ -57,6 +57,7 @@ const qmPlayerLinkToggle = document.getElementById('qmPlayerLinkToggle');
 const qmClampToggle = document.getElementById('qmClampToggle');
 const qmFrontRowLinkToggle = document.getElementById('qmFrontRowLinkToggle');
 const qmBackRowLinkToggle = document.getElementById('qmBackRowLinkToggle');
+const qmZoneLabelToggle = document.getElementById('qmZoneLabelToggle');
 const qmRotateCwBtn = document.getElementById('qmRotateCw');
 const qmRotateCcwBtn = document.getElementById('qmRotateCcw');
 const qmResetToBaseBtn = document.getElementById('qmResetToBase');
@@ -116,6 +117,10 @@ let linksEnabled = false;
 // togglePlayerLinks), but freely combinable with each other.
 let frontRowLinkEnabled = false;
 let backRowLinkEnabled = false;
+// True while the "Zone Labels" toggle is on: each on-court player's label
+// gains a second line showing its current zone; the benched player never
+// shows one, regardless of this toggle.
+let showZoneEnabled = false;
 // True while the "Lock to Legal Positions" toggle is on: dragging any of
 // the 6 on-court players is clamped so it can't cross a fault line against
 // its current row/column neighbors. The benched player (Libero or whoever
@@ -296,9 +301,13 @@ function runOverlapCheck() {
     player.setSelectionLocked(selectionLocked && player.role === selectedRole);
     player.setGuideRelated(false);
     player.setBackRow(false);
+    player.setShowZone(null);
   });
   for (let zone = 1; zone <= 6; zone++) {
     playersByRole[positions[zone].role].setBackRow(BACK_ROW.includes(zone));
+    if (showZoneEnabled) {
+      playersByRole[positions[zone].role].setShowZone(zone);
+    }
   }
 
   const selectionActive = (guidesEnabled || linksEnabled) && selectedRole;
@@ -715,6 +724,13 @@ function toggleBackRowLink() {
 }
 qmBackRowLinkToggle.addEventListener('click', toggleBackRowLink);
 
+function toggleShowZoneLabels() {
+  showZoneEnabled = !showZoneEnabled;
+  qmZoneLabelToggle.classList.toggle('active', showZoneEnabled);
+  runOverlapCheck();
+}
+qmZoneLabelToggle.addEventListener('click', toggleShowZoneLabels);
+
 function toggleClamp() {
   clampEnabled = !clampEnabled;
   qmClampToggle.classList.toggle('active', clampEnabled);
@@ -813,6 +829,7 @@ const shortcutActions = {
   toggleClamp: () => toggleClamp(),
   toggleFrontRowLink: () => toggleFrontRowLink(),
   toggleBackRowLink: () => toggleBackRowLink(),
+  toggleZoneLabels: () => toggleShowZoneLabels(),
 };
 
 // Renders the quad-menu's Keys section from shortcutsData.js - just the
@@ -890,6 +907,9 @@ function onGlobalKeydown(event) {
       break;
     case 'b':
       shortcutActions.toggleBackRowLink();
+      break;
+    case 'k':
+      shortcutActions.toggleZoneLabels();
       break;
     default:
       return;

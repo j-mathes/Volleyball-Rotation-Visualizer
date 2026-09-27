@@ -570,7 +570,7 @@ only the applicable options shown per mode.
       `saveLabelScaleMode3D`, `getViewCubeSize3D`/`saveViewCubeSize3D`)
       from `setup.js`; the settings modules themselves are untouched and
       still used by `index.html`'s quad-menu buttons and `renderer3d.js`.
-- [ ] 3.7 Zone-label toggle (quad-menu item, in-memory only - not
+- [x] 3.7 Zone-label toggle (quad-menu item, in-memory only - not
       persisted, same convention as the existing guide/link/clamp
       toggles): when on, each on-court player's label gains a second line
       showing its current zone, e.g. "MB1" / "(Z6)"; the benched player
@@ -578,6 +578,31 @@ only the applicable options shown per mode.
       (2D: extra `<tspan dy=...>`) and `Player3D` (3D: extra child in the
       CSS2DObject's label div), updated on toggle-flip and on every
       rotate/reset.
+      Implemented as: new `qmZoneLabelToggle` quad-menu button (View
+      quadrant, 6th item in the existing Overlap Guides/Player Links/
+      Lock to Legal/Front Row/Back Row Link group), keyboard shortcut
+      `K` (both modes - `Z` was already taken by the 3D-only "zoom
+      extents"). New `showZoneEnabled` boolean in main.js, applied inside
+      the existing `runOverlapCheck()` (already re-run on every rotate/
+      reset/drag/toggle, so no separate hook was needed) - all players
+      reset to `setShowZone(null)` first (covering the benched player
+      automatically, since it's outside the zone 1-6 loop), then only the
+      6 on-court roles get `setShowZone(zone)` when the toggle is on.
+      `Player.setShowZone` uses an absolute `y` attribute (not a relative
+      `dy`) on the appended `<tspan class="zone-label">` - a relative
+      `dy` combined with `dominant-baseline: central` on a multi-line
+      `<text>` rendered the two lines overlapping almost exactly on top
+      of each other (browser-inconsistent multi-line baseline handling),
+      caught via screenshot and fixed by switching to an explicit
+      absolute `y` instead. New `.zone-label` CSS class sets the tspan's
+      font-size to `0.55em` so the second line fits inside the player
+      circle alongside the main label. `Player3D.setShowZone` mirrors
+      this with a second `zoneLabelEl` div (hidden by default) appended
+      to the same label `<div>`, sized the same way (`0.55 *
+      playerLabelSize`). Verified live in both 2D and 3D, across
+      rotate, Libero swap in/out, and toggle on/off - zone numbers always
+      matched the on-court occupant's actual current zone, and the
+      benched player never showed one.
 - [ ] 3.8 Playlist keyboard shortcuts (main.js, guarded like
       renderer3d.js's `onKeydown`): Space = play/pause, Right Arrow = step
       forward, Left Arrow = step backward (new - `goToPlaylistStep`
