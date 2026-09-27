@@ -616,6 +616,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // renderer.js's SVG version (same math, just a 3rd (z) coordinate along
   // for the ride where renderer.js has none).
   const linkColor = cssColor('--link-line', '#16a34a');
+  const rowLinkColor = cssColor('--row-link-line', '#7fe0ff');
   const guideColor = cssColor('--guide-line', '#000000');
   const violationColor = cssColor('--player-overlap', '#e74c3c');
   const lineSettings = getLineSettings();
@@ -675,6 +676,13 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   function drawLinkLine(posA, posB, isBackRowTarget) {
     const points = [new THREE.Vector3(posA.x, PUCK_HEIGHT / 2, posA.y), new THREE.Vector3(posB.x, PUCK_HEIGHT / 2, posB.y)];
     linkLines.push(addFatLine(points, linkColor, { dashed: isBackRowTarget, linewidth: lineSettings.linkLineWidth }));
+  }
+
+  // Used by the "link all front row"/"link all back row" toggles - see
+  // renderer.js's drawRowLinkLine for the shared rationale.
+  function drawRowLinkLine(posA, posB, dashed) {
+    const points = [new THREE.Vector3(posA.x, PUCK_HEIGHT / 2, posA.y), new THREE.Vector3(posB.x, PUCK_HEIGHT / 2, posB.y)];
+    linkLines.push(addFatLine(points, rowLinkColor, { dashed, linewidth: lineSettings.linkLineWidth }));
   }
 
   function clearViolationLines() {
@@ -956,6 +964,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     setBenchSide,
     drawSeparatorLine,
     drawLinkLine,
+    drawRowLinkLine,
     clearViolationLines,
     clearLinkLines,
     clearClampLines,

@@ -32,10 +32,12 @@
             <div class="op-group">
               <button id="liberoSwapBtn">Swap In Libero</button>
             </div>
-            <div class="op-group">
-              <button id="overlapGuideToggle">Show Overlap Guides</button>
-              <button id="playerLinkToggle">Show Player Links</button>
-              <button id="clampToggle" title="Prevents dragging a player past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
+            <div class="op-group toggle-indicators" id="toggleIndicators">
+              <span id="indicatorGuides" class="toggle-indicator indicator-guides" hidden><span class="indicator-swatch"></span>Overlap Guides</span>
+              <span id="indicatorLinks" class="toggle-indicator indicator-links" hidden><span class="indicator-swatch"></span>Player Links</span>
+              <span id="indicatorClamp" class="toggle-indicator indicator-clamp" hidden><span class="indicator-swatch"></span>Lock to Legal</span>
+              <span id="indicatorFrontRowLink" class="toggle-indicator indicator-row-link" hidden><span class="indicator-swatch"></span>Front Row Link</span>
+              <span id="indicatorBackRowLink" class="toggle-indicator indicator-row-link indicator-dashed" hidden><span class="indicator-swatch"></span>Back Row Link</span>
             </div>
           </div>
 
@@ -82,9 +84,11 @@
           <div class="quad-title">View</div>
           <div class="quad-items">
             <div class="quad-group">
-              <button id="qmOverlapGuideToggle">Overlap Guides</button>
-              <button id="qmPlayerLinkToggle">Player Links</button>
-              <button id="qmClampToggle">Lock to Legal</button>
+              <button id="qmOverlapGuideToggle">Overlap Guides (G)</button>
+              <button id="qmPlayerLinkToggle">Player Links (J)</button>
+              <button id="qmClampToggle">Lock to Legal (C)</button>
+              <button id="qmFrontRowLinkToggle">Front Row Link (F)</button>
+              <button id="qmBackRowLinkToggle">Back Row Link (B)</button>
             </div>
             <div class="quad-group quad-3d-only">
               <button id="qmResetView">&#8962; Reset</button>
@@ -114,11 +118,6 @@
             </div>
             <div class="quad-group">
               <button id="qmSwapLibero">Swap Libero (S)</button>
-            </div>
-            <div class="quad-group">
-              <button id="qmSceneGuideToggle">Overlap Guides (G)</button>
-              <button id="qmSceneLinkToggle">Player Links (J)</button>
-              <button id="qmSceneClampToggle">Lock to Legal (C)</button>
             </div>
             <div class="quad-group quad-3d-only">
               <button id="benchSide3DLeft">&#8592; Bench Left</button>

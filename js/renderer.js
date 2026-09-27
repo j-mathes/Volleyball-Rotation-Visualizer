@@ -116,6 +116,26 @@ export function createCourtRenderer(svg) {
     linkLinesLayer.appendChild(svgLine(attrs));
   }
 
+  // Draws an icy-blue line connecting two players' centers - used by the
+  // "link all front row"/"link all back row" toggles, which link every
+  // player in the row together regardless of any selection (unlike
+  // drawLinkLine, which only links the selected player to its
+  // neighbors). Solid for the front row, dashed for the back row.
+  function drawRowLinkLine(posA, posB, dashed) {
+    const attrs = {
+      x1: posA.x,
+      y1: posA.y,
+      x2: posB.x,
+      y2: posB.y,
+      stroke: 'var(--row-link-line)',
+      'stroke-width': lineSettings.linkLineWidth,
+    };
+    if (dashed) {
+      attrs['stroke-dasharray'] = '4,5';
+    }
+    linkLinesLayer.appendChild(svgLine(attrs));
+  }
+
   function clearViolationLines() {
     violationLinesLayer.innerHTML = '';
   }
@@ -177,6 +197,7 @@ export function createCourtRenderer(svg) {
     benchPositionReplaced,
     drawSeparatorLine,
     drawLinkLine,
+    drawRowLinkLine,
     clearViolationLines,
     clearLinkLines,
     clearClampLines,

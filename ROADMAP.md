@@ -373,6 +373,49 @@ only the applicable options shown per mode.
       (larger at grazing angles, ~0 extra at top-down angles) via a new
       `updateLabelHeight(offsetY)` on `Player3D`, mirroring the existing
       `updateLabelScale(scale)` pattern.
+- [x] 3.10 Front/Back Row Link toggles + top-bar cleanup - two new
+      quad-menu-only toggles (View quadrant, grouped with Overlap Guides/
+      Player Links/Lock to Legal): "Front Row Link" (`F`) draws a solid
+      icy-blue line chaining the 3 front-row players together (left-
+      middle, middle-right - not every pairwise combination, which would
+      double-draw the outer span and, being dashed, visually blend into a
+      false-looking solid line via overlapping dash phases), "Back Row
+      Link" (`B`) does the same dashed, for the back row. Both apply
+      unconditionally (not tied to any player selection, unlike the
+      existing Player Links). Mutually exclusive with Player Links in
+      both directions (enabling either row-link toggle turns Player Links
+      off; enabling Player Links turns both row-link toggles off) but
+      freely combinable with each other. New `--row-link-line` color
+      (default `#7fe0ff`, an icy blue distinct from the existing green
+      Player Link color) - auto-appeared in setup.html's color picker
+      since `colors.js`'s `DEFAULT_COLORS`/`COLOR_LABELS` drive that form
+      generically. New `drawRowLinkLine`/`drawRowLinks` on both renderer
+      interfaces, sharing the existing link-lines layer/clear plumbing
+      with `drawLinkLine`. Also removed the "Show Overlap Guides"/"Show
+      Player Links"/"Lock to Legal Positions" buttons from the top bar
+      entirely (redundant with their quad-menu equivalents, which already
+      existed in both the View and Scene quadrants) - all three (plus the
+      two new row-link toggles) are keyboard-accessible (`G`/`J`/`C`/`F`/
+      `B`, all "both modes" shortcuts, documented in `shortcutsData.js`
+      and therefore the reference page too).
+      Follow-up: added a row of small indicator chips (`#toggleIndicators`)
+      in the space the removed top-bar buttons freed up, next to Swap In
+      Libero - one per toggle (Overlap Guides/Player Links/Lock to Legal/
+      Front Row Link/Back Row Link), each hidden by default and only
+      shown while its toggle is on (`main.js`'s `refreshToggleIndicators`,
+      called from all 5 toggle functions). Each chip has a small colored
+      line swatch (solid or dashed to match) previewing the actual line
+      style/color it corresponds to on the court.
+      Follow-up 2: removed the duplicate Overlap Guides/Player Links/Lock
+      to Legal copies from the Scene quadrant entirely (an unintended
+      side effect of specifying "both quadrants" back in the original
+      3.3 follow-ups) - all 5 toggles now live together in a single group
+      in the View quadrant only, since the user felt they belonged
+      grouped as one set rather than split. The View copies gained the
+      `(G)`/`(J)`/`(C)` keyboard hints the removed Scene copies used to
+      show (the two row-link toggles already had `(F)`/`(B)`). Scene
+      quadrant now only holds Rotate CW/CCW, Reset to Base, and Swap
+      Libero.
 
 ## Phase 4 — Two-Team Support (planned, not started)
 

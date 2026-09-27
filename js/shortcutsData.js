@@ -22,6 +22,8 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'G', shortLabel: 'Overlap Guides', label: 'Toggle Show Overlap Guides', appliesTo: 'both', action: 'toggleGuides' },
   { key: 'J', shortLabel: 'Player Links', label: 'Toggle Show Player Links', appliesTo: 'both', action: 'toggleLinks' },
   { key: 'C', shortLabel: 'Lock to Legal', label: 'Toggle Lock to Legal Positions', appliesTo: 'both', action: 'toggleClamp' },
+  { key: 'F', shortLabel: 'Front Row Link', label: 'Toggle Front Row Link (links all 3 front-row players together, solid line; disables Player Links)', appliesTo: 'both', action: 'toggleFrontRowLink' },
+  { key: 'B', shortLabel: 'Back Row Link', label: 'Toggle Back Row Link (links all 3 back-row players together, dashed line; disables Player Links)', appliesTo: 'both', action: 'toggleBackRowLink' },
 ];
 
 export const MOUSE_CONTROLS = [

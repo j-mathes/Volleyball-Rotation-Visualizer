@@ -1,4 +1,4 @@
-import { ZONE_POSITIONS, BACK_ROW, COURT_SIZE } from './config.js';
+import { ZONE_POSITIONS, FRONT_ROW, BACK_ROW, COURT_SIZE } from './config.js';
 import { createCourtRenderer } from './renderer.js';
 import { createCourtRenderer3D } from './renderer3d.js';
 import { RotationState } from './rotation.js';
@@ -30,9 +30,6 @@ const rotationBadgeEl = document.getElementById('rotationBadge');
 const overlapResultsEl = document.getElementById('overlapResults');
 const overlapResultsSummaryEl = document.getElementById('overlapResultsSummary');
 const liberoSwapBtn = document.getElementById('liberoSwapBtn');
-const overlapGuideToggle = document.getElementById('overlapGuideToggle');
-const playerLinkToggle = document.getElementById('playerLinkToggle');
-const clampToggle = document.getElementById('clampToggle');
 const saveSetupBtn = document.getElementById('saveSetupBtn');
 const setupNameInput = document.getElementById('setupNameInput');
 const quickLoadInput = document.getElementById('quickLoadInput');
@@ -56,13 +53,17 @@ const qmLabelScaleBtns = quadViewCameraSection.querySelectorAll('button[data-mod
 const qmOverlapGuideToggle = document.getElementById('qmOverlapGuideToggle');
 const qmPlayerLinkToggle = document.getElementById('qmPlayerLinkToggle');
 const qmClampToggle = document.getElementById('qmClampToggle');
+const qmFrontRowLinkToggle = document.getElementById('qmFrontRowLinkToggle');
+const qmBackRowLinkToggle = document.getElementById('qmBackRowLinkToggle');
 const qmRotateCwBtn = document.getElementById('qmRotateCw');
 const qmRotateCcwBtn = document.getElementById('qmRotateCcw');
 const qmResetToBaseBtn = document.getElementById('qmResetToBase');
 const qmSwapLiberoBtn = document.getElementById('qmSwapLibero');
-const qmSceneGuideToggle = document.getElementById('qmSceneGuideToggle');
-const qmSceneLinkToggle = document.getElementById('qmSceneLinkToggle');
-const qmSceneClampToggle = document.getElementById('qmSceneClampToggle');
+const indicatorGuidesEl = document.getElementById('indicatorGuides');
+const indicatorLinksEl = document.getElementById('indicatorLinks');
+const indicatorClampEl = document.getElementById('indicatorClamp');
+const indicatorFrontRowLinkEl = document.getElementById('indicatorFrontRowLink');
+const indicatorBackRowLinkEl = document.getElementById('indicatorBackRowLink');
 
 // Custom per-role display labels (e.g. jersey numbers), set on the setup
 // page - read once at load, since they only change there.
@@ -101,6 +102,13 @@ let guidesEnabled = false;
 // True while the "Show Player Links" toggle is on, drawing solid green
 // lines from the selected player to its corresponding players.
 let linksEnabled = false;
+// True while "Front Row Link"/"Back Row Link" are on, drawing icy-blue
+// lines connecting every front-row (solid) or back-row (dashed) player
+// together, independent of any selection - mutually exclusive with
+// `linksEnabled` (see toggleFrontRowLink/toggleBackRowLink/
+// togglePlayerLinks), but freely combinable with each other.
+let frontRowLinkEnabled = false;
+let backRowLinkEnabled = false;
 // True while the "Lock to Legal Positions" toggle is on: dragging any of
 // the 6 on-court players is clamped so it can't cross a fault line against
 // its current row/column neighbors. The benched player (Libero or whoever
@@ -247,6 +255,21 @@ function findZoneForRole(positionsByZone, role) {
   return null;
 }
 
+// Draws a line connecting each adjacent pair of players in `zones` (a
+// simple chain - e.g. left-middle, middle-right for the 3 front-row
+// players - not every combination) - used by the "link all front/back
+// row" toggles, unconditionally (not selection-dependent, unlike
+// drawLinkLine). `zones` is ordered left -> right (see config.js);
+// connecting every pair instead of just neighbors would draw the same
+// span twice over (the two short segments plus a redundant long one),
+// and overlapping dashed lines with different phase offsets visually
+// blend into a false-looking solid line.
+function drawRowLinks(positions, zones, dashed) {
+  for (let i = 0; i < zones.length - 1; i++) {
+    renderer.drawRowLinkLine(positions[zones[i]], positions[zones[i + 1]], dashed);
+  }
+}
+
 function runOverlapCheck() {
   const positions = currentPositionsByZone();
   const pairwiseResults = checkOverlap(positions);
@@ -297,6 +320,13 @@ function runOverlapCheck() {
         renderer.drawLinkLine(positions[selectedZone], positions[neighborZone], BACK_ROW.includes(neighborZone));
       }
     }
+  }
+
+  if (frontRowLinkEnabled) {
+    drawRowLinks(positions, FRONT_ROW, false);
+  }
+  if (backRowLinkEnabled) {
+    drawRowLinks(positions, BACK_ROW, true);
   }
 
   for (const entry of summary) {
@@ -574,46 +604,103 @@ function wirePlayerClickHandlers() {
 }
 
 
-// Each of these three toggles has a duplicate button in BOTH the
-// quad-menu's View quadrant AND its Scene quadrant (ROADMAP Phase 3.3
-// follow-ups), alongside the original top-bar one - all call the same
-// function and get their `.active` state refreshed together, so no copy
-// can ever fall out of sync.
+// Shows/hides the top-bar indicator chips (ROADMAP 3.10) in the space
+// freed up when the Overlap Guides/Player Links/Lock to Legal buttons
+// moved out of the top bar - called at the end of every toggle function
+// below, independent of runOverlapCheck (toggleClamp doesn't always call
+// it).
+function refreshToggleIndicators() {
+  indicatorGuidesEl.hidden = !guidesEnabled;
+  indicatorLinksEl.hidden = !linksEnabled;
+  indicatorClampEl.hidden = !clampEnabled;
+  indicatorFrontRowLinkEl.hidden = !frontRowLinkEnabled;
+  indicatorBackRowLinkEl.hidden = !backRowLinkEnabled;
+}
+
+// All 5 of these toggles live together in a single group in the
+// quad-menu's View quadrant, per user request (previously the original 3
+// were also duplicated into the Scene quadrant - removed since having
+// the 5 split across two quadrants read as confusing/arbitrary rather
+// than a deliberate grouping). "Player Links" and the two row-link
+// toggles are mutually exclusive with each other (see
+// toggleFrontRowLink/toggleBackRowLink/disablePlayerLinksIfEnabled)
+// since they'd otherwise draw conflicting link lines at once; the two
+// row-link toggles are independent of each other.
 function toggleOverlapGuides() {
   guidesEnabled = !guidesEnabled;
-  overlapGuideToggle.classList.toggle('active', guidesEnabled);
   qmOverlapGuideToggle.classList.toggle('active', guidesEnabled);
-  qmSceneGuideToggle.classList.toggle('active', guidesEnabled);
   if (!guidesEnabled && !linksEnabled) {
     selectedRole = null;
     selectionLocked = false;
   }
+  refreshToggleIndicators();
   runOverlapCheck();
 }
-overlapGuideToggle.addEventListener('click', toggleOverlapGuides);
 qmOverlapGuideToggle.addEventListener('click', toggleOverlapGuides);
-qmSceneGuideToggle.addEventListener('click', toggleOverlapGuides);
+
+function disableRowLinksIfEnabled() {
+  if (!frontRowLinkEnabled && !backRowLinkEnabled) {
+    return;
+  }
+  frontRowLinkEnabled = false;
+  backRowLinkEnabled = false;
+  qmFrontRowLinkToggle.classList.remove('active');
+  qmBackRowLinkToggle.classList.remove('active');
+}
 
 function togglePlayerLinks() {
   linksEnabled = !linksEnabled;
-  playerLinkToggle.classList.toggle('active', linksEnabled);
+  if (linksEnabled) {
+    disableRowLinksIfEnabled();
+  }
   qmPlayerLinkToggle.classList.toggle('active', linksEnabled);
-  qmSceneLinkToggle.classList.toggle('active', linksEnabled);
   if (!guidesEnabled && !linksEnabled) {
     selectedRole = null;
     selectionLocked = false;
   }
+  refreshToggleIndicators();
   runOverlapCheck();
 }
-playerLinkToggle.addEventListener('click', togglePlayerLinks);
 qmPlayerLinkToggle.addEventListener('click', togglePlayerLinks);
-qmSceneLinkToggle.addEventListener('click', togglePlayerLinks);
+
+function disablePlayerLinksIfEnabled() {
+  if (!linksEnabled) {
+    return;
+  }
+  linksEnabled = false;
+  qmPlayerLinkToggle.classList.remove('active');
+  if (!guidesEnabled) {
+    selectedRole = null;
+    selectionLocked = false;
+  }
+}
+
+function toggleFrontRowLink() {
+  frontRowLinkEnabled = !frontRowLinkEnabled;
+  if (frontRowLinkEnabled) {
+    disablePlayerLinksIfEnabled();
+  }
+  qmFrontRowLinkToggle.classList.toggle('active', frontRowLinkEnabled);
+  refreshToggleIndicators();
+  runOverlapCheck();
+}
+qmFrontRowLinkToggle.addEventListener('click', toggleFrontRowLink);
+
+function toggleBackRowLink() {
+  backRowLinkEnabled = !backRowLinkEnabled;
+  if (backRowLinkEnabled) {
+    disablePlayerLinksIfEnabled();
+  }
+  qmBackRowLinkToggle.classList.toggle('active', backRowLinkEnabled);
+  refreshToggleIndicators();
+  runOverlapCheck();
+}
+qmBackRowLinkToggle.addEventListener('click', toggleBackRowLink);
 
 function toggleClamp() {
   clampEnabled = !clampEnabled;
-  clampToggle.classList.toggle('active', clampEnabled);
   qmClampToggle.classList.toggle('active', clampEnabled);
-  qmSceneClampToggle.classList.toggle('active', clampEnabled);
+  refreshToggleIndicators();
   if (clampEnabled) {
     // Snaps every on-court player back inside bounds immediately, in case
     // it was already mid-fault when the toggle was switched on.
@@ -625,9 +712,7 @@ function toggleClamp() {
     runOverlapCheck();
   }
 }
-clampToggle.addEventListener('click', toggleClamp);
 qmClampToggle.addEventListener('click', toggleClamp);
-qmSceneClampToggle.addEventListener('click', toggleClamp);
 
 // Bench Side (3D-only - the 2D view already places the bench
 // automatically). `renderer.setBenchSide` only exists on the 3D
@@ -700,6 +785,8 @@ const shortcutActions = {
   toggleGuides: () => toggleOverlapGuides(),
   toggleLinks: () => togglePlayerLinks(),
   toggleClamp: () => toggleClamp(),
+  toggleFrontRowLink: () => toggleFrontRowLink(),
+  toggleBackRowLink: () => toggleBackRowLink(),
 };
 
 // Renders the quad-menu's Keys section from shortcutsData.js - just the
@@ -707,8 +794,8 @@ const shortcutActions = {
 // tooltip); non-actionable entries and mouse gestures aren't "clickable"
 // so they're left for the full reference page instead, per the "keep the
 // menu itself minimal" ask. Only 3D camera shortcuts remain here now -
-// the both-modes ones (rotate/reset/libero/overlap toggles) moved to
-// dedicated Scene-quadrant buttons per user request.
+// the both-modes ones (rotate/reset/libero in Scene, overlap/link
+// toggles in View) moved to dedicated quad-menu buttons per user request.
 function renderShortcutsList() {
   quadShortcutsListEl.innerHTML = '';
   const list = document.createElement('ul');
@@ -771,6 +858,12 @@ function onGlobalKeydown(event) {
       break;
     case 'c':
       shortcutActions.toggleClamp();
+      break;
+    case 'f':
+      shortcutActions.toggleFrontRowLink();
+      break;
+    case 'b':
+      shortcutActions.toggleBackRowLink();
       break;
     default:
       return;

@@ -9,6 +9,7 @@
   --guide-line: #000000;
   --guide-selected: #3498db;
   --link-line: #16a34a;
+  --row-link-line: #7fe0ff;
   --panel-bg: #f5f7fa;
   --accent: #2c3e50;
   --libero-fill: #efa581;
@@ -122,6 +123,55 @@ h1 {
 .op-group + .op-group {
   padding-left: 10px;
   border-left: 1px solid #dde2e8;
+}
+
+/* Shows which of the quad-menu's Overlap Guides/Player Links/Lock to
+   Legal/Front Row Link/Back Row Link toggles are currently on, in the
+   space freed up when those buttons moved out of the top bar (ROADMAP
+   3.10) - each chip is hidden by default (see index.html) and only
+   shown while its toggle is enabled (js/main.js's
+   refreshToggleIndicators). The little swatch line previews the color/
+   dash style of the line it corresponds to on the court. */
+.toggle-indicators {
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.toggle-indicator[hidden] {
+  display: none;
+}
+
+.indicator-swatch {
+  width: 16px;
+  height: 0;
+  border-top: 3px solid var(--accent);
+  display: inline-block;
+}
+
+.indicator-dashed .indicator-swatch {
+  border-top-style: dashed;
+}
+
+.indicator-guides .indicator-swatch {
+  border-top-color: var(--guide-line);
+}
+
+.indicator-links .indicator-swatch {
+  border-top-color: var(--link-line);
+}
+
+.indicator-row-link .indicator-swatch {
+  border-top-color: var(--row-link-line);
 }
 
 .status-row {
