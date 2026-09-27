@@ -333,6 +333,13 @@ only the applicable options shown per mode.
       underneath view unreachable anyway - clicking/pressing it just
       clamped to the same near-horizontal angle other low-angle presets
       already reach, so it never did anything genuinely distinct.
+      Follow-up 4: reference.html redesigned from two separate tables
+      (2D View/3D View, each listing every "both"-mode entry twice) into
+      a single deduplicated table - one row per action, with 2D/3D
+      checkmark columns instead of separate sections. `js/reference.js`
+      no longer filters by mode or takes a `mode` param; it just renders
+      `[...KEYBOARD_SHORTCUTS, ...MOUSE_CONTROLS]` once, each row's
+      checkmark cells computed from `entry.appliesTo`.
 - [ ] 3.5 New 3D objects: net posts (at the sidelines, z=0) + a real
       vertical net (canvas-textured grid plane, 2.43m tall, between the
       posts - today's "net" is just a flat ground-level line marker with

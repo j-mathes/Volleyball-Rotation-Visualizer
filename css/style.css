@@ -753,12 +753,27 @@ select {
   font-size: 0.85rem;
 }
 
+.reference-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--accent);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+}
+
 .reference-table td {
   padding: 6px 8px;
   border-bottom: 1px solid #dde2e8;
 }
 
-.reference-table td:first-child {
+.reference-table .ref-check-col {
+  text-align: center;
+  width: 1%;
+}
+
+.reference-table .ref-input-col {
   font-weight: bold;
   color: var(--accent);
   white-space: nowrap;
