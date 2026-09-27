@@ -603,11 +603,24 @@ only the applicable options shown per mode.
       rotate, Libero swap in/out, and toggle on/off - zone numbers always
       matched the on-court occupant's actual current zone, and the
       benched player never showed one.
-- [ ] 3.8 Playlist keyboard shortcuts (main.js, guarded like
+- [x] 3.8 Playlist keyboard shortcuts (main.js, guarded like
       renderer3d.js's `onKeydown`): Space = play/pause, Right Arrow = step
       forward, Left Arrow = step backward (new - `goToPlaylistStep`
       already wraps negative indices correctly, so this is a trivial
       addition).
+      Implemented as: extracted the play/pause and step click handlers
+      into named `togglePlaylistPlay()`/`stepPlaylist(direction)`
+      functions (previously anonymous listeners), reused by 3 new
+      `shortcutActions` entries (`playPausePlaylist`/
+      `stepPlaylistForward`/`stepPlaylistBackward`) and 3 new
+      `onGlobalKeydown` cases (`' '`, `'arrowright'`, `'arrowleft'`) -
+      same guard (ignored while an input/textarea is focused) as every
+      other global shortcut. Documented in `shortcutsData.js` (and
+      therefore the reference page) as `Space`/`\u2192`/`\u2190`.
+      Verified live: seeded a temporary 2-item playlist via localStorage,
+      confirmed Right Arrow steps forward and wraps around past the last
+      item, Left Arrow steps backward, and Space toggles the Play/Pause
+      button's label - zero console errors.
 - [x] 3.9 Label vertical-offset fix for low camera angles - CSS2DObject
       labels are anchored at a fixed world-space height, which at
       shallow/grazing camera pitch reads as "floating in front of" the

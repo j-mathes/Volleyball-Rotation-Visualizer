@@ -830,6 +830,9 @@ const shortcutActions = {
   toggleFrontRowLink: () => toggleFrontRowLink(),
   toggleBackRowLink: () => toggleBackRowLink(),
   toggleZoneLabels: () => toggleShowZoneLabels(),
+  playPausePlaylist: () => togglePlaylistPlay(),
+  stepPlaylistForward: () => stepPlaylist(1),
+  stepPlaylistBackward: () => stepPlaylist(-1),
 };
 
 // Renders the quad-menu's Keys section from shortcutsData.js - just the
@@ -910,6 +913,15 @@ function onGlobalKeydown(event) {
       break;
     case 'k':
       shortcutActions.toggleZoneLabels();
+      break;
+    case ' ':
+      shortcutActions.playPausePlaylist();
+      break;
+    case 'arrowright':
+      shortcutActions.stepPlaylistForward();
+      break;
+    case 'arrowleft':
+      shortcutActions.stepPlaylistBackward();
       break;
     default:
       return;
@@ -1094,7 +1106,7 @@ function schedulePlaylistAdvance() {
   }, getPlaylistDelay());
 }
 
-playlistPlayBtn.addEventListener('click', async () => {
+async function togglePlaylistPlay() {
   if (playlistPlaying) {
     playlistPlaying = false;
     clearTimeout(playlistTimer);
@@ -1107,13 +1119,18 @@ playlistPlayBtn.addEventListener('click', async () => {
     await goToPlaylistStep(0);
   }
   schedulePlaylistAdvance();
-});
+}
+playlistPlayBtn.addEventListener('click', togglePlaylistPlay);
 
-playlistStepBtn.addEventListener('click', async () => {
+// Shared by the Step button and the Left/Right arrow keyboard shortcuts -
+// `direction` is +1/-1; `goToPlaylistStep` already wraps a negative index
+// around to the last step.
+async function stepPlaylist(direction) {
   playlistPlaying = false;
   clearTimeout(playlistTimer);
-  await goToPlaylistStep(playlistIndex + 1);
+  await goToPlaylistStep(playlistIndex + direction);
   refreshPlaylistUI();
-});
+}
+playlistStepBtn.addEventListener('click', () => stepPlaylist(1));
 
 refreshPlaylistUI();

@@ -26,6 +26,9 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'F', shortLabel: 'Front Row Link', label: 'Toggle Front Row Link (links all 3 front-row players together, solid line; disables Player Links)', appliesTo: 'both', action: 'toggleFrontRowLink' },
   { key: 'B', shortLabel: 'Back Row Link', label: 'Toggle Back Row Link (links all 3 back-row players together, dashed line; disables Player Links)', appliesTo: 'both', action: 'toggleBackRowLink' },
   { key: 'K', shortLabel: 'Zone Labels', label: 'Toggle Zone Labels (shows each on-court player\u2019s current zone under its label)', appliesTo: 'both', action: 'toggleZoneLabels' },
+  { key: 'Space', shortLabel: 'Play/Pause', label: 'Play/pause the Court Setup Playlist', appliesTo: 'both', action: 'playPausePlaylist' },
+  { key: '\u2192', shortLabel: 'Playlist Next', label: 'Step the Court Setup Playlist forward one step', appliesTo: 'both', action: 'stepPlaylistForward' },
+  { key: '\u2190', shortLabel: 'Playlist Back', label: 'Step the Court Setup Playlist backward one step', appliesTo: 'both', action: 'stepPlaylistBackward' },
 ];
 
 export const MOUSE_CONTROLS = [
