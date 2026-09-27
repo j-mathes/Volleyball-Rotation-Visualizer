@@ -556,9 +556,20 @@ only the applicable options shown per mode.
       all 6 players + the other referee still simultaneously visible,
       post now a reasonable on-screen size rather than filling much of
       the frame.
-- [ ] 3.6 setup.html cleanup - rename the 3 "3D Preview" headings to
+- [x] 3.6 setup.html cleanup - rename the 3 "3D Preview" headings to
       "3D View" and fix the 2 stale links to the retired `scene3d.html`
       to point at `index.html` instead.
+      Follow-up: went further per user feedback - removed all 3 "3D
+      View" panel sections (Bench Side/Label Scaling/View Cube Size)
+      from setup.html entirely, since each already has a fully
+      functional quad-menu equivalent in `index.html` (`benchSide3DLeft`/
+      `Right`, `qmLabelScaleOn`/`Off`, `qmViewCubeSmall`/`Medium`/
+      `Large`) - the setup.html copies were redundant. Removed the
+      matching DOM wiring blocks and now-unused imports
+      (`getBenchSide3D`/`saveBenchSide3D`, `getLabelScaleMode3D`/
+      `saveLabelScaleMode3D`, `getViewCubeSize3D`/`saveViewCubeSize3D`)
+      from `setup.js`; the settings modules themselves are untouched and
+      still used by `index.html`'s quad-menu buttons and `renderer3d.js`.
 - [ ] 3.7 Zone-label toggle (quad-menu item, in-memory only - not
       persisted, same convention as the existing guide/link/clamp
       toggles): when on, each on-court player's label gains a second line

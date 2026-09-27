@@ -6,9 +6,6 @@ import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings
 import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings, DEFAULT_FONT_SETTINGS, FONT_SETTING_LABELS, FONT_FAMILY_OPTIONS } from './fontSettings.js';
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
-import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
-import { getLabelScaleMode3D, saveLabelScaleMode3D } from './labelScaleSettings.js';
-import { getViewCubeSize3D, saveViewCubeSize3D } from './viewCubeSizeSettings.js';
 
 applyColors();
 applyLineSettings();
@@ -666,67 +663,4 @@ playlistDelayInput.addEventListener('change', () => {
 });
 
 renderPlaylist();
-
-const benchSide3DLeftBtn = document.getElementById('benchSide3DLeft');
-const benchSide3DRightBtn = document.getElementById('benchSide3DRight');
-
-function refreshBenchSide3DButtons() {
-  const side = getBenchSide3D();
-  benchSide3DLeftBtn.classList.toggle('active', side === 'left');
-  benchSide3DRightBtn.classList.toggle('active', side === 'right');
-}
-
-benchSide3DLeftBtn.addEventListener('click', () => {
-  saveBenchSide3D('left');
-  refreshBenchSide3DButtons();
-});
-benchSide3DRightBtn.addEventListener('click', () => {
-  saveBenchSide3D('right');
-  refreshBenchSide3DButtons();
-});
-refreshBenchSide3DButtons();
-
-const labelScale3DScaleBtn = document.getElementById('labelScale3DScale');
-const labelScale3DFixedBtn = document.getElementById('labelScale3DFixed');
-
-function refreshLabelScale3DButtons() {
-  const mode = getLabelScaleMode3D();
-  labelScale3DScaleBtn.classList.toggle('active', mode === 'scale');
-  labelScale3DFixedBtn.classList.toggle('active', mode === 'fixed');
-}
-
-labelScale3DScaleBtn.addEventListener('click', () => {
-  saveLabelScaleMode3D('scale');
-  refreshLabelScale3DButtons();
-});
-labelScale3DFixedBtn.addEventListener('click', () => {
-  saveLabelScaleMode3D('fixed');
-  refreshLabelScale3DButtons();
-});
-refreshLabelScale3DButtons();
-
-const viewCubeSize3DSmallBtn = document.getElementById('viewCubeSize3DSmall');
-const viewCubeSize3DMediumBtn = document.getElementById('viewCubeSize3DMedium');
-const viewCubeSize3DLargeBtn = document.getElementById('viewCubeSize3DLarge');
-
-function refreshViewCubeSize3DButtons() {
-  const size = getViewCubeSize3D();
-  viewCubeSize3DSmallBtn.classList.toggle('active', size === 'small');
-  viewCubeSize3DMediumBtn.classList.toggle('active', size === 'medium');
-  viewCubeSize3DLargeBtn.classList.toggle('active', size === 'large');
-}
-
-viewCubeSize3DSmallBtn.addEventListener('click', () => {
-  saveViewCubeSize3D('small');
-  refreshViewCubeSize3DButtons();
-});
-viewCubeSize3DMediumBtn.addEventListener('click', () => {
-  saveViewCubeSize3D('medium');
-  refreshViewCubeSize3DButtons();
-});
-viewCubeSize3DLargeBtn.addEventListener('click', () => {
-  saveViewCubeSize3D('large');
-  refreshViewCubeSize3DButtons();
-});
-refreshViewCubeSize3DButtons();
 
