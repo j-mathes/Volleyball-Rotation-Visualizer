@@ -538,6 +538,24 @@ only the applicable options shown per mode.
       posts + net (the specific occluders users actually reported) rather
       than every mesh in the scene (e.g. other players' pucks), to keep
       the added per-frame raycasting cost minimal and the fix focused.
+      Follow-up (still too fisheye - lower FOV + pull the eye back):
+      `FIRST_PERSON_FOV` reduced further, 75 -> 60 (a much more
+      camera-normal angle). Lowering FOV alone would show LESS of the
+      court from the exact same eye point, so `selectViewpoint` now also
+      pulls the actual camera eye position back an extra
+      `FP_EYE_PULLBACK` (150 units) further from its post than the
+      puck's own (visually unmoved) spot - along X only, in the same
+      direction the puck already sits outside its post. First attempt at
+      this pulled back along a generic "away from court center" 2D
+      vector instead, which also dragged Z toward the opponent's
+      mirrored half (both R1 and R2 already sit exactly at the net's
+      z=0, so any Z component in the pullback is wrong) - caused a
+      visibly broken view (2 players clipped, the post enormous/too
+      close) until corrected to X-only. Verified via screenshot from
+      both R1 and R2: straight lines noticeably less curved/stretched,
+      all 6 players + the other referee still simultaneously visible,
+      post now a reasonable on-screen size rather than filling much of
+      the frame.
 - [ ] 3.6 setup.html cleanup - rename the 3 "3D Preview" headings to
       "3D View" and fix the 2 stale links to the retired `scene3d.html`
       to point at `index.html` instead.

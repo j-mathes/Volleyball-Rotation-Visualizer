@@ -165,11 +165,14 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   let fpPitch = 0;
   let fpDragging = false;
   let fpLastPointer = null;
-  // A more natural (less fisheye-distorted) wide angle than the default
-  // 50 - still noticeably wider to help take in more of the court from a
-  // fixed, close-up vantage, without the extreme edge-stretching a very
-  // high FOV (e.g. 100+) causes.
-  const FIRST_PERSON_FOV = 75;
+  // A more natural (less fisheye-distorted) angle than the default 50 -
+  // still a bit wider to help take in more of the court from a fixed
+  // vantage, without the pronounced edge-stretching much higher FOVs
+  // (75-100+) cause. The eye position itself is also pulled back a bit
+  // further from court center than the puck's own spot (see
+  // FP_EYE_PULLBACK in selectViewpoint) to compensate for the narrower
+  // angle and still frame the whole court.
+  const FIRST_PERSON_FOV = 60;
   const FP_LOOK_SENSITIVITY = 0.005;
   const FP_MAX_PITCH = Math.PI * 0.49;
   const FP_WALK_SPEED = 120; // units/sec (~1.2 m/s, a slow walk)
@@ -1166,9 +1169,21 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // mesh (and label) for the duration - restored automatically by the
   // next flyCameraTo call (see its `hiddenViewpoint` handling above),
   // whatever triggers it. Once the fly-in tween finishes, first-person
-  // look-around mode kicks in (see enterFirstPersonMode above).
+  // look-around mode kicks in (see enterFirstPersonMode above). The
+  // camera's actual eye position is pulled back a bit further along X
+  // (the same direction the puck already sits outside its post) than
+  // the puck's own (unmoved) spot - per user feedback, a lower FOV alone
+  // would show less of the court from the exact same point, so stepping
+  // the eye back compensates, giving a less "fisheye" look while still
+  // framing the whole court. Z is left untouched (both R1 and R2 already
+  // sit exactly at the net's z=0) - pulling back along a generic
+  // "away-from-court-center" vector instead would drag Z toward the
+  // opponent's mirrored half, which is what caused the first attempt at
+  // this to look wrong.
+  const FP_EYE_PULLBACK = 150;
   function selectViewpoint(viewpoint) {
-    const eyePosition = new THREE.Vector3(viewpoint.group.position.x, viewpoint.eyeHeight, viewpoint.group.position.z);
+    const pullbackX = viewpoint.group.position.x < COURT_SIZE / 2 ? -FP_EYE_PULLBACK : FP_EYE_PULLBACK;
+    const eyePosition = new THREE.Vector3(viewpoint.group.position.x + pullbackX, viewpoint.eyeHeight, viewpoint.group.position.z);
     const lookAt = new THREE.Vector3(COURT_SIZE / 2, 0, COURT_SIZE / 2);
     flyCameraTo(eyePosition, lookAt, 500, () => enterFirstPersonMode(eyePosition, lookAt, viewpoint.canWalk));
     viewpoint.group.visible = false;
