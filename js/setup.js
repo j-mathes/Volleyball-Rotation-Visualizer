@@ -484,7 +484,7 @@ function renderFontSettingsFields() {
   familyRow.appendChild(familySelect);
   fontSettingsFieldsEl.appendChild(familyRow);
 
-  for (const name of ['playerLabelSize', 'benchLabelSize', 'rotationTrackerSize']) {
+  for (const name of ['playerLabelSize', 'benchLabelSize']) {
     const row = document.createElement('label');
     row.className = 'line-setting-row';
 
@@ -508,7 +508,7 @@ saveFontSettingsBtn.addEventListener('click', () => {
   const current = getFontSettings();
   const fontFamily = fontSettingsFieldsEl.querySelector('[name="fontFamily"]').value || DEFAULT_FONT_SETTINGS.fontFamily;
   const settings = { fontFamily };
-  for (const name of ['playerLabelSize', 'benchLabelSize', 'rotationTrackerSize']) {
+  for (const name of ['playerLabelSize', 'benchLabelSize']) {
     const value = Number(fontSettingsFieldsEl.querySelector(`[name="${name}"]`).value);
     settings[name] = Number.isFinite(value) && value > 0 ? value : current[name];
   }

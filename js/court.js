@@ -1,4 +1,4 @@
-import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, BENCH_WIDTH, BENCH_CENTER_CLASSIC, BENCH_PANEL_HEIGHT_CLASSIC, ROTATION_TRACKER_CENTER_X_CLASSIC } from './config.js';
+import { COURT_SIZE, ATTACK_LINE_Y, SIDE_MARGIN, BENCH_WIDTH, BENCH_CENTER_CLASSIC, BENCH_PANEL_HEIGHT_CLASSIC } from './config.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -29,12 +29,11 @@ export function createViewport(svg) {
   return viewport;
 }
 
-// The only bench layout (a vertical strip on the court's left side, with
-// the "R#" tracker above it near the net) - previously one of three used
-// across the (now-removed) Net Left/Top/Right view-orientation toggle,
-// kept as the single layout once that toggle was removed. Returns
-// { layer, trackerText } so callers can update the tracker text as
-// rotations happen.
+// The only bench layout (a vertical strip on the court's left side) -
+// previously one of three used across the (now-removed) Net Left/Top/
+// Right view-orientation toggle, kept as the single layout once that
+// toggle was removed. Returns { layer } so callers can attach bench
+// players to it.
 export function createClassicBenchLayer(svg) {
   const layer = el('g', { class: 'classic-bench-layer' });
   svg.appendChild(layer);
@@ -74,40 +73,7 @@ export function createClassicBenchLayer(svg) {
   label.textContent = 'BENCH';
   layer.appendChild(label);
 
-  const trackerText = drawRotationTrackerBox(layer, ROTATION_TRACKER_CENTER_X_CLASSIC, 45);
-  return { layer, trackerText };
-}
-
-// Draws the "R#" rotation-number tracker box centered at (centerX,
-// centerY) and returns its text element so callers can update it as
-// rotations happen.
-function drawRotationTrackerBox(container, centerX, centerY) {
-  const boxWidth = 150;
-  const boxHeight = 90;
-
-  const box = el('rect', {
-    x: centerX - boxWidth / 2,
-    y: centerY - boxHeight / 2,
-    width: boxWidth,
-    height: boxHeight,
-    rx: 18,
-    fill: 'var(--accent)',
-  });
-  container.appendChild(box);
-
-  const text = el('text', {
-    x: centerX,
-    y: centerY,
-    fill: 'var(--line-colour)',
-    'text-anchor': 'middle',
-    'dominant-baseline': 'central',
-    'font-family': 'var(--diagram-font-family)',
-    'font-weight': 'bold',
-    'font-size': 'var(--rotation-tracker-size)',
-  });
-  text.textContent = 'R1';
-  container.appendChild(text);
-  return text;
+  return { layer };
 }
 
 // Group that holds dashed red lines marking the specific gap between two

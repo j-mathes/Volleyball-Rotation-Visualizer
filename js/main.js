@@ -26,6 +26,7 @@ const svg = document.getElementById('court');
 const scene3dMount = document.getElementById('scene3dMount');
 const viewCubeWrap = document.getElementById('viewCubeWrap');
 const serverZoneEl = document.getElementById('serverZone');
+const rotationBadgeEl = document.getElementById('rotationBadge');
 const overlapResultsEl = document.getElementById('overlapResults');
 const overlapResultsSummaryEl = document.getElementById('overlapResultsSummary');
 const liberoSwapBtn = document.getElementById('liberoSwapBtn');
@@ -154,7 +155,7 @@ function isWithinCourt(x, y) {
 // whoever's currently serving from zone 1.
 function refreshRotationDisplay() {
   serverZoneEl.textContent = playerLabels[rotationState.roleInZone(1)];
-  renderer.setRotationTrackerText(`R${rotationState.rotationNumber}`);
+  rotationBadgeEl.textContent = `R${rotationState.rotationNumber}`;
 }
 
 // Warns (in red) if the single benched player has been dragged onto a
@@ -302,10 +303,20 @@ function runOverlapCheck() {
     const item = document.createElement('li');
     item.className = `status-card ${entry.ok ? 'ok' : 'violation'}`;
 
+    const top = document.createElement('span');
+    top.className = 'status-card-top';
+
+    const zone = document.createElement('span');
+    zone.className = 'status-card-zone';
+    zone.textContent = `Z${entry.zone}`;
+    top.appendChild(zone);
+
     const role = document.createElement('span');
     role.className = 'status-card-role';
     role.textContent = playerLabels[entry.role];
-    item.appendChild(role);
+    top.appendChild(role);
+
+    item.appendChild(top);
 
     const status = document.createElement('span');
     status.className = 'status-card-status';

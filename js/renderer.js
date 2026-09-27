@@ -1,8 +1,8 @@
 // Thin 2D (SVG) rendering interface - the only module that talks to
 // court.js/player.js/raw SVG DOM specifics for the main visualizer.
 // main.js drives the app purely through the object createCourtRenderer()
-// returns (create/move players, draw guide/link lines, update the
-// rotation tracker text) without ever touching an SVG element itself.
+// returns (create/move players, draw guide/link lines) without ever
+// touching an SVG element itself.
 // js/renderer3d.js implements this same interface for the 3D view mode.
 import { setViewBox, drawCourt, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, createClassicBenchLayer } from './court.js';
 import { Player, PLAYER_RADIUS } from './player.js';
@@ -45,10 +45,6 @@ export function createCourtRenderer(svg) {
   }
   function benchPositionReplaced() {
     return BENCH_POSITION_REPLACED_CLASSIC;
-  }
-
-  function setRotationTrackerText(text) {
-    classicBench.trackerText.textContent = text;
   }
 
   // Draws a dashed line marking a positional boundary, spanning the full
@@ -179,7 +175,6 @@ export function createCourtRenderer(svg) {
   return {
     benchPosition,
     benchPositionReplaced,
-    setRotationTrackerText,
     drawSeparatorLine,
     drawLinkLine,
     clearViolationLines,

@@ -17,32 +17,35 @@
 
     <div class="layout">
       <div class="top-bar">
-        <div class="top-bar-row op-row">
-          <div class="op-group">
-            <button id="viewMode2DBtn">2D View</button>
-            <button id="viewMode3DBtn">3D View</button>
+        <span id="rotationBadge" class="rotation-badge">R1</span>
+        <div class="top-bar-rows">
+          <div class="top-bar-row op-row">
+            <div class="op-group">
+              <button id="viewMode2DBtn">2D View</button>
+              <button id="viewMode3DBtn">3D View</button>
+            </div>
+            <div class="op-group">
+              <button id="rotateCw" title="Rotate clockwise (standard side-out rotation)">Rotate &#8635;</button>
+              <button id="rotateCcw" title="Rotate counter-clockwise (undo)">&#8634; Rotate Back</button>
+              <button id="resetBtn">Reset to Base Positions</button>
+            </div>
+            <div class="op-group">
+              <button id="liberoSwapBtn">Swap In Libero</button>
+            </div>
+            <div class="op-group">
+              <button id="overlapGuideToggle">Show Overlap Guides</button>
+              <button id="playerLinkToggle">Show Player Links</button>
+              <button id="clampToggle" title="Prevents dragging a player past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
+            </div>
           </div>
-          <div class="op-group">
-            <button id="rotateCw" title="Rotate clockwise (standard side-out rotation)">Rotate &#8635;</button>
-            <button id="rotateCcw" title="Rotate counter-clockwise (undo)">&#8634; Rotate Back</button>
-            <button id="resetBtn">Reset to Base Positions</button>
-          </div>
-          <div class="op-group">
-            <button id="liberoSwapBtn">Swap In Libero</button>
-          </div>
-          <div class="op-group">
-            <button id="overlapGuideToggle">Show Overlap Guides</button>
-            <button id="playerLinkToggle">Show Player Links</button>
-            <button id="clampToggle" title="Prevents dragging a player past the fault line against its current row/column neighbors">Lock to Legal Positions</button>
-          </div>
-        </div>
 
-        <div class="top-bar-row status-row">
-          <div class="status-summary">
-            <span class="rotation-display">Serving: <span id="serverZone">S</span> (zone 1)</span>
-            <span id="overlapResultsSummary">Overlap Results</span>
+          <div class="top-bar-row status-row">
+            <div class="status-summary">
+              <span class="rotation-display">Serving: <span id="serverZone">S</span> (zone 1)</span>
+              <span id="overlapResultsSummary">Overlap Results</span>
+            </div>
+            <ul id="overlapResults" class="status-cards"></ul>
           </div>
-          <ul id="overlapResults" class="status-cards"></ul>
         </div>
       </div>
 

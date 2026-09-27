@@ -687,13 +687,6 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     disposeLines(clampLines);
   }
 
-  function setRotationTrackerText() {
-    // No-op: the shared side panel's "Serving: X (zone 1)" readout
-    // (index.html, updated directly by main.js) already covers this
-    // regardless of which renderer is active - 3D doesn't need its own
-    // separate in-scene copy.
-  }
-
   // Hard sanity clamp (always active, independent of the optional "Lock
   // to Legal Positions" rule-based clamp main.js applies on top) - keeps
   // every puck within the actual modeled play area, so a fast/oblique
@@ -961,7 +954,6 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     benchPosition,
     benchPositionReplaced,
     setBenchSide,
-    setRotationTrackerText,
     drawSeparatorLine,
     drawLinkLine,
     clearViolationLines,

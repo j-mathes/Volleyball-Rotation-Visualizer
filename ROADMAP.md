@@ -226,6 +226,18 @@ only the applicable options shown per mode.
       from the existing `#overlapResults` list, reusing `summarizeByPlayer`
       unchanged). Court/`#scene3dMount` width expands into the freed
       space.
+      Follow-up: moved the "R#" rotation tracker off the 2D court diagram
+      (it never had a 3D equivalent) into a single top-bar badge shared by
+      both view modes - a large teal-bordered tile (`#rotationBadge`) at
+      the far left of `.top-bar`, spanning the full height of both rows,
+      updated directly by `refreshRotationDisplay()` in main.js instead of
+      via a per-renderer `setRotationTrackerText` (removed from both
+      renderer interfaces; the SVG box/text it drew, plus its
+      `rotationTrackerSize` font setting on setup.html, were removed
+      entirely). Also added a small "Z#" zone-number sub-label to the left
+      of each per-player role in the overlap-status cards (`entry.zone`
+      from `summarizeByPlayer` was already available, just not
+      displayed).
 - [x] 3.2 3D Alt-to-orbit remap - holding Alt temporarily turns
       LEFT-click-drag into camera orbit (toggles
       `controls.mouseButtons.LEFT` between `ROTATE`/`null` on Alt
