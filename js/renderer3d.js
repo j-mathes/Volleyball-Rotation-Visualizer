@@ -847,7 +847,9 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   );
   verticalNet.position.set(COURT_SIZE / 2, NET_BOTTOM + NET_BOTTOM_BAND_HEIGHT + netMeshHeight / 2, 0);
   scene.add(verticalNet);
-  labelOccluders.push(verticalNet);
+  // Deliberately NOT a label occluder - it's a mesh (see-through in real
+  // life), so a label behind it should still show through, unlike a
+  // solid post.
 
   // Side bands (5cm wide, directly above each sideline, spanning the
   // net's full height) + antennae (striped fiberglass rods at each side

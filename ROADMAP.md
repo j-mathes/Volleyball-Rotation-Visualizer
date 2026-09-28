@@ -556,6 +556,18 @@ only the applicable options shown per mode.
       all 6 players + the other referee still simultaneously visible,
       post now a reasonable on-screen size rather than filling much of
       the frame.
+      Follow-up (net mesh shouldn't occlude labels, only the solid
+      posts): the vertical net mesh was included in `labelOccluders`
+      alongside the 2 posts, so a label behind the net (from any camera
+      angle looking across it) was wrongly hidden too - unlike a post,
+      the net is see-through, so a label behind it should still read
+      fine. Fixed by simply never pushing `verticalNet` into
+      `labelOccluders` in the first place - it stays a normal (non-
+      occluding) part of the scene, while the 2 posts keep hiding labels
+      behind them as before. Verified live by orbiting to a low, near-
+      net-height angle looking across the net: a front-row player's
+      label read clearly through the mesh grid, while the R1/R2 labels
+      still correctly hid behind their own posts.
 - [x] 3.6 setup.html cleanup - rename the 3 "3D Preview" headings to
       "3D View" and fix the 2 stale links to the retired `scene3d.html`
       to point at `index.html` instead.
@@ -682,6 +694,18 @@ only the applicable options shown per mode.
       show (the two row-link toggles already had `(F)`/`(B)`). Scene
       quadrant now only holds Rotate CW/CCW, Reset to Base, and Swap
       Libero.
+
+**Bug fix + polish (found/requested after 3.8):** the net-mesh label
+occlusion fix (3.5's `updateLabelOcclusion` follow-up) had wrongly
+included the see-through vertical net mesh alongside the 2 solid posts in
+`labelOccluders` - a label whose puck was behind the net (but not behind
+a post) got hidden too, when it should still read fine through the mesh.
+Fixed by no longer pushing `verticalNet` into `labelOccluders` at all;
+posts still occlude as before. Also darkened 3D's back-row puck fill
+further (`Player3D._refreshVisual`'s multiplier 0.8 -> 0.65) so back-row
+stands out clearly against front-row - 2D's equivalent CSS `color-mix`
+darken (80%) was left as-is, since a puck's own lighting/shading already
+reads flatter than a flat SVG fill at the same mix percentage.
 
 ## Phase 4 — Two-Team Support (planned, not started)
 

@@ -203,7 +203,11 @@ export class Player3D {
   _refreshVisual() {
     let fillColor = this.baseFillColor;
     if (this._backRow) {
-      fillColor = new THREE.Color(fillColor).multiplyScalar(0.8);
+      // Darker than 2D's equivalent 80% mix (`.back-row circle` in
+      // style.css) - a puck's lighting/shading already reads as "flatter"
+      // than a flat SVG fill, so back-row needed a stronger darken here
+      // to stand out by the same amount.
+      fillColor = new THREE.Color(fillColor).multiplyScalar(0.65);
     }
     if (this._overlapping || this._benchWarning) {
       fillColor = this._colors.violationFill;
