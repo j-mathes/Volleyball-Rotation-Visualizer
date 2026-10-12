@@ -1099,7 +1099,9 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     } else {
       const displacement = (pos, zone) => {
         const base = ZONE_POSITIONS[zone];
-        return (pos.x - base.x) ** 2 + (pos.y - base.y) ** 2;
+        // See renderer.js's drawSeparatorLine for why this is axis-only,
+        // not full 2D distance.
+        return axis === 'horizontal' ? (pos.x - base.x) ** 2 : (pos.y - base.y) ** 2;
       };
       anchorIsA = displacement(posA, zoneA) <= displacement(posB, zoneB);
     }

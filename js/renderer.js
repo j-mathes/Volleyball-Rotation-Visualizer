@@ -74,7 +74,12 @@ export function createCourtRenderer(svg) {
     } else {
       const displacement = (pos, zone) => {
         const base = ZONE_POSITIONS[zone];
-        return (pos.x - base.x) ** 2 + (pos.y - base.y) ** 2;
+        // Only the axis this check cares about - e.g. a horizontal (left/
+        // right) check must ignore how far a player has drifted in y, or
+        // dragging one player along the net-to-baseline axis alone could
+        // flip which player the line anchors to, making the line appear
+        // to drift sideways with the OTHER player instead of staying put.
+        return axis === 'horizontal' ? (pos.x - base.x) ** 2 : (pos.y - base.y) ** 2;
       };
       const dispA = displacement(posA, zoneA);
       const dispB = displacement(posB, zoneB);
