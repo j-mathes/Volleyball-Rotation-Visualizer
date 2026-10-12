@@ -1060,7 +1060,7 @@ select {
   dominant-baseline: central;
   font-family: var(--diagram-font-family);
   font-weight: bold;
-  font-size: var(--player-label-size);
+  font-size: calc(var(--player-label-size) * var(--puck-size-scale, 1));
   pointer-events: none;
 }
 

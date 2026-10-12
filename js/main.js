@@ -15,7 +15,7 @@ import { getBenchSide3D } from './benchSideSettings.js';
 import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
 import { getInvertPitch3D } from './firstPersonSettings.js';
-import { getPuckSize, savePuckSize } from './puckSizeSettings.js';
+import { getPuckSize, savePuckSize, applyPuckSizeScale } from './puckSizeSettings.js';
 import { createQuadMenu } from './quadMenu.js';
 import { KEYBOARD_SHORTCUTS } from './shortcutsData.js';
 
@@ -23,6 +23,7 @@ applyColors();
 applyLineSettings();
 applyFontSettings();
 applyEffectSettings();
+applyPuckSizeScale();
 
 const svg = document.getElementById('court');
 const scene3dMount = document.getElementById('scene3dMount');
@@ -793,6 +794,7 @@ function refreshPuckSizeButtons() {
 }
 function applyPuckSize(size) {
   savePuckSize(size);
+  applyPuckSizeScale(size);
   renderer.setPuckSize(size);
   for (const player of Object.values(playersByRole)) {
     player.refreshRadius();

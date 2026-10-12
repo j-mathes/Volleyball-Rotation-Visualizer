@@ -23,3 +23,16 @@ export function savePuckSize(size) {
 export function getPuckRadius(size = getPuckSize()) {
   return PUCK_SIZE_RADII[size] ?? PUCK_SIZE_RADII[DEFAULT_PUCK_SIZE];
 }
+
+// Player label text (fontSettings.js's playerLabelSize) was sized for the
+// original fixed "large" puck - scaling it by radius-relative-to-large
+// keeps the label proportional to whichever puck size is active instead
+// of staying a fixed pixel size while the puck itself shrinks/grows.
+// Sets a CSS custom property (read by style.css's `.player text` rule and
+// by player3d.js's inline label font-size) rather than recomputing pixel
+// values per-caller, so both 2D and 3D - and any future puck-size change,
+// live or on load - pick it up automatically from one place.
+export function applyPuckSizeScale(size = getPuckSize()) {
+  const scale = getPuckRadius(size) / PUCK_SIZE_RADII.large;
+  document.documentElement.style.setProperty('--puck-size-scale', scale);
+}
