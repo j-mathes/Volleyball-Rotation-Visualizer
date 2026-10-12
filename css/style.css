@@ -408,6 +408,14 @@ h1 {
   margin-bottom: 0;
   width: 130px;
 }
+/* Isometric puck icon (Puck Size quad-menu buttons - see the <symbol
+   id="puckIcon"> definition near the top of index.html). */
+.puck-icon {
+  width: 16px;
+  height: 11px;
+  vertical-align: middle;
+  margin-left: 2px;
+}
 .quad-items .hint {
   font-size: 0.62rem;
   margin: 0;
