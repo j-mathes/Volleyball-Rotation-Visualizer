@@ -15,6 +15,7 @@ import { getBenchSide3D } from './benchSideSettings.js';
 import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
 import { getInvertPitch3D } from './firstPersonSettings.js';
+import { getPuckSize, savePuckSize } from './puckSizeSettings.js';
 import { createQuadMenu } from './quadMenu.js';
 import { KEYBOARD_SHORTCUTS } from './shortcutsData.js';
 
@@ -51,6 +52,7 @@ const qmResetViewBtn = document.getElementById('qmResetView');
 const qmZoomExtentsBtn = document.getElementById('qmZoomExtents');
 const qmViewCubeSizeBtns = quadViewCameraSection.querySelectorAll('button[data-size]');
 const qmLabelScaleBtns = quadViewCameraSection.querySelectorAll('button[data-mode]');
+const qmPuckSizeBtns = quadViewCameraSection.querySelectorAll('button[data-puck-size]');
 const qmInvertPitchToggle = document.getElementById('qmInvertPitchToggle');
 const qmOverlapGuideToggle = document.getElementById('qmOverlapGuideToggle');
 const qmPlayerLinkToggle = document.getElementById('qmPlayerLinkToggle');
@@ -165,6 +167,7 @@ function benchedRole() {
 createPlayers();
 wireRendererEvents();
 refreshViewModeButtons();
+refreshPuckSizeButtons();
 
 
 function isWithinCourt(x, y) {
@@ -779,6 +782,28 @@ const quadMenu = createQuadMenu(quadMenuEl);
 qmResetViewBtn.addEventListener('click', () => { renderer.resetToDefaultView?.(); quadMenu.close(); });
 qmZoomExtentsBtn.addEventListener('click', () => { renderer.zoomExtents?.(); quadMenu.close(); });
 
+// Puck Size (both modes, unlike the 3D-only groups above/below it) -
+// changes the shared radius binding (player.js/player3d.js) and resizes
+// every CURRENTLY existing player in place, then re-runs the overlap
+// check so the overlap tolerance (which scales with puck size - see
+// overlap.js's tolerance()) reflects the new size immediately.
+function refreshPuckSizeButtons() {
+  const size = getPuckSize();
+  qmPuckSizeBtns.forEach((button) => button.classList.toggle('active', button.dataset.puckSize === size));
+}
+function applyPuckSize(size) {
+  savePuckSize(size);
+  renderer.setPuckSize(size);
+  for (const player of Object.values(playersByRole)) {
+    player.refreshRadius();
+  }
+  runOverlapCheck();
+  refreshPuckSizeButtons();
+}
+qmPuckSizeBtns.forEach((button) => {
+  button.addEventListener('click', () => applyPuckSize(button.dataset.puckSize));
+});
+
 function refreshViewCubeSizeButtons() {
   const size = getViewCubeSize3D();
   qmViewCubeSizeBtns.forEach((button) => button.classList.toggle('active', button.dataset.size === size));
@@ -947,6 +972,7 @@ function wireRendererEvents() {
     refreshViewCubeSizeButtons();
     refreshLabelScaleButtons();
     refreshInvertPitchButton();
+    refreshPuckSizeButtons();
     renderShortcutsList();
     quadMenu.open(event.clientX, event.clientY, viewMode === '3d');
   });

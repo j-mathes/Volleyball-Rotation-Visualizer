@@ -45,6 +45,10 @@ rework when the renderer changes later.
       used for selectable/guide-selected/locked player highlights, and the
       `lock-pulse` animation's duration, as settings instead of the
       hardcoded values in `style.css`.
+- [x] 0.10 Puck (player icon) size — Small/Medium/Large preset, Medium
+      the default, selectable on the setup page and live from the
+      right-click quad-menu's View section (both 2D and 3D). Overlap
+      checking's tolerance distance scales with whichever size is active.
 
 ## Phase 1 — 2D View Orientation Toggle (REMOVED, see note below)
 

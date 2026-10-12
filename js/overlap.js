@@ -8,7 +8,12 @@ import { PLAYER_RADIUS } from './player.js';
 // longer overlap at all in the wrong order). Any partial overlap, even if
 // the centers are already "swapped", is still legal - hence a tolerance
 // equal to a full player diameter rather than a near-zero epsilon.
-const TOLERANCE = PLAYER_RADIUS * 2;
+// A function (not a cached const) so it tracks PLAYER_RADIUS live as the
+// puck-size setting changes (see puckSizeSettings.js) instead of freezing
+// at whatever size was active when this module first evaluated.
+function tolerance() {
+  return PLAYER_RADIUS * 2;
+}
 
 function pairs(row) {
   const result = [];
@@ -49,7 +54,7 @@ export function checkOverlap(positionsByZone) {
   for (const [leftZone, rightZone] of LEFT_RIGHT_CHECKS) {
     const left = positionsByZone[leftZone];
     const right = positionsByZone[rightZone];
-    const ok = left.x <= right.x + TOLERANCE;
+    const ok = left.x <= right.x + tolerance();
     results.push({
       zoneA: leftZone,
       zoneB: rightZone,
@@ -66,7 +71,7 @@ export function checkOverlap(positionsByZone) {
   for (const [frontZone, backZone] of FRONT_BACK_PAIRS) {
     const front = positionsByZone[frontZone];
     const back = positionsByZone[backZone];
-    const ok = front.y <= back.y + TOLERANCE;
+    const ok = front.y <= back.y + tolerance();
     results.push({
       zoneA: frontZone,
       zoneB: backZone,
@@ -103,13 +108,13 @@ export function getClampBounds(zone, positionsByZone) {
   for (const pair of LEFT_RIGHT_CHECKS) {
     const [leftZone, rightZone] = pair;
     if (zone === leftZone) {
-      const candidate = positionsByZone[rightZone].x + TOLERANCE;
+      const candidate = positionsByZone[rightZone].x + tolerance();
       if (candidate < bounds.maxX) {
         bounds.maxX = candidate;
         bounds.maxXPair = pair;
       }
     } else if (zone === rightZone) {
-      const candidate = positionsByZone[leftZone].x - TOLERANCE;
+      const candidate = positionsByZone[leftZone].x - tolerance();
       if (candidate > bounds.minX) {
         bounds.minX = candidate;
         bounds.minXPair = pair;
@@ -120,13 +125,13 @@ export function getClampBounds(zone, positionsByZone) {
   for (const pair of FRONT_BACK_PAIRS) {
     const [frontZone, backZone] = pair;
     if (zone === frontZone) {
-      const candidate = positionsByZone[backZone].y + TOLERANCE;
+      const candidate = positionsByZone[backZone].y + tolerance();
       if (candidate < bounds.maxY) {
         bounds.maxY = candidate;
         bounds.maxYPair = pair;
       }
     } else if (zone === backZone) {
-      const candidate = positionsByZone[frontZone].y - TOLERANCE;
+      const candidate = positionsByZone[frontZone].y - tolerance();
       if (candidate > bounds.minY) {
         bounds.minY = candidate;
         bounds.minYPair = pair;

@@ -1,5 +1,17 @@
+import { getPuckRadius } from './puckSizeSettings.js';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
-export const PLAYER_RADIUS = 45;
+// Mutable (not const) so the puck-size setting (puckSizeSettings.js) can
+// change it live - importers see updates for free via ES modules' live
+// bindings, since reassignment only ever happens inside this module (see
+// setPlayerRadius below). Existing circles are only resized when
+// `refreshRadius()` is explicitly called on them (main.js does this for
+// every current Player when the setting changes).
+export let PLAYER_RADIUS = getPuckRadius();
+
+export function setPlayerRadius(radius) {
+  PLAYER_RADIUS = radius;
+}
 
 function el(tag, attrs) {
   const node = document.createElementNS(SVG_NS, tag);
@@ -62,6 +74,13 @@ export class Player {
   // swapping the Libero in/out.
   setContainer(container) {
     container.appendChild(this.group);
+  }
+
+  // Live-resizes this player's circle to the current PLAYER_RADIUS (see
+  // puckSizeSettings.js) - called on every existing player by main.js
+  // when the puck-size setting changes.
+  refreshRadius() {
+    this.circle.setAttribute('r', PLAYER_RADIUS);
   }
 
   // Registers a click/double-click handler on this player's icon, so

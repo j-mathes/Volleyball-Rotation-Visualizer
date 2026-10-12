@@ -6,6 +6,7 @@ import { getLineSettings, saveLineSettings, resetLineSettings, applyLineSettings
 import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings, DEFAULT_FONT_SETTINGS, FONT_SETTING_LABELS, FONT_FAMILY_OPTIONS } from './fontSettings.js';
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
+import { getPuckSize, savePuckSize } from './puckSizeSettings.js';
 
 applyColors();
 applyLineSettings();
@@ -21,6 +22,7 @@ const colorForm = document.getElementById('colorForm');
 const resetColorsBtn = document.getElementById('resetColors');
 const lineSettingsForm = document.getElementById('lineSettingsForm');
 const resetLineSettingsBtn = document.getElementById('resetLineSettings');
+const puckSizeBtns = document.querySelectorAll('button[data-puck-size]');
 const fontSettingsFieldsEl = document.getElementById('fontSettingsFields');
 const saveFontSettingsBtn = document.getElementById('saveFontSettings');
 const resetFontSettingsBtn = document.getElementById('resetFontSettings');
@@ -449,6 +451,18 @@ resetLineSettingsBtn.addEventListener('click', () => {
 });
 
 renderLineSettingsForm();
+
+function refreshPuckSizeButtons() {
+  const size = getPuckSize();
+  puckSizeBtns.forEach((button) => button.classList.toggle('active', button.dataset.puckSize === size));
+}
+puckSizeBtns.forEach((button) => {
+  button.addEventListener('click', () => {
+    savePuckSize(button.dataset.puckSize);
+    refreshPuckSizeButtons();
+  });
+});
+refreshPuckSizeButtons();
 
 function renderFontSettingsFields() {
   const settings = getFontSettings();

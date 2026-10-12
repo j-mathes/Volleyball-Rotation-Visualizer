@@ -30,7 +30,8 @@ import { getBenchSide3D, saveBenchSide3D } from './benchSideSettings.js';
 import { getLabelScaleMode3D, saveLabelScaleMode3D } from './labelScaleSettings.js';
 import { getViewCubeSize3D, saveViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getInvertPitch3D, saveInvertPitch3D } from './firstPersonSettings.js';
-import { Player3D, PLAYER_RADIUS_3D, PUCK_HEIGHT } from './player3d.js';
+import { getPuckRadius } from './puckSizeSettings.js';
+import { Player3D, PLAYER_RADIUS_3D, PUCK_HEIGHT, setPlayerRadius3D } from './player3d.js';
 
 // Reads a customizable color (see colors.js/setup.html) so the 3D court
 // matches whatever the user picked for the 2D one, instead of duplicating
@@ -46,6 +47,12 @@ function cssColor(name, fallback) {
 // widget's container (a sibling overlay, also absolutely positioned
 // within `mountEl` by index.html's CSS).
 export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
+  // Read fresh (not just at module-load time) so a puck-size change made
+  // while 2D was active is already correct the next time 3D is selected
+  // (see main.js's switchViewMode) - mirrors how lineSettings/fontSettings
+  // etc. are read fresh per renderer creation elsewhere in this app.
+  setPlayerRadius3D(getPuckRadius());
+
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(cssColor('--court-bg', '#189a94'));
 
@@ -953,6 +960,14 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     repositionReferees();
   }
 
+  // Live-updates the puck size (see puckSizeSettings.js) - only changes
+  // the shared PLAYER_RADIUS_3D binding; callers (main.js) still need to
+  // call `.refreshRadius()` on every existing Player3D themselves, since
+  // this renderer has no registry of the players it created.
+  function setPuckSize(size) {
+    setPlayerRadius3D(getPuckRadius(size));
+  }
+
   // R1 (stand referee, 3.2m) and R2 (floor referee, 1.8m) - selectable
   // camera viewpoints (see selectableViewpoints/onPointerDownLeft below),
   // not draggable like player pucks. Each stands 1.5m outside its own
@@ -1564,6 +1579,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     setViewCubeSize,
     setLabelScaleMode,
     setInvertPitch3D,
+    setPuckSize,
     destroy,
   };
 }

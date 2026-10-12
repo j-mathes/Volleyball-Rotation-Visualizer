@@ -5,9 +5,10 @@
 // touching an SVG element itself.
 // js/renderer3d.js implements this same interface for the 3D view mode.
 import { setViewBox, drawCourt, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, createClassicBenchLayer } from './court.js';
-import { Player, PLAYER_RADIUS } from './player.js';
+import { Player, PLAYER_RADIUS, setPlayerRadius } from './player.js';
 import { BENCH_POSITION_CLASSIC, BENCH_POSITION_REPLACED_CLASSIC, COURT_SIZE, ZONE_POSITIONS } from './config.js';
 import { getLineSettings } from './lineSettings.js';
+import { getPuckRadius } from './puckSizeSettings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -24,6 +25,10 @@ function svgLine(attrs) {
 // main.js uses for everything rendering-related.
 export function createCourtRenderer(svg) {
   const lineSettings = getLineSettings();
+  // Read fresh (not just at module-load time) so a puck-size change made
+  // while 3D was active is already correct the next time 2D is selected
+  // (see switchViewMode) - mirrors lineSettings above.
+  setPlayerRadius(getPuckRadius());
 
   setViewBox(svg);
   const viewport = createViewport(svg);
@@ -192,6 +197,14 @@ export function createCourtRenderer(svg) {
     svg.innerHTML = '';
   }
 
+  // Live-updates the puck size (see puckSizeSettings.js) - only changes
+  // the shared PLAYER_RADIUS binding; callers (main.js) still need to call
+  // `.refreshRadius()` on every existing Player themselves, since this
+  // renderer has no registry of the players it created.
+  function setPuckSize(size) {
+    setPlayerRadius(getPuckRadius(size));
+  }
+
   return {
     benchPosition,
     benchPositionReplaced,
@@ -208,5 +221,6 @@ export function createCourtRenderer(svg) {
     onBackgroundClick,
     onContextMenu,
     destroy,
+    setPuckSize,
   };
 }

@@ -10,9 +10,16 @@
 // DOM click event to hook `onClick` onto directly.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { getPuckRadius } from './puckSizeSettings.js';
 
-export const PLAYER_RADIUS_3D = 45;
+// Mutable (not const) - see player.js's PLAYER_RADIUS for why/how this
+// stays live across puck-size setting changes.
+export let PLAYER_RADIUS_3D = getPuckRadius();
 export const PUCK_HEIGHT = 20;
+
+export function setPlayerRadius3D(radius) {
+  PLAYER_RADIUS_3D = radius;
+}
 
 export class Player3D {
   constructor(scene, raycastTargets, role, label, x, y, onDragEnd, onDragMove, colors, fontSettings) {
@@ -108,6 +115,18 @@ export class Player3D {
   // enough to just support directly.
   setLabel(label) {
     this.labelTextEl.textContent = label;
+  }
+
+  // Live-resizes this puck to the current PLAYER_RADIUS_3D (see
+  // puckSizeSettings.js) - geometry is recreated (not scaled) so the
+  // outline's fixed +4 margin and both cylinders' height stay correct at
+  // any size. Called on every existing player by main.js when the
+  // puck-size setting changes.
+  refreshRadius() {
+    this.outline.geometry.dispose();
+    this.outline.geometry = new THREE.CylinderGeometry(PLAYER_RADIUS_3D + 4, PLAYER_RADIUS_3D + 4, PUCK_HEIGHT * 0.8, 32);
+    this.fill.geometry.dispose();
+    this.fill.geometry = new THREE.CylinderGeometry(PLAYER_RADIUS_3D, PLAYER_RADIUS_3D, PUCK_HEIGHT, 32);
   }
 
   // Mirrors Player (2D)'s setShowZone(zone|null) - see its comment.

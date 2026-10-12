@@ -51,8 +51,8 @@ when opened straight from disk (`file://`). Pick whichever is easiest:
 7. **Right-click for more** - right-click anywhere on the court to open a
    quick menu of extra toggles and camera shortcuts.
 8. **Customize** - visit the Setup page (top-right link) to rename
-   players, recolor the court, adjust fonts/line thickness, and manage
-   saved setups and playlists.
+   players, recolor the court, adjust fonts/line thickness/puck size, and
+   manage saved setups and playlists.
 
 The "Shortcuts" link at the top of the app lists every keyboard and mouse
 control.
