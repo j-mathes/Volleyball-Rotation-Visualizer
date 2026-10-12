@@ -16,6 +16,7 @@ import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
 import { getInvertPitch3D } from './firstPersonSettings.js';
 import { getPuckSize, savePuckSize, applyPuckSizeScale } from './puckSizeSettings.js';
+import { getRememberCameraPosition3D, saveRememberCameraPosition3D } from './cameraMemorySettings.js';
 import { createQuadMenu } from './quadMenu.js';
 import { KEYBOARD_SHORTCUTS } from './shortcutsData.js';
 
@@ -84,9 +85,16 @@ const playerLabels = getPlayerLabels();
 // without ever knowing which it is.
 let viewMode = getViewMode();
 
-function createRendererForMode(mode) {
+// The 3D camera's position/orbit-target from right before the LAST time
+// 3D was switched away from, within this session (never persisted to
+// localStorage - only the ON/OFF setting itself is) - restored into the
+// next 3D renderer instance when "Remember Camera Position" is on. Null
+// until 3D has been left at least once.
+let lastCameraState3D = null;
+
+function createRendererForMode(mode, cameraState) {
   return mode === '3d'
-    ? createCourtRenderer3D(scene3dMount, viewCubeWrap)
+    ? createCourtRenderer3D(scene3dMount, viewCubeWrap, cameraState)
     : createCourtRenderer(svg);
 }
 
@@ -1010,11 +1018,20 @@ async function switchViewMode(mode) {
   // snapped it into the correct spot). On-court positions don't have this
   // problem since both renderers share the same ZONE_POSITIONS space.
   const benchedBeforeSwitch = state.liberoReplacedRole || 'L';
+  // Capture the outgoing 3D camera's position/orbit-target BEFORE
+  // destroying it (see js/cameraMemorySettings.js's "Remember Camera
+  // Position" setting) - captured unconditionally whenever leaving 3D
+  // (cheap, just reads 2 vectors) so toggling the setting back on
+  // mid-session immediately has something to restore, even if it was off
+  // the last time 3D was actually left.
+  if (viewMode === '3d') {
+    lastCameraState3D = renderer.getCameraState?.() ?? lastCameraState3D;
+  }
   renderer.destroy?.();
   viewMode = mode;
   saveViewMode(mode);
   refreshViewModeButtons();
-  renderer = createRendererForMode(mode);
+  renderer = createRendererForMode(mode, mode === '3d' && getRememberCameraPosition3D() ? lastCameraState3D : null);
   wireRendererEvents();
   createPlayers();
   const newBenchPos = benchedBeforeSwitch === 'L' ? renderer.benchPosition() : renderer.benchPositionReplaced();

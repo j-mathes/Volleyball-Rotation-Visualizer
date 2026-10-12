@@ -7,6 +7,7 @@ import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 import { getPuckSize, savePuckSize } from './puckSizeSettings.js';
+import { getRememberCameraPosition3D, saveRememberCameraPosition3D } from './cameraMemorySettings.js';
 
 applyColors();
 applyLineSettings();
@@ -23,6 +24,7 @@ const resetColorsBtn = document.getElementById('resetColors');
 const lineSettingsForm = document.getElementById('lineSettingsForm');
 const resetLineSettingsBtn = document.getElementById('resetLineSettings');
 const puckSizeBtns = document.querySelectorAll('button[data-puck-size]');
+const rememberCameraPosition3DCheckbox = document.getElementById('rememberCameraPosition3D');
 const fontSettingsFieldsEl = document.getElementById('fontSettingsFields');
 const saveFontSettingsBtn = document.getElementById('saveFontSettings');
 const resetFontSettingsBtn = document.getElementById('resetFontSettings');
@@ -463,6 +465,11 @@ puckSizeBtns.forEach((button) => {
   });
 });
 refreshPuckSizeButtons();
+
+rememberCameraPosition3DCheckbox.checked = getRememberCameraPosition3D();
+rememberCameraPosition3DCheckbox.addEventListener('change', () => {
+  saveRememberCameraPosition3D(rememberCameraPosition3DCheckbox.checked);
+});
 
 function renderFontSettingsFields() {
   const settings = getFontSettings();

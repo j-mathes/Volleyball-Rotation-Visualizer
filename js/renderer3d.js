@@ -46,7 +46,7 @@ function cssColor(name, fallback) {
 // positioned absolutely within it). `viewCubeWrapEl` is the ViewCube
 // widget's container (a sibling overlay, also absolutely positioned
 // within `mountEl` by index.html's CSS).
-export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
+export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraState) {
   // Read fresh (not just at module-load time) so a puck-size change made
   // while 2D was active is already correct the next time 3D is selected
   // (see main.js's switchViewMode) - mirrors how lineSettings/fontSettings
@@ -101,6 +101,18 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
   // user interaction.
   const DEFAULT_CAMERA_POSITION = camera.position.clone();
   const DEFAULT_CONTROLS_TARGET = controls.target.clone();
+
+  // Restores a camera position/orbit-target captured from the previous 3D
+  // renderer instance right before it was torn down (see main.js's
+  // switchViewMode + the "Remember Camera Position" setup.html toggle) -
+  // applied AFTER capturing the TRUE defaults above, so "Reset to Default
+  // View" (Home) still returns to the original broadcast-style view
+  // rather than wherever the camera happened to be left last time.
+  if (initialCameraState) {
+    camera.position.set(initialCameraState.position.x, initialCameraState.position.y, initialCameraState.position.z);
+    controls.target.set(initialCameraState.target.x, initialCameraState.target.y, initialCameraState.target.z);
+    controls.update();
+  }
 
   // Smoothly animates the camera position/orbit-target over `durationMs`
   // (Phase 2.12 - used by the ViewCube/keyboard shortcuts/Home button and
@@ -1559,6 +1571,16 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     antennaTexture.dispose();
   }
 
+  // Snapshot of the live camera position/orbit-target - read by main.js
+  // right before destroy() when the "Remember Camera Position" setting is
+  // on, then passed as the NEXT 3D renderer's `initialCameraState`.
+  function getCameraState() {
+    return {
+      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+    };
+  }
+
   return {
     benchPosition,
     benchPositionReplaced,
@@ -1582,6 +1604,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl) {
     setLabelScaleMode,
     setInvertPitch3D,
     setPuckSize,
+    getCameraState,
     destroy,
   };
 }
