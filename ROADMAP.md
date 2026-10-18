@@ -61,6 +61,9 @@ rework when the renderer changes later.
       feet (`playerIconSettings.js`'s `getPlayerExtents`). Selection glow
       surrounds the figure/footprints. Colors: "Player" became "Front Row
       Player", plus a new "Back Row Player" color (also used by pucks).
+      A locked selection (double-click) uses its own "Locked Selection
+      Highlight" color (default #8acaf4) instead of pulsing; the pulse
+      settings were removed.
 
 ## Phase 1 — 2D View Orientation Toggle (REMOVED, see note below)
 

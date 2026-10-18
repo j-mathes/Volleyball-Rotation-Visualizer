@@ -30,7 +30,8 @@ when opened straight from disk (`file://`). Pick whichever is easiest:
 
 ## How to use it
 
-1. **The court** - each circle is a player, labeled by position (`S` =
+1. **The court** - each puck is a player (or a mannequin / pair of
+   footprints, see below), labeled by position (`S` =
    Setter, `OH` = Outside Hitter, `MB` = Middle Blocker, `OP` = Opposite,
    `L` = Libero). Zone numbers 1-6 mark each position on court, with
    zone 1 being the back-right serving position.
@@ -38,7 +39,10 @@ when opened straight from disk (`file://`). Pick whichever is easiest:
    real side-out rotation works. "Rotate Back" undoes it.
 3. **Move players** - drag any player anywhere on the court to test a
    formation. The "Overlap Results" list updates live, and any player
-   breaking a positional-fault rule turns red.
+   breaking a positional-fault rule turns red. Turn on Overlap Guides or
+   Player Links (right-click menu) and click a player to see the
+   boundaries it must respect; double-click to lock that selection
+   (shown in its own highlight color) while you move others.
 4. **Swap in the Libero** - click "Swap In Libero", then click a
    highlighted back-row player to swap them out for the Libero. Rotating
    that player to the front row automatically swaps the Libero back out.
@@ -49,11 +53,14 @@ when opened straight from disk (`file://`). Pick whichever is easiest:
    rendered as a real 3D scene: orbit the camera freely, or click either
    referee (R1/R2) to jump to their exact viewpoint and look around.
 7. **Right-click for more** - right-click anywhere on the court to open a
-   quick menu of extra toggles and camera shortcuts, including switching
-   players between pucks and true-scale mannequins (3D) / footprints (2D).
+   quick menu of extra toggles and camera shortcuts. It also switches
+   players between pucks and true-scale mannequins (3D) / footprints (2D),
+   sized 5'2" / 5'9" / 6'2" (Small / Medium / Large). Mannequins always
+   face the net, and overlap checking uses the exact extents of their feet.
 8. **Customize** - visit the Setup page (top-right link) to rename
-   players, recolor the court (front- and back-row players separately),
-   adjust fonts/line thickness/player icon style and size, and
+   players, recolor the court (front-row, back-row, and locked-selection
+   highlight colors are separate), adjust fonts/line thickness/player
+   icon style and size/2D footprint enlargement, and
    manage saved setups and playlists.
 
 The "Shortcuts" link at the top of the app lists every keyboard and mouse

@@ -818,7 +818,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   const NET_SPAN_WIDTH = 970; // ~9.7m, within the 9.5-10m spec
   const POST_MARGIN = 75;
   const POST_HEIGHT = 255;
-  const postMaterial = new THREE.MeshStandardMaterial({ color: cssColor('--line-colour', '#ffffff') });
+  const postMaterial = new THREE.MeshStandardMaterial({ color: 0xcc1f1f });
   // Solid meshes a label should be hidden behind if the camera's view of
   // its puck is actually blocked by one of these (posts, the net) - see
   // updateLabelOcclusion below. CSS2DObject labels otherwise always
