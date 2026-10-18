@@ -1250,6 +1250,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     if (event.button !== 0 || altHeld || shiftHeld) {
       return;
     }
+    viewpointClickHandled = false;
     updatePointerNDC(event);
     raycaster.setFromCamera(pointerNDC, camera);
     const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
@@ -1362,6 +1363,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
       const moveDistance = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
       if (moveDistance <= VIEWPOINT_CLICK_THRESHOLD) {
         selectViewpoint(pendingViewpoint);
+        viewpointClickHandled = true;
       }
       pendingViewpoint = null;
     }
@@ -1385,10 +1387,17 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   // A native 'click' only fires here for the left button (right-click
   // never produces one on a canvas), so no button check is needed.
   let backgroundClickHandler = null;
+  // Set when a pointerup selected an R1/R2 viewpoint, so the click that
+  // follows it isn't mistaken for a background click (which deselects).
+  let viewpointClickHandled = false;
   function onCanvasClick(event) {
     updatePointerNDC(event);
     raycaster.setFromCamera(pointerNDC, camera);
     const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
+    if (viewpointClickHandled) {
+      viewpointClickHandled = false;
+      return;
+    }
     if (!hit) {
       backgroundClickHandler?.(event);
     }
