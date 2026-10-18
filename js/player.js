@@ -167,7 +167,7 @@ export class Player {
     this.group.classList.toggle('guide-selected', isSelected);
   }
 
-  // Pulses the selection highlight while the selection is locked to this player.
+  // Shows the selection in the locked-selection color while locked to this player.
   setSelectionLocked(isLocked) {
     this.group.classList.toggle('locked', isLocked);
   }

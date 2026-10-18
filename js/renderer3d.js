@@ -1044,6 +1044,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     playerOutline: cssColor('--player-outline', '#f5f5f5'),
     violationFill: cssColor('--player-overlap', '#e74c3c'),
     selectedOutline: cssColor('--guide-selected', '#3498db'),
+    lockedOutline: cssColor('--guide-locked', '#8acaf4'),
     selectableOutline: cssColor('--player-selectable', '#22c55e'),
     // Matches the 2D renderer's `.guide-related` CSS rule - a hardcoded
     // black outline (not a customizable CSS var there either).
@@ -1494,16 +1495,14 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     }
   }
 
-  // Glow/pulse selection highlight (Phase 2.11) - reuses the same
-  // effectSettings.js values 2D's setup.html panel edits, reinterpreted
+  // Selection glow - reuses effectSettings.js's blur radius, reinterpreted
   // as MeshStandardMaterial emissive-intensity units (no CSS filter/blur
   // equivalent for a WebGL material).
   const effectSettings = getEffectSettings();
   const glowIntensity = effectSettings.glowBlurRadius / 6;
-  const pulseMaxIntensity = effectSettings.pulseMaxBlurRadius / 6;
-  function updateSelectionGlow(nowMs) {
+  function updateSelectionGlow() {
     for (const group of draggablePlayers) {
-      group.userData.player3d.updateGlow(nowMs, glowIntensity, pulseMaxIntensity, effectSettings.pulseDurationMs);
+      group.userData.player3d.updateGlow(glowIntensity);
     }
   }
 
@@ -1539,7 +1538,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     updateLabelScaling();
     updateLabelHeights();
     updateLabelOcclusion();
-    updateSelectionGlow(nowMs);
+    updateSelectionGlow();
     updateViewCubeOrientation();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);

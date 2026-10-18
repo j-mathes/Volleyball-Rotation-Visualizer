@@ -482,7 +482,7 @@ export class Player3D {
       outlineColor = this._colors.guideRelatedOutline;
     }
     if (this._guideSelected) {
-      outlineColor = this._colors.selectedOutline;
+      outlineColor = this._locked ? this._colors.lockedOutline : this._colors.selectedOutline;
     }
 
     if (!this._mannequin) {
@@ -494,43 +494,30 @@ export class Player3D {
       const hull = this._ensureHull();
       hull.inner.color.set(outlineColor);
       hull.outer.color.set(outlineColor);
-      if (!this._guideSelected) {
-        hull.inner.opacity = 0.9;
-        hull.outer.opacity = 0.25;
-      }
+      hull.inner.opacity = this._guideSelected ? 0.8 : 0.9;
+      hull.outer.opacity = this._guideSelected ? 0.3 : 0.25;
     }
     if (this._hull) {
       this._hull.group.visible = highlighted;
     }
   }
 
-  // Selection glow (Phase 2.11) - only meaningful while guide-selected;
-  // driven every frame by renderer3d.js's animate loop rather than from
-  // `_refreshVisual` since the pulse needs a continuously advancing
-  // timestamp. A puck pulses its rim's emissive intensity; a mannequin
-  // pulses the opacity of its glow shells.
-  updateGlow(nowMs, glowIntensity, pulseMaxIntensity, pulseDurationMs) {
+  // Puck selection glow (emissive rim), driven every frame by
+  // renderer3d.js's animate loop. A mannequin's glow shells are steady and
+  // fully handled in _refreshVisual.
+  updateGlow(glowIntensity) {
+    if (this._mannequin) {
+      return;
+    }
+    const emissive = this.outline.material;
     if (!this._guideSelected) {
-      if (!this._mannequin && this.outline.material.emissiveIntensity !== 0) {
-        this.outline.material.emissiveIntensity = 0;
+      if (emissive.emissiveIntensity !== 0) {
+        emissive.emissiveIntensity = 0;
       }
       return;
     }
-    let intensity = glowIntensity;
-    if (this._locked) {
-      const phase = (nowMs % pulseDurationMs) / pulseDurationMs;
-      const t = (Math.sin(phase * Math.PI * 2 - Math.PI / 2) + 1) / 2;
-      intensity = glowIntensity + (pulseMaxIntensity - glowIntensity) * t;
-    }
-    if (this._mannequin) {
-      const level = Math.min(1, intensity / pulseMaxIntensity);
-      const hull = this._ensureHull();
-      hull.inner.opacity = 0.5 + 0.5 * level;
-      hull.outer.opacity = 0.15 + 0.4 * level;
-      return;
-    }
-    this.outline.material.emissive.set(this._colors.selectedOutline);
-    this.outline.material.emissiveIntensity = intensity;
+    emissive.emissive.set(this._locked ? this._colors.lockedOutline : this._colors.selectedOutline);
+    emissive.emissiveIntensity = glowIntensity;
   }
 
   updateLabelScale(scale) {

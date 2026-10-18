@@ -93,37 +93,37 @@
           <div class="quad-title">View</div>
           <div class="quad-items">
             <div class="quad-group">
-              <button id="qmOverlapGuideToggle">Overlap Guides (G)</button>
-              <button id="qmPlayerLinkToggle">Player Links (J)</button>
-              <button id="qmClampToggle">Lock to Legal (C)</button>
-              <button id="qmFrontRowLinkToggle">Front Row Link (F)</button>
-              <button id="qmBackRowLinkToggle">Back Row Link (B)</button>
-              <button id="qmZoneLabelToggle">Zone Labels (K)</button>
+              <button id="qmOverlapGuideToggle" title="Select a player to preview the boundary lines it must stay within">Overlap Guides (G)</button>
+              <button id="qmPlayerLinkToggle" title="Select a player to draw lines to the players it is compared against">Player Links (J)</button>
+              <button id="qmClampToggle" title="Stop dragging a player past a positional-fault line">Lock to Legal (C)</button>
+              <button id="qmFrontRowLinkToggle" title="Draw a solid line connecting the front-row players">Front Row Link (F)</button>
+              <button id="qmBackRowLinkToggle" title="Draw a dashed line connecting the back-row players">Back Row Link (B)</button>
+              <button id="qmZoneLabelToggle" title="Show each player's current zone under its label">Zone Labels (K)</button>
             </div>
             <div class="quad-group">
               <button id="qmPlayerIconPuck" data-player-icon="puck" title="Players shown as pucks">Puck <svg class="puck-icon"><use href="#puckIcon" /></svg></button>
               <button id="qmPlayerIconMannequin" data-player-icon="mannequin" title="3D: standing mannequins. 2D: footprints">Mannequin &#x1F9CD;</button>
             </div>
             <div class="quad-group">
-              <button id="qmPuckSizeSmall" data-puck-size="small">Small <svg class="puck-icon"><use href="#puckIcon" /></svg></button>
-              <button id="qmPuckSizeMedium" data-puck-size="medium">Medium <svg class="puck-icon"><use href="#puckIcon" /></svg></button>
-              <button id="qmPuckSizeLarge" data-puck-size="large">Large <svg class="puck-icon"><use href="#puckIcon" /></svg></button>
+              <button id="qmPuckSizeSmall" data-puck-size="small" title="Small pucks / 5'2&quot; mannequins">Small <svg class="puck-icon"><use href="#puckIcon" /></svg></button>
+              <button id="qmPuckSizeMedium" data-puck-size="medium" title="Medium pucks / 5'9&quot; mannequins">Medium <svg class="puck-icon"><use href="#puckIcon" /></svg></button>
+              <button id="qmPuckSizeLarge" data-puck-size="large" title="Large pucks / 6'2&quot; mannequins">Large <svg class="puck-icon"><use href="#puckIcon" /></svg></button>
             </div>
             <div class="quad-group quad-3d-only">
-              <button id="qmResetView">&#8962; Reset</button>
-              <button id="qmZoomExtents">&#10530; Extents</button>
+              <button id="qmResetView" title="Return the camera to the default view">&#8962; Reset</button>
+              <button id="qmZoomExtents" title="Frame the whole court, or the last Alt+clicked player">&#10530; Extents</button>
             </div>
             <div class="quad-group quad-3d-only">
-              <button id="qmViewCubeSmall" data-size="small">Small &#x1F9CA;</button>
-              <button id="qmViewCubeMedium" data-size="medium">Medium &#x1F9CA;</button>
-              <button id="qmViewCubeLarge" data-size="large">Large &#x1F9CA;</button>
+              <button id="qmViewCubeSmall" data-size="small" title="Small view cube">Small &#x1F9CA;</button>
+              <button id="qmViewCubeMedium" data-size="medium" title="Medium view cube">Medium &#x1F9CA;</button>
+              <button id="qmViewCubeLarge" data-size="large" title="Large view cube">Large &#x1F9CA;</button>
             </div>
             <div class="quad-group quad-3d-only">
-              <button id="qmLabelScaleOn" data-mode="scale">Scale &#x2131;</button>
-              <button id="qmLabelScaleOff" data-mode="fixed">Fixed &#x2131;</button>
+              <button id="qmLabelScaleOn" data-mode="scale" title="Labels shrink and grow with distance, like the players">Scale &#x2131;</button>
+              <button id="qmLabelScaleOff" data-mode="fixed" title="Labels stay the same size on screen">Fixed &#x2131;</button>
             </div>
             <div class="quad-group quad-3d-only">
-              <button id="qmInvertPitchToggle">Invert Pitch (R1/R2)</button>
+              <button id="qmInvertPitchToggle" title="Flip up/down mouse-look when viewing from R1/R2">Invert Pitch (R1/R2)</button>
             </div>
           </div>
         </div>
@@ -132,18 +132,18 @@
           <div class="quad-title">Scene</div>
           <div class="quad-items">
             <div class="quad-group">
-              <button id="qmRotateCw">Rotate CW ( ] )</button>
-              <button id="qmRotateCcw">Rotate CCW ( [ )</button>
+              <button id="qmRotateCw" title="Rotate clockwise (standard side-out rotation)">Rotate CW ( ] )</button>
+              <button id="qmRotateCcw" title="Rotate counter-clockwise (undo)">Rotate CCW ( [ )</button>
             </div>
             <div class="quad-group">
-              <button id="qmResetToBase">Reset to Base (0)</button>
+              <button id="qmResetToBase" title="Return every player to their base position">Reset to Base (0)</button>
             </div>
             <div class="quad-group">
-              <button id="qmSwapLibero">Swap Libero (/)</button>
+              <button id="qmSwapLibero" title="Swap the Libero in or out">Swap Libero (/)</button>
             </div>
             <div class="quad-group quad-3d-only">
-              <button id="benchSide3DLeft">&#8592; Bench Left</button>
-              <button id="benchSide3DRight">Bench Right &#8594;</button>
+              <button id="benchSide3DLeft" title="Put the bench on the left side">&#8592; Bench Left</button>
+              <button id="benchSide3DRight" title="Put the bench on the right side">Bench Right &#8594;</button>
             </div>
           </div>
         </div>
@@ -152,15 +152,15 @@
           <div class="quad-title">Setups</div>
           <div class="quad-items">
             <div class="quad-group">
-              <input type="text" id="setupNameInput" class="text-input" placeholder="Name">
-              <button id="saveSetupBtn">&#128190; Save</button>
-              <input type="text" id="quickLoadInput" class="text-input" list="quickLoadOptions" placeholder="Load&hellip;">
+              <input type="text" id="setupNameInput" class="text-input" placeholder="Name" title="Name for the setup to save">
+              <button id="saveSetupBtn" title="Save the current arrangement under this name">&#128190; Save</button>
+              <input type="text" id="quickLoadInput" class="text-input" list="quickLoadOptions" placeholder="Load&hellip;" title="Name of a saved setup to load">
               <datalist id="quickLoadOptions"></datalist>
-              <button id="quickLoadBtn">&#128194; Load</button>
+              <button id="quickLoadBtn" title="Load the saved setup with this name">&#128194; Load</button>
             </div>
             <div class="quad-group">
               <button id="playlistPlayBtn">&#9654; Play</button>
-              <button id="playlistStepBtn">&#9197; Step</button>
+              <button id="playlistStepBtn" title="Step to the next setup in the playlist (Right arrow)">&#9197; Step</button>
               <p id="playlistStatus" class="hint"></p>
             </div>
           </div>

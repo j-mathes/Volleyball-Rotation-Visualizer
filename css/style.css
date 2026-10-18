@@ -9,6 +9,7 @@
   --player-selectable: #22c55e;
   --guide-line: #000000;
   --guide-selected: #3498db;
+  --guide-locked: #8acaf4;
   --link-line: #16a34a;
   --row-link-line: #7fe0ff;
   --panel-bg: #f5f7fa;
@@ -21,8 +22,6 @@
   --player-label-size: 34px;
   --bench-label-size: 24px;
   --glow-blur-radius: 6px;
-  --pulse-max-blur-radius: 14px;
-  --pulse-duration: 1.2s;
 }
 
 * {
@@ -1042,18 +1041,8 @@ select {
 }
 
 .player.guide-selected.locked circle {
-  animation: lock-pulse var(--pulse-duration) ease-in-out infinite;
-}
-
-@keyframes lock-pulse {
-  0%, 100% {
-    stroke-opacity: 1;
-    filter: drop-shadow(0 0 var(--glow-blur-radius) #ffffff);
-  }
-  50% {
-    stroke-opacity: 0.4;
-    filter: drop-shadow(0 0 var(--pulse-max-blur-radius) #ffffff);
-  }
+  stroke: var(--guide-locked);
+  filter: drop-shadow(0 0 var(--glow-blur-radius) var(--guide-locked));
 }
 
 .player.guide-related circle {
@@ -1128,8 +1117,12 @@ select {
   filter: drop-shadow(0 0 var(--glow-blur-radius) var(--guide-selected)) drop-shadow(0 0 calc(var(--glow-blur-radius) * 0.5) var(--guide-selected));
 }
 
+.player.guide-selected.locked .foot {
+  stroke: var(--guide-locked);
+}
+
 .player.guide-selected.locked .feet {
-  animation: lock-pulse var(--pulse-duration) ease-in-out infinite;
+  filter: drop-shadow(0 0 var(--glow-blur-radius) var(--guide-locked)) drop-shadow(0 0 calc(var(--glow-blur-radius) * 0.5) var(--guide-locked));
 }
 
 .player.guide-related .foot {
