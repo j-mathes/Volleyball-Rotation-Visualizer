@@ -637,6 +637,11 @@ button.active {
   color: #2c3e50;
 }
 
+/* Setup page: a section's Save button after one of its settings changed. */
+button.unsaved {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 12px 4px #23f558;
+}
+
 
 .full-width {
   width: 100%;

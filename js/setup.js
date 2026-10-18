@@ -368,6 +368,7 @@ function createColorPicker(name, initialValue) {
       nativeInput.value = preset;
       current.style.backgroundColor = preset;
       popover.hidden = true;
+      nativeInput.dispatchEvent(new Event('input', { bubbles: true }));
     });
     swatchGrid.appendChild(swatch);
   }
@@ -708,4 +709,20 @@ playlistDelayInput.addEventListener('change', () => {
 });
 
 renderPlaylist();
+
+// Glows a section's Save button once any of its settings is edited, until
+// it's saved or reset - sections without a Save button save immediately.
+document.querySelectorAll('.panel-section').forEach((section) => {
+  const saveBtn = section.querySelector('button[type="submit"], #saveFontSettings');
+  if (!saveBtn) {
+    return;
+  }
+  const markUnsaved = () => saveBtn.classList.add('unsaved');
+  const clearUnsaved = () => saveBtn.classList.remove('unsaved');
+  section.addEventListener('input', markUnsaved);
+  section.addEventListener('change', markUnsaved);
+  section.addEventListener('submit', clearUnsaved);
+  saveBtn.addEventListener('click', clearUnsaved);
+  section.querySelectorAll('button[id^="reset"]').forEach((button) => button.addEventListener('click', clearUnsaved));
+});
 
