@@ -16,6 +16,7 @@ import { getViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getLabelScaleMode3D } from './labelScaleSettings.js';
 import { getInvertPitch3D } from './firstPersonSettings.js';
 import { getPuckSize, savePuckSize, applyPuckSizeScale } from './puckSizeSettings.js';
+import { getPlayerIcon, savePlayerIcon, refreshPlayerExtents } from './playerIconSettings.js';
 import { getRememberCameraPosition3D, saveRememberCameraPosition3D } from './cameraMemorySettings.js';
 import { createQuadMenu } from './quadMenu.js';
 import { KEYBOARD_SHORTCUTS } from './shortcutsData.js';
@@ -55,6 +56,7 @@ const qmZoomExtentsBtn = document.getElementById('qmZoomExtents');
 const qmViewCubeSizeBtns = quadViewCameraSection.querySelectorAll('button[data-size]');
 const qmLabelScaleBtns = quadViewCameraSection.querySelectorAll('button[data-mode]');
 const qmPuckSizeBtns = quadViewCameraSection.querySelectorAll('button[data-puck-size]');
+const qmPlayerIconBtns = quadViewCameraSection.querySelectorAll('button[data-player-icon]');
 const qmInvertPitchToggle = document.getElementById('qmInvertPitchToggle');
 const qmOverlapGuideToggle = document.getElementById('qmOverlapGuideToggle');
 const qmPlayerLinkToggle = document.getElementById('qmPlayerLinkToggle');
@@ -794,8 +796,9 @@ qmZoomExtentsBtn.addEventListener('click', () => { renderer.zoomExtents?.(); qua
 // Puck Size (both modes, unlike the 3D-only groups above/below it) -
 // changes the shared radius binding (player.js/player3d.js) and resizes
 // every CURRENTLY existing player in place, then re-runs the overlap
-// check so the overlap tolerance (which scales with puck size - see
-// overlap.js's tolerance()) reflects the new size immediately.
+// check so the overlap tolerance (which scales with the icon's extents -
+// see overlap.js) reflects the new size immediately. In mannequin mode
+// the same Small/Medium/Large setting is the figure's height.
 function refreshPuckSizeButtons() {
   const size = getPuckSize();
   qmPuckSizeBtns.forEach((button) => button.classList.toggle('active', button.dataset.puckSize === size));
@@ -804,14 +807,34 @@ function applyPuckSize(size) {
   savePuckSize(size);
   applyPuckSizeScale(size);
   renderer.setPuckSize(size);
+  refreshPlayerExtents();
   for (const player of Object.values(playersByRole)) {
-    player.refreshRadius();
+    player.refreshIcon();
   }
   runOverlapCheck();
   refreshPuckSizeButtons();
 }
 qmPuckSizeBtns.forEach((button) => {
   button.addEventListener('click', () => applyPuckSize(button.dataset.puckSize));
+});
+
+// Player icon style (both modes): pucks, or mannequins in 3D /
+// footprints in 2D.
+function refreshPlayerIconButtons() {
+  const icon = getPlayerIcon();
+  qmPlayerIconBtns.forEach((button) => button.classList.toggle('active', button.dataset.playerIcon === icon));
+}
+function applyPlayerIcon(icon) {
+  savePlayerIcon(icon);
+  refreshPlayerExtents();
+  for (const player of Object.values(playersByRole)) {
+    player.refreshIcon();
+  }
+  runOverlapCheck();
+  refreshPlayerIconButtons();
+}
+qmPlayerIconBtns.forEach((button) => {
+  button.addEventListener('click', () => applyPlayerIcon(button.dataset.playerIcon));
 });
 
 function refreshViewCubeSizeButtons() {
@@ -983,6 +1006,7 @@ function wireRendererEvents() {
     refreshLabelScaleButtons();
     refreshInvertPitchButton();
     refreshPuckSizeButtons();
+    refreshPlayerIconButtons();
     renderShortcutsList();
     quadMenu.open(event.clientX, event.clientY, viewMode === '3d');
   });

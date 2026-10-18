@@ -5,10 +5,11 @@
 // touching an SVG element itself.
 // js/renderer3d.js implements this same interface for the 3D view mode.
 import { setViewBox, drawCourt, createViolationLinesLayer, createLinkLinesLayer, createClampLinesLayer, createViewport, createClassicBenchLayer } from './court.js';
-import { Player, PLAYER_RADIUS, setPlayerRadius } from './player.js';
+import { Player, setPlayerRadius } from './player.js';
 import { BENCH_POSITION_CLASSIC, BENCH_POSITION_REPLACED_CLASSIC, COURT_SIZE, ZONE_POSITIONS } from './config.js';
 import { getLineSettings } from './lineSettings.js';
 import { getPuckRadius } from './puckSizeSettings.js';
+import { getPlayerExtents } from './playerIconSettings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -91,14 +92,15 @@ export function createCourtRenderer(svg) {
       'stroke-width': isViolation ? lineSettings.violationLineWidth : lineSettings.guideLineWidth,
       'stroke-dasharray': '10,8',
     };
+    const extents = getPlayerExtents();
     if (axis === 'horizontal') {
-      const x = anchorIsA ? posA.x - PLAYER_RADIUS : posB.x + PLAYER_RADIUS;
+      const x = anchorIsA ? posA.x - extents.halfWidth : posB.x + extents.halfWidth;
       attrs.x1 = x;
       attrs.x2 = x;
       attrs.y1 = 0;
       attrs.y2 = COURT_SIZE;
     } else {
-      const y = anchorIsA ? posA.y - PLAYER_RADIUS : posB.y + PLAYER_RADIUS;
+      const y = anchorIsA ? posA.y - extents.halfDepth : posB.y + extents.halfDepth;
       attrs.x1 = 0;
       attrs.x2 = COURT_SIZE;
       attrs.y1 = y;
@@ -204,7 +206,7 @@ export function createCourtRenderer(svg) {
 
   // Live-updates the puck size (see puckSizeSettings.js) - only changes
   // the shared PLAYER_RADIUS binding; callers (main.js) still need to call
-  // `.refreshRadius()` on every existing Player themselves, since this
+  // `.refreshIcon()` on every existing Player themselves, since this
   // renderer has no registry of the players it created.
   function setPuckSize(size) {
     setPlayerRadius(getPuckRadius(size));

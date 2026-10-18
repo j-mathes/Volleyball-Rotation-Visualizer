@@ -7,6 +7,7 @@ import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 import { getPuckSize, savePuckSize } from './puckSizeSettings.js';
+import { getPlayerIcon, savePlayerIcon, getFootprintScale2D, saveFootprintScale2D, MIN_FOOTPRINT_SCALE, MAX_FOOTPRINT_SCALE } from './playerIconSettings.js';
 import { getRememberCameraPosition3D, saveRememberCameraPosition3D } from './cameraMemorySettings.js';
 
 applyColors();
@@ -24,6 +25,8 @@ const resetColorsBtn = document.getElementById('resetColors');
 const lineSettingsForm = document.getElementById('lineSettingsForm');
 const resetLineSettingsBtn = document.getElementById('resetLineSettings');
 const puckSizeBtns = document.querySelectorAll('button[data-puck-size]');
+const playerIconBtns = document.querySelectorAll('button[data-player-icon]');
+const footprintScale2DInput = document.getElementById('footprintScale2D');
 const rememberCameraPosition3DCheckbox = document.getElementById('rememberCameraPosition3D');
 const fontSettingsFieldsEl = document.getElementById('fontSettingsFields');
 const saveFontSettingsBtn = document.getElementById('saveFontSettings');
@@ -465,6 +468,27 @@ puckSizeBtns.forEach((button) => {
   });
 });
 refreshPuckSizeButtons();
+
+function refreshPlayerIconButtons() {
+  const icon = getPlayerIcon();
+  playerIconBtns.forEach((button) => button.classList.toggle('active', button.dataset.playerIcon === icon));
+}
+playerIconBtns.forEach((button) => {
+  button.addEventListener('click', () => {
+    savePlayerIcon(button.dataset.playerIcon);
+    refreshPlayerIconButtons();
+  });
+});
+refreshPlayerIconButtons();
+
+footprintScale2DInput.value = getFootprintScale2D();
+footprintScale2DInput.addEventListener('change', () => {
+  const value = Number(footprintScale2DInput.value);
+  if (Number.isFinite(value) && value >= MIN_FOOTPRINT_SCALE && value <= MAX_FOOTPRINT_SCALE) {
+    saveFootprintScale2D(value);
+  }
+  footprintScale2DInput.value = getFootprintScale2D();
+});
 
 rememberCameraPosition3DCheckbox.checked = getRememberCameraPosition3D();
 rememberCameraPosition3DCheckbox.addEventListener('change', () => {

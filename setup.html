@@ -83,17 +83,34 @@
       </div>
 
       <div class="panel-section">
-        <h2>Puck Size</h2>
-        <p class="hint">Changes the size of every player icon. Overlap
-          checking automatically accounts for whichever size is selected.
-          Saved sizes apply next time the visualizer page loads - or
-          change it live from the right-click menu's "View" section while
-          the visualizer is open.</p>
+        <h2>Player Icon</h2>
+        <p class="hint">Choose pucks, or mannequins (3D View) / footprints
+          (2D View). Mannequins are true to scale and always face the net;
+          overlap checking uses the exact extents of their feet. Saved
+          changes apply next time the visualizer page loads - or change
+          the icon and size live from the right-click menu's "View"
+          section while the visualizer is open.</p>
+        <div class="button-row">
+          <button type="button" id="playerIconPuck" data-player-icon="puck" class="full-width">Puck</button>
+          <button type="button" id="playerIconMannequin" data-player-icon="mannequin" class="full-width">Mannequin</button>
+        </div>
+        <h2>Size</h2>
+        <p class="hint">Puck size - or, for mannequins, height: Small =
+          5'2", Medium = 5'9", Large = 6'2". Overlap checking
+          automatically accounts for whichever size is selected.</p>
         <div class="button-row">
           <button type="button" id="puckSizeSmall" data-puck-size="small" class="full-width">Small</button>
           <button type="button" id="puckSizeMedium" data-puck-size="medium" class="full-width">Medium</button>
           <button type="button" id="puckSizeLarge" data-puck-size="large" class="full-width">Large</button>
         </div>
+        <h2>2D Footprint Enlargement</h2>
+        <p class="hint">Draws 2D footprints larger than true scale (1 =
+          true scale, same as the 3D mannequins). Display only - overlap
+          checking always uses the true-scale feet.</p>
+        <label class="line-setting-row">
+          <span>Enlargement factor</span>
+          <input type="number" id="footprintScale2D" min="0.5" max="4" step="0.1">
+        </label>
       </div>
 
       <div class="panel-section">

@@ -3,6 +3,7 @@
   --court-bg: #189a94;
   --line-colour: #ffffff;
   --player-fill: #efa581;
+  --player-fill-back: #bf8467;
   --player-outline: #f5f5f5;
   --player-overlap: #e74c3c;
   --player-selectable: #22c55e;
@@ -1011,7 +1012,7 @@ select {
 }
 
 .player.back-row circle {
-  fill: color-mix(in srgb, var(--player-fill) 80%, black);
+  fill: var(--player-fill-back);
 }
 
 .player.libero.back-row circle {
@@ -1074,4 +1075,72 @@ select {
 
 .player text .zone-label {
   font-size: 0.55em;
+}
+
+/* Mannequin mode (2D): footprints instead of a circle - see player.js's
+   _buildIcon. Same state colors as the puck, thinner strokes to suit the
+   much smaller shapes; glow is applied to the whole .feet group so it
+   surrounds the pair. */
+.player .hit-area {
+  fill: transparent;
+  stroke: none;
+}
+
+.player .foot {
+  stroke: var(--player-outline);
+  stroke-width: 2.5;
+  fill: var(--player-fill);
+}
+
+.player.libero .foot {
+  fill: var(--libero-fill);
+}
+
+.player.back-row .foot {
+  fill: var(--player-fill-back);
+}
+
+.player.libero.back-row .foot {
+  fill: color-mix(in srgb, var(--libero-fill) 80%, black);
+}
+
+.player.overlapping .foot,
+.player.bench-warning .foot {
+  fill: var(--player-overlap);
+}
+
+.player.selectable .foot {
+  stroke: var(--player-selectable);
+  stroke-width: 4;
+  stroke-dasharray: 8, 5;
+}
+
+.player.selectable .feet {
+  filter: drop-shadow(0 0 var(--glow-blur-radius) var(--player-selectable));
+}
+
+.player.guide-selected .foot {
+  stroke: var(--guide-selected);
+  stroke-width: 4;
+}
+
+.player.guide-selected .feet {
+  filter: drop-shadow(0 0 var(--glow-blur-radius) var(--guide-selected)) drop-shadow(0 0 calc(var(--glow-blur-radius) * 0.5) var(--guide-selected));
+}
+
+.player.guide-selected.locked .feet {
+  animation: lock-pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+.player.guide-related .foot {
+  stroke: #000000;
+  stroke-width: 4;
+}
+
+/* The label sits on the court floor (above the footprints) rather than on
+   a dark puck, so give it a dark halo for contrast. */
+.player.icon-mannequin text {
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 5;
+  paint-order: stroke;
 }

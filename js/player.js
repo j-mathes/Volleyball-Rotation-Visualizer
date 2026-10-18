@@ -1,11 +1,13 @@
-import { getPuckRadius } from './puckSizeSettings.js';
+import { getPuckRadius, PUCK_SIZE_RADII } from './puckSizeSettings.js';
+import { getPlayerIcon, getMannequinSpec, getFootprintScale2D } from './playerIconSettings.js';
+import { getFontSettings } from './fontSettings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // Mutable (not const) so the puck-size setting (puckSizeSettings.js) can
 // change it live - importers see updates for free via ES modules' live
 // bindings, since reassignment only ever happens inside this module (see
 // setPlayerRadius below). Existing circles are only resized when
-// `refreshRadius()` is explicitly called on them (main.js does this for
+// `refreshIcon()` is explicitly called on them (main.js does this for
 // every current Player when the setting changes).
 export let PLAYER_RADIUS = getPuckRadius();
 
@@ -48,15 +50,67 @@ export class Player {
     this.dragging = false;
 
     this.group = el('g', { class: role === 'L' ? 'player libero' : 'player' });
-    this.circle = el('circle', { cx: 0, cy: 0, r: PLAYER_RADIUS });
     this.text = el('text', { x: 0, y: 2 });
     this.text.textContent = label;
-    this.group.appendChild(this.circle);
     this.group.appendChild(this.text);
     container.appendChild(this.group);
+    this.iconEls = [];
+    this.zoneTspan = null;
+    this._buildIcon();
 
     this._applyTransform();
     this._attachDragHandlers();
+  }
+
+  // Builds the icon for the current style setting: a circle puck, or (in
+  // mannequin mode) a pair of true-scale footprints facing the net plus
+  // an invisible padded hit area (the feet alone are tiny to grab). The
+  // label moves above the footprints (toward the net) so they stay
+  // unobscured.
+  _buildIcon() {
+    this.iconEls.forEach((node) => node.remove());
+    const mannequin = getPlayerIcon() === 'mannequin';
+    this.group.classList.toggle('icon-mannequin', mannequin);
+
+    if (mannequin) {
+      const spec = getMannequinSpec();
+      const k = getFootprintScale2D();
+      const pad = 12;
+      const halfWidth = (spec.width * k) / 2;
+      const halfDepth = (spec.depth * k) / 2;
+      const hitArea = el('rect', {
+        class: 'hit-area',
+        x: -(halfWidth + pad),
+        y: -(halfDepth + pad),
+        width: (halfWidth + pad) * 2,
+        height: (halfDepth + pad) * 2,
+      });
+      const feet = el('g', { class: 'feet' });
+      // Right foot (screen right) is staggered toward the net (smaller y).
+      for (const side of [-1, 1]) {
+        const footWidth = spec.footWidth * k;
+        const footLength = spec.footLength * k;
+        feet.appendChild(el('rect', {
+          class: 'foot',
+          x: side * (spec.footSpacing * k) / 2 - footWidth / 2,
+          y: -side * (spec.stagger * k) / 2 - footLength / 2,
+          width: footWidth,
+          height: footLength,
+          rx: footWidth / 2,
+        }));
+      }
+      this.iconEls = [hitArea, feet];
+      const fontPx = getFontSettings().playerLabelSize * (getPuckRadius() / PUCK_SIZE_RADII.large);
+      this._labelY = -(halfDepth + 6 + fontPx / 2);
+      this._zoneLabelY = this._labelY - fontPx * 0.75;
+    } else {
+      this.iconEls = [el('circle', { cx: 0, cy: 0, r: PLAYER_RADIUS })];
+      this._labelY = 2;
+      this._zoneLabelY = 22;
+    }
+    this.iconEls.forEach((node) => this.group.insertBefore(node, this.text));
+    this.text.setAttribute('y', this._labelY);
+    this.zoneTspan?.setAttribute('y', this._zoneLabelY);
   }
 
   _applyTransform() {
@@ -76,11 +130,11 @@ export class Player {
     container.appendChild(this.group);
   }
 
-  // Live-resizes this player's circle to the current PLAYER_RADIUS (see
-  // puckSizeSettings.js) - called on every existing player by main.js
-  // when the puck-size setting changes.
-  refreshRadius() {
-    this.circle.setAttribute('r', PLAYER_RADIUS);
+  // Rebuilds the icon for the current icon-style/size settings (see
+  // puckSizeSettings.js / playerIconSettings.js) - called on every
+  // existing player by main.js when either setting changes.
+  refreshIcon() {
+    this._buildIcon();
   }
 
   // Registers a click/double-click handler on this player's icon, so
@@ -143,7 +197,7 @@ export class Player {
       return;
     }
     if (!this.zoneTspan) {
-      this.zoneTspan = el('tspan', { x: 0, y: 22, class: 'zone-label' });
+      this.zoneTspan = el('tspan', { x: 0, y: this._zoneLabelY, class: 'zone-label' });
       this.text.appendChild(this.zoneTspan);
     }
     this.zoneTspan.textContent = `(Z${zone})`;

@@ -31,6 +31,7 @@ import { getLabelScaleMode3D, saveLabelScaleMode3D } from './labelScaleSettings.
 import { getViewCubeSize3D, saveViewCubeSize3D } from './viewCubeSizeSettings.js';
 import { getInvertPitch3D, saveInvertPitch3D } from './firstPersonSettings.js';
 import { getPuckRadius } from './puckSizeSettings.js';
+import { getPlayerExtents, getPlayerIcon, getMannequinSpec } from './playerIconSettings.js';
 import { Player3D, PLAYER_RADIUS_3D, PUCK_HEIGHT, setPlayerRadius3D } from './player3d.js';
 
 // Reads a customizable color (see colors.js/setup.html) so the 3D court
@@ -410,8 +411,9 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   // only adjusting distance - matches 3ds Max's "Zoom Extents" (Z key).
   function zoomExtents() {
     const target = selectedPlayer ? new THREE.Vector3(selectedPlayer.x, PUCK_HEIGHT / 2, selectedPlayer.y) : DEFAULT_CONTROLS_TARGET.clone();
+    const playerFrameSize = getPlayerIcon() === 'mannequin' ? getMannequinSpec().height * 2.5 : PLAYER_RADIUS_3D * 8;
     const distance = THREE.MathUtils.clamp(
-      selectedPlayer ? PLAYER_RADIUS_3D * 8 : COURT_SIZE * 1.3,
+      selectedPlayer ? playerFrameSize : COURT_SIZE * 1.3,
       controls.minDistance,
       controls.maxDistance,
     );
@@ -974,7 +976,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
 
   // Live-updates the puck size (see puckSizeSettings.js) - only changes
   // the shared PLAYER_RADIUS_3D binding; callers (main.js) still need to
-  // call `.refreshRadius()` on every existing Player3D themselves, since
+  // call `.refreshIcon()` on every existing Player3D themselves, since
   // this renderer has no registry of the players it created.
   function setPuckSize(size) {
     setPlayerRadius3D(getPuckRadius(size));
@@ -1037,6 +1039,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   const draggablePlayers = []; // Player3D `.group` Object3Ds, for raycasting
   const colors = {
     playerFill: cssColor('--player-fill', '#efa581'),
+    playerFillBack: cssColor('--player-fill-back', '#bf8467'),
     liberoFill: cssColor('--libero-fill', '#efa581'),
     playerOutline: cssColor('--player-outline', '#f5f5f5'),
     violationFill: cssColor('--player-overlap', '#e74c3c'),
@@ -1117,9 +1120,10 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
       };
       anchorIsA = displacement(posA, zoneA) <= displacement(posB, zoneB);
     }
+    const extents = getPlayerExtents();
     const anchor = axis === 'horizontal'
-      ? (anchorIsA ? posA.x - PLAYER_RADIUS_3D : posB.x + PLAYER_RADIUS_3D)
-      : (anchorIsA ? posA.y - PLAYER_RADIUS_3D : posB.y + PLAYER_RADIUS_3D);
+      ? (anchorIsA ? posA.x - extents.halfWidth : posB.x + extents.halfWidth)
+      : (anchorIsA ? posA.y - extents.halfDepth : posB.y + extents.halfDepth);
     const line = addFatLine(boundaryLinePoints(axis, anchor), isViolation ? violationColor : guideColor, {
       dashed: true,
       linewidth: isViolation ? lineSettings.violationLineWidth : lineSettings.guideLineWidth,
@@ -1181,6 +1185,9 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(PUCK_HEIGHT / 2));
   const dragPoint = new THREE.Vector3();
   let draggingPlayer = null;
+  // Where the player's anchor sits relative to the point grabbed on it
+  // (a mannequin can be grabbed by the head, far above the ground).
+  const dragOffset = { x: 0, z: 0 };
   let pointerDownAt = null;
   // Tracks an R1/R2 puck hit on pointerdown until pointerup confirms it
   // was a tap (not a drag - see endDrag) - mirrors draggingPlayer/
@@ -1248,6 +1255,11 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
     if (hit) {
       draggingPlayer = hit.object.parent.userData.player3d;
+      // Drag along the horizontal plane through the grabbed point, so that
+      // point stays under the cursor.
+      dragPlane.constant = -hit.point.y;
+      dragOffset.x = draggingPlayer.x - hit.point.x;
+      dragOffset.z = draggingPlayer.y - hit.point.z;
       pointerDownAt = { x: event.clientX, y: event.clientY };
       controls.enabled = false;
       renderer.domElement.setPointerCapture(event.pointerId);
@@ -1322,7 +1334,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     updatePointerNDC(event);
     raycaster.setFromCamera(pointerNDC, camera);
     if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
-      const { x, z } = clampToPlayArea(draggingPlayer.isBenched, dragPoint.x, dragPoint.z);
+      const { x, z } = clampToPlayArea(draggingPlayer.isBenched, dragPoint.x + dragOffset.x, dragPoint.z + dragOffset.z);
       draggingPlayer.setPosition(x, z);
       draggingPlayer.onDragMove?.(draggingPlayer);
     }
@@ -1420,10 +1432,12 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   const cameraDirectionScratch = new THREE.Vector3();
   function updateLabelHeights() {
     camera.getWorldDirection(cameraDirectionScratch);
-    const grazing = 1 - Math.abs(cameraDirectionScratch.y);
-    const offsetY = grazing * MAX_LABEL_LIFT;
+    const lift = (1 - Math.abs(cameraDirectionScratch.y)) * MAX_LABEL_LIFT;
+    const viewportHeight = renderer.domElement.clientHeight;
+    // The renderer only refreshes this inside render(), after this runs.
+    camera.updateMatrixWorld();
     for (const group of draggablePlayers) {
-      group.userData.player3d.updateLabelHeight(offsetY);
+      group.userData.player3d.updateLabelPlacement(lift, camera, viewportHeight);
     }
   }
 

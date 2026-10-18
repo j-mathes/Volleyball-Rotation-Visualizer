@@ -49,9 +49,11 @@ when opened straight from disk (`file://`). Pick whichever is easiest:
    rendered as a real 3D scene: orbit the camera freely, or click either
    referee (R1/R2) to jump to their exact viewpoint and look around.
 7. **Right-click for more** - right-click anywhere on the court to open a
-   quick menu of extra toggles and camera shortcuts.
+   quick menu of extra toggles and camera shortcuts, including switching
+   players between pucks and true-scale mannequins (3D) / footprints (2D).
 8. **Customize** - visit the Setup page (top-right link) to rename
-   players, recolor the court, adjust fonts/line thickness/puck size, and
+   players, recolor the court (front- and back-row players separately),
+   adjust fonts/line thickness/player icon style and size, and
    manage saved setups and playlists.
 
 The "Shortcuts" link at the top of the app lists every keyboard and mouse

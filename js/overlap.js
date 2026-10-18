@@ -1,18 +1,23 @@
 import { FRONT_ROW, BACK_ROW, FRONT_BACK_PAIRS } from './config.js';
-import { PLAYER_RADIUS } from './player.js';
+import { getPlayerExtents } from './playerIconSettings.js';
 
 // Rule 7.4.3 judges position by foot contact, not a single reference
-// point. Our icons have no feet, so we treat each player's circle edge as
-// its foot boundary: a player is only in violation once its entire circle
-// has crossed completely past the other player's circle (i.e. the two no
-// longer overlap at all in the wrong order). Any partial overlap, even if
-// the centers are already "swapped", is still legal - hence a tolerance
-// equal to a full player diameter rather than a near-zero epsilon.
-// A function (not a cached const) so it tracks PLAYER_RADIUS live as the
-// puck-size setting changes (see puckSizeSettings.js) instead of freezing
-// at whatever size was active when this module first evaluated.
-function tolerance() {
-  return PLAYER_RADIUS * 2;
+// point. A puck has no feet, so its circle edge stands in as the foot
+// boundary; a mannequin uses the exact axis-aligned extents of its
+// staggered feet (see playerIconSettings.js's getPlayerExtents). Either
+// way a player is only in violation once its entire footprint has crossed
+// completely past the other player's (i.e. the two no longer overlap at
+// all in the wrong order). Any partial overlap, even if the anchors are
+// already "swapped", is still legal - hence a tolerance equal to a full
+// footprint width/depth rather than a near-zero epsilon.
+// Functions (not cached consts) so they track the extents live as the
+// icon style/size settings change.
+function toleranceX() {
+  return getPlayerExtents().halfWidth * 2;
+}
+
+function toleranceY() {
+  return getPlayerExtents().halfDepth * 2;
 }
 
 function pairs(row) {
@@ -33,7 +38,7 @@ const LEFT_RIGHT_CHECKS = [...pairs(FRONT_ROW), ...pairs(BACK_ROW)];
 //  - 7.4.2.2 (left/right): front-row and back-row players must each keep
 //    their row's left-to-right order (4-3-2 and 5-6-1)
 //  - 7.4.3 judges position by foot contact: "level with" is legal, and
-//    (per our circle-edge model above) a player is only out of position
+//    (per our footprint-extents model above) a player is only out of position
 //    once it has moved completely past the other player, not merely when
 //    its center has.
 //
@@ -54,7 +59,7 @@ export function checkOverlap(positionsByZone) {
   for (const [leftZone, rightZone] of LEFT_RIGHT_CHECKS) {
     const left = positionsByZone[leftZone];
     const right = positionsByZone[rightZone];
-    const ok = left.x <= right.x + tolerance();
+    const ok = left.x <= right.x + toleranceX();
     results.push({
       zoneA: leftZone,
       zoneB: rightZone,
@@ -71,7 +76,7 @@ export function checkOverlap(positionsByZone) {
   for (const [frontZone, backZone] of FRONT_BACK_PAIRS) {
     const front = positionsByZone[frontZone];
     const back = positionsByZone[backZone];
-    const ok = front.y <= back.y + tolerance();
+    const ok = front.y <= back.y + toleranceY();
     results.push({
       zoneA: frontZone,
       zoneB: backZone,
@@ -108,13 +113,13 @@ export function getClampBounds(zone, positionsByZone) {
   for (const pair of LEFT_RIGHT_CHECKS) {
     const [leftZone, rightZone] = pair;
     if (zone === leftZone) {
-      const candidate = positionsByZone[rightZone].x + tolerance();
+      const candidate = positionsByZone[rightZone].x + toleranceX();
       if (candidate < bounds.maxX) {
         bounds.maxX = candidate;
         bounds.maxXPair = pair;
       }
     } else if (zone === rightZone) {
-      const candidate = positionsByZone[leftZone].x - tolerance();
+      const candidate = positionsByZone[leftZone].x - toleranceX();
       if (candidate > bounds.minX) {
         bounds.minX = candidate;
         bounds.minXPair = pair;
@@ -125,13 +130,13 @@ export function getClampBounds(zone, positionsByZone) {
   for (const pair of FRONT_BACK_PAIRS) {
     const [frontZone, backZone] = pair;
     if (zone === frontZone) {
-      const candidate = positionsByZone[backZone].y + tolerance();
+      const candidate = positionsByZone[backZone].y + toleranceY();
       if (candidate < bounds.maxY) {
         bounds.maxY = candidate;
         bounds.maxYPair = pair;
       }
     } else if (zone === backZone) {
-      const candidate = positionsByZone[frontZone].y - tolerance();
+      const candidate = positionsByZone[frontZone].y - toleranceY();
       if (candidate > bounds.minY) {
         bounds.minY = candidate;
         bounds.minYPair = pair;

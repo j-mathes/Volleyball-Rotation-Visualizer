@@ -49,6 +49,18 @@ rework when the renderer changes later.
       the default, selectable on the setup page and live from the
       right-click quad-menu's View section (both 2D and 3D). Overlap
       checking's tolerance distance scales with whichever size is active.
+- [x] 0.11 Mannequin / footprint player icons — a "Player Icon: Puck /
+      Mannequin" setting (setup page + quad-menu View section). In 3D, a
+      standing mannequin (simple primitives, relaxed athletic stance,
+      always facing the net) replaces the puck, scaled to 5'2"/5'9"/6'2"
+      via the existing Small/Medium/Large size; its label floats above
+      the head and slides to the top of the screen as the camera looks
+      down. In 2D, true-scale staggered footprints (label above, toward
+      the net) with an optional enlargement factor (setup page only).
+      Overlap checking/clamping/guide lines use the exact extents of the
+      feet (`playerIconSettings.js`'s `getPlayerExtents`). Selection glow
+      surrounds the figure/footprints. Colors: "Player" became "Front Row
+      Player", plus a new "Back Row Player" color (also used by pucks).
 
 ## Phase 1 — 2D View Orientation Toggle (REMOVED, see note below)
 

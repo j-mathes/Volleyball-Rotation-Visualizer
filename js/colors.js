@@ -8,6 +8,7 @@ export const DEFAULT_COLORS = {
   'court-bg': '#189a94',
   'line-colour': '#ffffff',
   'player-fill': '#efa581',
+  'player-fill-back': '#bf8467',
   'player-outline': '#f5f5f5',
   'player-overlap': '#e74c3c',
   'player-selectable': '#22c55e',
@@ -27,7 +28,8 @@ export const COLOR_LABELS = {
   'court-fill': 'Court',
   'court-bg': 'Court Background',
   'line-colour': 'Court Lines & Text',
-  'player-fill': 'Player',
+  'player-fill': 'Front Row Player',
+  'player-fill-back': 'Back Row Player',
   'player-outline': 'Player Outline',
   'player-overlap': 'Overlap / Violation',
   'player-selectable': 'Libero Swap Highlight',
@@ -53,7 +55,21 @@ export const PRESET_SWATCHES = [
 ];
 
 export function getColors() {
-  return { ...DEFAULT_COLORS, ...readSavedColors() };
+  const saved = readSavedColors();
+  const colors = { ...DEFAULT_COLORS, ...saved };
+  // A front-row color saved before the back-row one existed: keep the old
+  // look (back row was a fixed 80% darkening of the front-row color).
+  if (saved['player-fill'] && !saved['player-fill-back']) {
+    colors['player-fill-back'] = darkenHex(saved['player-fill'], 0.8);
+  }
+  return colors;
+}
+
+function darkenHex(hex, factor) {
+  const channel = (start) => Math.round(parseInt(hex.slice(start, start + 2), 16) * factor)
+    .toString(16)
+    .padStart(2, '0');
+  return `#${channel(1)}${channel(3)}${channel(5)}`;
 }
 
 export function saveColors(colors) {
