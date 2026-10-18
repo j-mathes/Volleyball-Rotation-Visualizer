@@ -4,7 +4,7 @@ import { createCourtRenderer3D } from './renderer3d.js';
 import { RotationState } from './rotation.js';
 import { checkOverlap, summarizeByPlayer, getClampBounds } from './overlap.js';
 import { getPlayerLabels } from './playerLabels.js';
-import { saveSetup, takePendingSetup, getSavedSetups } from './courtSetups.js';
+import { saveSetup, takePendingSetup, getSavedSetups, isValidState } from './courtSetups.js';
 import { applyColors } from './colors.js';
 import { applyLineSettings } from './lineSettings.js';
 import { applyFontSettings } from './fontSettings.js';
@@ -1120,8 +1120,53 @@ refreshLiberoButtonLabel();
 // A saved setup chosen on the setup page is queued here and applied once,
 // on this first load, instead of the default base positions.
 const pendingSetup = takePendingSetup();
+
+// The current court and toggles are kept for this browser tab, so visiting
+// the setup/shortcuts pages and coming back doesn't reset the visualizer.
+const SESSION_KEY = 'volleyballViz.sessionState';
+
+window.addEventListener('pagehide', () => {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+    state: captureCurrentState(),
+    toggles: {
+      guides: guidesEnabled,
+      links: linksEnabled,
+      clamp: clampEnabled,
+      frontRow: frontRowLinkEnabled,
+      backRow: backRowLinkEnabled,
+      zone: showZoneEnabled,
+    },
+    selectedRole,
+    selectionLocked,
+  }));
+});
+
+function readSessionState() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    return saved && isValidState(saved.state) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+const sessionState = readSessionState();
+if (sessionState) {
+  const { toggles } = sessionState;
+  if (toggles?.guides) toggleOverlapGuides();
+  if (toggles?.links) togglePlayerLinks();
+  if (toggles?.frontRow) toggleFrontRowLink();
+  if (toggles?.backRow) toggleBackRowLink();
+  if (toggles?.zone) toggleShowZoneLabels();
+  if (toggles?.clamp) toggleClamp();
+  selectedRole = (guidesEnabled || linksEnabled) ? sessionState.selectedRole ?? null : null;
+  selectionLocked = Boolean(selectedRole && sessionState.selectionLocked);
+}
+
 if (pendingSetup) {
   applyState(pendingSetup);
+} else if (sessionState) {
+  applyState(sessionState.state);
 } else {
   runOverlapCheck();
 }
