@@ -30,7 +30,6 @@ const footprintScale2DInput = document.getElementById('footprintScale2D');
 const linkDotScale2DInput = document.getElementById('linkDotScale2D');
 const rememberCameraPosition3DCheckbox = document.getElementById('rememberCameraPosition3D');
 const fontSettingsFieldsEl = document.getElementById('fontSettingsFields');
-const saveFontSettingsBtn = document.getElementById('saveFontSettings');
 const resetFontSettingsBtn = document.getElementById('resetFontSettings');
 const effectSettingsForm = document.getElementById('effectSettingsForm');
 const resetEffectSettingsBtn = document.getElementById('resetEffectSettings');
@@ -40,6 +39,24 @@ const addToPlaylistBtn = document.getElementById('addToPlaylistBtn');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 const playlistDelayInput = document.getElementById('playlistDelayInput');
 const folderNamesListEl = document.getElementById('folderNamesList');
+
+// Every setting on this page saves as soon as it's changed (a committed
+// edit - blur/Enter/pick - not each keystroke); this just confirms it.
+let savedToastTimer = null;
+function showSaved() {
+  let toast = document.getElementById('saveToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'saveToast';
+    toast.className = 'save-toast';
+    toast.setAttribute('role', 'status');
+    toast.textContent = 'Saved';
+    document.body.appendChild(toast);
+  }
+  toast.classList.add('visible');
+  clearTimeout(savedToastTimer);
+  savedToastTimer = setTimeout(() => toast.classList.remove('visible'), 1200);
+}
 
 function renderForm() {
   const labels = getPlayerLabels();
@@ -63,20 +80,31 @@ function renderForm() {
   }
 }
 
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
+// Writes normalized values back into the existing inputs rather than
+// re-rendering the form, so keyboard focus survives an autosave on blur.
+function savePlayerLabelForm() {
   const labels = {};
   for (const role of Object.keys(ROLE_LABELS)) {
     const value = form.elements.namedItem(role).value.trim().slice(0, 3);
     labels[role] = value || ROLE_LABELS[role];
   }
   savePlayerLabels(labels);
-  renderForm();
+  for (const role of Object.keys(ROLE_LABELS)) {
+    form.elements.namedItem(role).value = labels[role];
+  }
+  showSaved();
+}
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  savePlayerLabelForm();
 });
+form.addEventListener('change', savePlayerLabelForm);
 
 resetBtn.addEventListener('click', () => {
   resetPlayerLabels();
   renderForm();
+  showSaved();
 });
 
 renderForm();
@@ -370,6 +398,7 @@ function createColorPicker(name, initialValue) {
       current.style.backgroundColor = preset;
       popover.hidden = true;
       nativeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      nativeInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
     swatchGrid.appendChild(swatch);
   }
@@ -397,8 +426,7 @@ function createColorPicker(name, initialValue) {
   return wrapper;
 }
 
-colorForm.addEventListener('submit', (event) => {
-  event.preventDefault();
+function saveColorForm() {
   const colors = {};
   for (const name of Object.keys(COLOR_LABELS)) {
     const raw = colorForm.elements.namedItem(name).value;
@@ -406,12 +434,20 @@ colorForm.addEventListener('submit', (event) => {
   }
   saveColors(colors);
   applyColors();
+  showSaved();
+}
+
+colorForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  saveColorForm();
 });
+colorForm.addEventListener('change', saveColorForm);
 
 resetColorsBtn.addEventListener('click', () => {
   resetColors();
   applyColors();
   renderColorForm();
+  showSaved();
 });
 
 renderColorForm();
@@ -439,8 +475,7 @@ function renderLineSettingsForm() {
   }
 }
 
-lineSettingsForm.addEventListener('submit', (event) => {
-  event.preventDefault();
+function saveLineSettingsForm() {
   const settings = {};
   for (const name of Object.keys(LINE_SETTING_LABELS)) {
     const value = Number(lineSettingsForm.elements.namedItem(name).value);
@@ -448,13 +483,23 @@ lineSettingsForm.addEventListener('submit', (event) => {
   }
   saveLineSettings(settings);
   applyLineSettings();
-  renderLineSettingsForm();
+  for (const name of Object.keys(LINE_SETTING_LABELS)) {
+    lineSettingsForm.elements.namedItem(name).value = settings[name];
+  }
+  showSaved();
+}
+
+lineSettingsForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  saveLineSettingsForm();
 });
+lineSettingsForm.addEventListener('change', saveLineSettingsForm);
 
 resetLineSettingsBtn.addEventListener('click', () => {
   resetLineSettings();
   applyLineSettings();
   renderLineSettingsForm();
+  showSaved();
 });
 
 renderLineSettingsForm();
@@ -467,6 +512,7 @@ puckSizeBtns.forEach((button) => {
   button.addEventListener('click', () => {
     savePuckSize(button.dataset.puckSize);
     refreshPuckSizeButtons();
+    showSaved();
   });
 });
 refreshPuckSizeButtons();
@@ -479,6 +525,7 @@ playerIconBtns.forEach((button) => {
   button.addEventListener('click', () => {
     savePlayerIcon(button.dataset.playerIcon);
     refreshPlayerIconButtons();
+    showSaved();
   });
 });
 refreshPlayerIconButtons();
@@ -488,6 +535,7 @@ footprintScale2DInput.addEventListener('change', () => {
   const value = Number(footprintScale2DInput.value);
   if (Number.isFinite(value) && value >= MIN_FOOTPRINT_SCALE && value <= MAX_FOOTPRINT_SCALE) {
     saveFootprintScale2D(value);
+    showSaved();
   }
   footprintScale2DInput.value = getFootprintScale2D();
 });
@@ -497,6 +545,7 @@ linkDotScale2DInput.addEventListener('change', () => {
   const value = Number(linkDotScale2DInput.value);
   if (Number.isFinite(value) && value >= MIN_LINK_DOT_SCALE && value <= MAX_LINK_DOT_SCALE) {
     saveLinkDotScale2D(value);
+    showSaved();
   }
   linkDotScale2DInput.value = getLinkDotScale2D();
 });
@@ -504,6 +553,7 @@ linkDotScale2DInput.addEventListener('change', () => {
 rememberCameraPosition3DCheckbox.checked = getRememberCameraPosition3D();
 rememberCameraPosition3DCheckbox.addEventListener('change', () => {
   saveRememberCameraPosition3D(rememberCameraPosition3DCheckbox.checked);
+  showSaved();
 });
 
 function renderFontSettingsFields() {
@@ -557,7 +607,7 @@ function renderFontSettingsFields() {
   }
 }
 
-saveFontSettingsBtn.addEventListener('click', () => {
+function saveFontSettingsFields() {
   const current = getFontSettings();
   const fontFamily = fontSettingsFieldsEl.querySelector('[name="fontFamily"]').value || DEFAULT_FONT_SETTINGS.fontFamily;
   const settings = { fontFamily };
@@ -567,13 +617,19 @@ saveFontSettingsBtn.addEventListener('click', () => {
   }
   saveFontSettings(settings);
   applyFontSettings();
-  renderFontSettingsFields();
-});
+  for (const name of ['playerLabelSize', 'benchLabelSize']) {
+    fontSettingsFieldsEl.querySelector(`[name="${name}"]`).value = settings[name];
+  }
+  showSaved();
+}
+
+fontSettingsFieldsEl.addEventListener('change', saveFontSettingsFields);
 
 resetFontSettingsBtn.addEventListener('click', () => {
   resetFontSettings();
   applyFontSettings();
   renderFontSettingsFields();
+  showSaved();
 });
 
 renderFontSettingsFields();
@@ -600,8 +656,7 @@ function renderEffectSettingsForm() {
   }
 }
 
-effectSettingsForm.addEventListener('submit', (event) => {
-  event.preventDefault();
+function saveEffectSettingsForm() {
   const current = getEffectSettings();
   const settings = {};
   for (const name of Object.keys(EFFECT_SETTING_LABELS)) {
@@ -610,13 +665,23 @@ effectSettingsForm.addEventListener('submit', (event) => {
   }
   saveEffectSettings(settings);
   applyEffectSettings();
-  renderEffectSettingsForm();
+  for (const name of Object.keys(EFFECT_SETTING_LABELS)) {
+    effectSettingsForm.elements.namedItem(name).value = settings[name];
+  }
+  showSaved();
+}
+
+effectSettingsForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  saveEffectSettingsForm();
 });
+effectSettingsForm.addEventListener('change', saveEffectSettingsForm);
 
 resetEffectSettingsBtn.addEventListener('click', () => {
   resetEffectSettings();
   applyEffectSettings();
   renderEffectSettingsForm();
+  showSaved();
 });
 
 renderEffectSettingsForm();
@@ -715,24 +780,9 @@ playlistDelayInput.addEventListener('change', () => {
   const ms = Number(playlistDelayInput.value);
   if (Number.isFinite(ms) && ms > 0) {
     setPlaylistDelay(ms);
+    showSaved();
   }
 });
 
 renderPlaylist();
-
-// Glows a section's Save button once any of its settings is edited, until
-// it's saved or reset - sections without a Save button save immediately.
-document.querySelectorAll('.panel-section').forEach((section) => {
-  const saveBtn = section.querySelector('button[type="submit"], #saveFontSettings');
-  if (!saveBtn) {
-    return;
-  }
-  const markUnsaved = () => saveBtn.classList.add('unsaved');
-  const clearUnsaved = () => saveBtn.classList.remove('unsaved');
-  section.addEventListener('input', markUnsaved);
-  section.addEventListener('change', markUnsaved);
-  section.addEventListener('submit', clearUnsaved);
-  saveBtn.addEventListener('click', clearUnsaved);
-  section.querySelectorAll('button[id^="reset"]').forEach((button) => button.addEventListener('click', clearUnsaved));
-});
 

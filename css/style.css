@@ -647,11 +647,25 @@ button.active {
   color: #2c3e50;
 }
 
-/* Setup page: a section's Save button after one of its settings changed. */
-button.unsaved {
-  box-shadow: 0 0 0 2px #ffffff, 0 0 12px 4px #23f558;
+/* Setup page: brief confirmation after a setting autosaves. */
+.save-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 30;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: #1e8449;
+  color: #ffffff;
+  font-size: 0.85rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
 }
 
+.save-toast.visible {
+  opacity: 1;
+}
 
 .full-width {
   width: 100%;
