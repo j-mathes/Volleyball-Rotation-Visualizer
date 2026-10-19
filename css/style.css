@@ -274,6 +274,16 @@ h1 {
   display: block;
 }
 
+/* iOS starts a text/element selection (and a callout) on long-press
+   otherwise, highlighting the whole canvas. */
+#court,
+.scene3d-mount {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .scene3d-mount {
   position: relative;
   width: 100%;
@@ -1141,4 +1151,59 @@ select {
   stroke: rgba(0, 0, 0, 0.55);
   stroke-width: 5;
   paint-order: stroke;
+}
+
+/* Touch-only UI: there is no right-click on touch devices, so a floating
+   button opens the quad-menu instead (see js/main.js `openQuadMenu`). */
+.quad-menu-btn {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .quad-menu-btn {
+    display: block;
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 19;
+    flex: none;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    line-height: 1;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+
+  .top-bar button {
+    padding: 9px 12px;
+    font-size: 0.85rem;
+  }
+
+  .view-cube-home {
+    width: 36px;
+    height: 36px;
+  }
+
+  .quad-section {
+    max-width: calc((100vw - 24px) / 2);
+    font-size: 0.8rem;
+  }
+  .quad-items button {
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    white-space: normal;
+  }
+  /* iOS zooms the page on focus of any input under 16px. */
+  .quad-items .text-input {
+    font-size: 16px;
+    padding: 6px;
+  }
+  .quad-items .hint,
+  .quad-items a,
+  .quad-title {
+    font-size: 0.75rem;
+  }
 }

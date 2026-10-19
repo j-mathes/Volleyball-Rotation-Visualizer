@@ -40,4 +40,9 @@ export const MOUSE_CONTROLS = [
   { input: 'Scroll wheel', label: 'Zoom the camera', appliesTo: '3d' },
   { input: 'Left-click R1/R2', label: 'Fly the camera to that referee\u2019s viewpoint (click any other player/viewpoint, or use a camera shortcut, to return)', appliesTo: '3d' },
   { input: 'Alt + left-click the net', label: 'Re-anchor orbiting on the net (camera position unchanged)', appliesTo: '3d' },
+  { input: 'Touch: drag a player', label: 'Select and move a player', appliesTo: 'both' },
+  { input: 'Touch: double-tap a player', label: 'Lock/unlock the current selection', appliesTo: 'both' },
+  { input: 'Touch: menu button (bottom-right)', label: 'Open the quad-menu (the touch replacement for right-click)', appliesTo: 'both' },
+  { input: 'Touch: one-finger drag on empty space', label: 'Orbit the camera (or look around while locked onto R1/R2)', appliesTo: '3d' },
+  { input: 'Touch: two-finger pinch / drag', label: 'Zoom / pan the camera', appliesTo: '3d' },
 ];

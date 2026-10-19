@@ -714,6 +714,23 @@ only the applicable options shown per mode.
       quadrant now only holds Rotate CW/CCW, Reset to Base, and Swap
       Libero.
 
+- [x] 3.11 Touch/mobile support (iOS-first; other platforms are best
+      guesses via `pointer: coarse`/pointer events) - viewport meta on all
+      pages; native selection/callout/tap-highlight disabled on `#court`
+      and `.scene3d-mount` (long-press used to highlight the whole
+      canvas); floating `#quadMenuBtn` (coarse pointers only) opens the
+      quad-menu via a shared `openQuadMenu(x, y)` since iOS has no
+      `contextmenu`; `quadMenu.js` now dismisses on `pointerdown` (iOS
+      doesn't bubble `click` from non-interactive elements), ignores its
+      trigger button, and caps section heights to the viewport (scrolls
+      in phone landscape); 3D ignores non-primary pointers so a second
+      finger can't start a puck drag/look-around; new `doubleTap.js`
+      detects touch double-taps (deduped against native `dblclick`) for
+      the selection lock in both renderers. 3D keeps OrbitControls'
+      default touch gestures (1-finger orbit, 2-finger zoom/pan).
+      Deliberately skipped: long-press menu, WASD joystick for R1/R2
+      walking, Alt-style orbit re-anchor, responsive top-bar redesign.
+
 **Bug fix + polish (found/requested after 3.8):** the net-mesh label
 occlusion fix (3.5's `updateLabelOcclusion` follow-up) had wrongly
 included the see-through vertical net mesh alongside the 2 solid posts in

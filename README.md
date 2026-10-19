@@ -28,6 +28,9 @@ when opened straight from disk (`file://`). Pick whichever is easiest:
 - **Any OS with Python:** run `python -m http.server` in this folder,
   then visit `http://localhost:8000`.
 
+To try it on a phone, serve it as above and open `http://<your-PC's-LAN-IP>:<port>`
+from a phone on the same Wi-Fi.
+
 ## How to use it
 
 1. **The court** - each puck is a player (or a mannequin / pair of
@@ -65,6 +68,10 @@ when opened straight from disk (`file://`). Pick whichever is easiest:
 
 The "Shortcuts" link at the top of the app lists every keyboard and mouse
 control.
+
+**On a phone or tablet:** drag players with one finger, double-tap to lock
+a selection, and use the round menu button (bottom-right) in place of
+right-click. In 3D, one finger orbits and two fingers pinch-zoom/pan.
 
 ## Learn more
 

@@ -33,6 +33,7 @@ import { getInvertPitch3D, saveInvertPitch3D } from './firstPersonSettings.js';
 import { getPuckRadius } from './puckSizeSettings.js';
 import { getPlayerExtents, getPlayerIcon, getMannequinSpec } from './playerIconSettings.js';
 import { Player3D, PLAYER_RADIUS_3D, PUCK_HEIGHT, setPlayerRadius3D } from './player3d.js';
+import { createDoubleTapDetector } from './doubleTap.js';
 
 // Reads a customizable color (see colors.js/setup.html) so the 3D court
 // matches whatever the user picked for the 2D one, instead of duplicating
@@ -244,7 +245,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   // clickable even while locked onto R1/R2, matching normal-mode
   // priority instead of a separate always-wins handler.
   function onFirstPersonPointerMove(event) {
-    if (!fpDragging) {
+    if (!fpDragging || !event.isPrimary) {
       return;
     }
     const dx = event.clientX - fpLastPointer.x;
@@ -256,7 +257,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     updateFirstPersonCamera();
   }
   function onFirstPersonPointerUp(event) {
-    if (!fpDragging) {
+    if (!fpDragging || !event.isPrimary) {
       return;
     }
     fpDragging = false;
@@ -1248,7 +1249,8 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   // look-around (checked last, only if neither hit) - so players and the
   // other R1/R2 viewpoint stay clickable even while locked onto one.
   function onPointerDownLeft(event) {
-    if (event.button !== 0 || altHeld || shiftHeld) {
+    // A second finger (pinch/two-finger pan) must not start its own drag.
+    if (!event.isPrimary || event.button !== 0 || altHeld || shiftHeld) {
       return;
     }
     viewpointClickHandled = false;
@@ -1330,7 +1332,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   }
 
   function onPointerMove(event) {
-    if (!draggingPlayer) {
+    if (!draggingPlayer || !event.isPrimary) {
       return;
     }
     updatePointerNDC(event);
@@ -1349,6 +1351,9 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   // handler is what tells them apart, via `lastMoveDistance`, identically
   // for both renderers.
   function endDrag(event) {
+    if (!event.isPrimary) {
+      return;
+    }
     if (draggingPlayer) {
       const player = draggingPlayer;
       player.lastMoveDistance = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
@@ -1369,6 +1374,10 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
       pendingViewpoint = null;
     }
   }
+  const doubleTap = createDoubleTapDetector((player) => player?._fireDoubleClick());
+  renderer.domElement.addEventListener('pointerdown', doubleTap.pointerDown);
+  // Must run before endDrag, which clears `draggingPlayer`.
+  renderer.domElement.addEventListener('pointerup', (event) => doubleTap.pointerUp(event, draggingPlayer));
   renderer.domElement.addEventListener('pointerup', endDrag);
   renderer.domElement.addEventListener('pointercancel', endDrag);
 
@@ -1379,7 +1388,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     updatePointerNDC(event);
     raycaster.setFromCamera(pointerNDC, camera);
     const hit = raycaster.intersectObjects(draggablePlayers, true)[0];
-    hit?.object.parent.userData.player3d._fireDoubleClick();
+    doubleTap.nativeDoubleClick(event, hit?.object.parent.userData.player3d ?? null);
   }
   renderer.domElement.addEventListener('dblclick', onDoubleClick);
 

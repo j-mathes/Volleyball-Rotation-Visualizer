@@ -48,6 +48,7 @@ const viewMode3DBtn = document.getElementById('viewMode3DBtn');
 const benchSide3DLeftBtn = document.getElementById('benchSide3DLeft');
 const benchSide3DRightBtn = document.getElementById('benchSide3DRight');
 const quadMenuEl = document.getElementById('quadMenu');
+const quadMenuBtn = document.getElementById('quadMenuBtn');
 const quadViewCameraSection = document.getElementById('quadViewCamera');
 const quadSceneSetupSection = document.getElementById('quadSceneSetup');
 const quadShortcutsListEl = document.getElementById('quadShortcutsList');
@@ -788,7 +789,7 @@ benchSide3DRightBtn.addEventListener('click', () => applyBenchSide3D('right'));
 // many shown as apply to the current view mode. js/quadMenu.js owns the
 // generic open/close/positioning mechanics; everything below is what
 // each button actually does.
-const quadMenu = createQuadMenu(quadMenuEl);
+const quadMenu = createQuadMenu(quadMenuEl, quadMenuBtn);
 
 qmResetViewBtn.addEventListener('click', () => { renderer.resetToDefaultView?.(); quadMenu.close(); });
 qmZoomExtentsBtn.addEventListener('click', () => { renderer.zoomExtents?.(); quadMenu.close(); });
@@ -1000,17 +1001,29 @@ function wireRendererEvents() {
     selectedRole = null;
     runOverlapCheck();
   });
-  renderer.onContextMenu((event) => {
-    refreshBenchSide3DButtons();
-    refreshViewCubeSizeButtons();
-    refreshLabelScaleButtons();
-    refreshInvertPitchButton();
-    refreshPuckSizeButtons();
-    refreshPlayerIconButtons();
-    renderShortcutsList();
-    quadMenu.open(event.clientX, event.clientY, viewMode === '3d');
-  });
+  renderer.onContextMenu((event) => openQuadMenu(event.clientX, event.clientY));
 }
+
+function openQuadMenu(x, y) {
+  refreshBenchSide3DButtons();
+  refreshViewCubeSizeButtons();
+  refreshLabelScaleButtons();
+  refreshInvertPitchButton();
+  refreshPuckSizeButtons();
+  refreshPlayerIconButtons();
+  renderShortcutsList();
+  quadMenu.open(x, y, viewMode === '3d');
+}
+
+// No right-click on touch devices - the floating Menu button (shown via
+// CSS only for coarse pointers) opens the menu centered on the viewport.
+quadMenuBtn.addEventListener('click', () => {
+  if (quadMenu.isOpen()) {
+    quadMenu.close();
+    return;
+  }
+  openQuadMenu(window.innerWidth / 2, window.innerHeight / 2);
+});
 
 // View Mode (Phase 2.13) - switches between the 2D SVG renderer and the
 // 3D Three.js one, preserving the exact current court setup (rotation,

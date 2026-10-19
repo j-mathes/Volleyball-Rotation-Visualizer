@@ -1,6 +1,7 @@
 import { getPuckRadius, PUCK_SIZE_RADII } from './puckSizeSettings.js';
 import { getPlayerIcon, getMannequinSpec, getFootprintScale2D } from './playerIconSettings.js';
 import { getFontSettings } from './fontSettings.js';
+import { createDoubleTapDetector } from './doubleTap.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // Mutable (not const) so the puck-size setting (puckSizeSettings.js) can
@@ -145,7 +146,10 @@ export class Player {
   }
 
   onDoubleClick(handler) {
-    this.group.addEventListener('dblclick', handler);
+    const detector = createDoubleTapDetector((_key, event) => handler(event));
+    this.group.addEventListener('dblclick', (event) => detector.nativeDoubleClick(event));
+    this.group.addEventListener('pointerdown', detector.pointerDown);
+    this.group.addEventListener('pointerup', (event) => detector.pointerUp(event));
   }
 
   setOverlapping(isOverlapping) {
