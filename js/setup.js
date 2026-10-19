@@ -7,7 +7,7 @@ import { getFontSettings, saveFontSettings, resetFontSettings, applyFontSettings
 import { getEffectSettings, saveEffectSettings, resetEffectSettings, applyEffectSettings, EFFECT_SETTING_LABELS } from './effectSettings.js';
 import { getPlaylist, addPlaylistItem, removePlaylistItem, movePlaylistItem, clearPlaylist, getPlaylistDelay, setPlaylistDelay } from './playlist.js';
 import { getPuckSize, savePuckSize } from './puckSizeSettings.js';
-import { getPlayerIcon, savePlayerIcon, getFootprintScale2D, saveFootprintScale2D, MIN_FOOTPRINT_SCALE, MAX_FOOTPRINT_SCALE } from './playerIconSettings.js';
+import { getPlayerIcon, savePlayerIcon, getFootprintScale2D, saveFootprintScale2D, MIN_FOOTPRINT_SCALE, MAX_FOOTPRINT_SCALE, getLinkDotScale2D, saveLinkDotScale2D, MIN_LINK_DOT_SCALE, MAX_LINK_DOT_SCALE } from './playerIconSettings.js';
 import { getRememberCameraPosition3D, saveRememberCameraPosition3D } from './cameraMemorySettings.js';
 
 applyColors();
@@ -27,6 +27,7 @@ const resetLineSettingsBtn = document.getElementById('resetLineSettings');
 const puckSizeBtns = document.querySelectorAll('button[data-puck-size]');
 const playerIconBtns = document.querySelectorAll('button[data-player-icon]');
 const footprintScale2DInput = document.getElementById('footprintScale2D');
+const linkDotScale2DInput = document.getElementById('linkDotScale2D');
 const rememberCameraPosition3DCheckbox = document.getElementById('rememberCameraPosition3D');
 const fontSettingsFieldsEl = document.getElementById('fontSettingsFields');
 const saveFontSettingsBtn = document.getElementById('saveFontSettings');
@@ -489,6 +490,15 @@ footprintScale2DInput.addEventListener('change', () => {
     saveFootprintScale2D(value);
   }
   footprintScale2DInput.value = getFootprintScale2D();
+});
+
+linkDotScale2DInput.value = getLinkDotScale2D();
+linkDotScale2DInput.addEventListener('change', () => {
+  const value = Number(linkDotScale2DInput.value);
+  if (Number.isFinite(value) && value >= MIN_LINK_DOT_SCALE && value <= MAX_LINK_DOT_SCALE) {
+    saveLinkDotScale2D(value);
+  }
+  linkDotScale2DInput.value = getLinkDotScale2D();
 });
 
 rememberCameraPosition3DCheckbox.checked = getRememberCameraPosition3D();

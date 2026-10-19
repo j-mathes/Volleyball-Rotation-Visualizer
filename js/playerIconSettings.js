@@ -12,6 +12,9 @@ const VALID_ICONS = ['puck', 'mannequin'];
 export const DEFAULT_PLAYER_ICON = 'puck';
 export const MIN_FOOTPRINT_SCALE = 0.5;
 export const MAX_FOOTPRINT_SCALE = 4;
+const LINK_DOT_SCALE_KEY = 'volleyballViz.linkDotScale2D';
+export const MIN_LINK_DOT_SCALE = 0.25;
+export const MAX_LINK_DOT_SCALE = 4;
 
 export function getPlayerIcon() {
   const raw = localStorage.getItem(ICON_KEY);
@@ -31,6 +34,17 @@ export function getFootprintScale2D() {
 
 export function saveFootprintScale2D(scale) {
   localStorage.setItem(FOOTPRINT_SCALE_KEY, String(scale));
+}
+
+// Multiplier on the default size of the attach-point dots drawn at the
+// ends of 2D link lines in footprint mode (1 = default).
+export function getLinkDotScale2D() {
+  const value = Number(localStorage.getItem(LINK_DOT_SCALE_KEY));
+  return Number.isFinite(value) && value >= MIN_LINK_DOT_SCALE && value <= MAX_LINK_DOT_SCALE ? value : 1;
+}
+
+export function saveLinkDotScale2D(scale) {
+  localStorage.setItem(LINK_DOT_SCALE_KEY, String(scale));
 }
 
 // World units are centimeters (the court is 900 units = 9 m wide). The

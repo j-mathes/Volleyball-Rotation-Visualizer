@@ -9,12 +9,20 @@ import { Player, setPlayerRadius } from './player.js';
 import { BENCH_POSITION_CLASSIC, BENCH_POSITION_REPLACED_CLASSIC, COURT_SIZE, ZONE_POSITIONS } from './config.js';
 import { getLineSettings } from './lineSettings.js';
 import { getPuckRadius } from './puckSizeSettings.js';
-import { getPlayerExtents } from './playerIconSettings.js';
+import { getPlayerExtents, getPlayerIcon, getMannequinSpec, getFootprintScale2D, getLinkDotScale2D } from './playerIconSettings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function svgLine(attrs) {
   const el = document.createElementNS(SVG_NS, 'line');
+  for (const [key, value] of Object.entries(attrs)) {
+    el.setAttribute(key, value);
+  }
+  return el;
+}
+
+function svgCircle(attrs) {
+  const el = document.createElementNS(SVG_NS, 'circle');
   for (const [key, value] of Object.entries(attrs)) {
     el.setAttribute(key, value);
   }
@@ -126,6 +134,20 @@ export function createCourtRenderer(svg) {
       attrs['stroke-dasharray'] = '4,5';
     }
     linkLinesLayer.appendChild(svgLine(attrs));
+    addLinkDot(posA, 'var(--link-line)');
+    addLinkDot(posB, 'var(--link-line)');
+  }
+
+  // Marks where a link line attaches to a player (their stance center,
+  // between the feet) - footprint mode only, since a puck's center is
+  // already obvious. Sized to stay within a footprint's width; drawn
+  // together with its line, so it only exists while that link is on.
+  function addLinkDot(pos, color) {
+    if (getPlayerIcon() !== 'mannequin') {
+      return;
+    }
+    const radius = Math.max(getMannequinSpec().footWidth * getFootprintScale2D() * 0.4, lineSettings.linkLineWidth * 0.9) * getLinkDotScale2D();
+    linkLinesLayer.appendChild(svgCircle({ cx: pos.x, cy: pos.y, r: radius, fill: color }));
   }
 
   // Draws an icy-blue line connecting two players' centers - used by the
@@ -146,6 +168,8 @@ export function createCourtRenderer(svg) {
       attrs['stroke-dasharray'] = '4,5';
     }
     linkLinesLayer.appendChild(svgLine(attrs));
+    addLinkDot(posA, 'var(--row-link-line)');
+    addLinkDot(posB, 'var(--row-link-line)');
   }
 
   function clearViolationLines() {
