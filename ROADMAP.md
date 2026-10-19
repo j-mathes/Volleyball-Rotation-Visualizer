@@ -730,6 +730,15 @@ only the applicable options shown per mode.
       default touch gestures (1-finger orbit, 2-finger zoom/pan).
       Deliberately skipped: long-press menu, WASD joystick for R1/R2
       walking, Alt-style orbit re-anchor, responsive top-bar redesign.
+      Follow-up bug fix: the 3D camera (including an R1/R2 first-person
+      view - viewpoint, eye position, yaw/pitch) now also survives
+      navigating to the Shortcuts/Setup pages and back, and a page reload,
+      via `sessionStorage` (`main.js`'s `CAMERA_SESSION_KEY`, written on
+      `pagehide`); previously only the 2D<->3D switch remembered the
+      camera, and never first-person. Honors the "Remember Camera
+      Position" setting. Label-scale reference distance now derives from
+      the default camera position, so restored views keep correct label
+      sizes.
 
 **Bug fix + polish (found/requested after 3.8):** the net-mesh label
 occlusion fix (3.5's `updateLabelOcclusion` follow-up) had wrongly

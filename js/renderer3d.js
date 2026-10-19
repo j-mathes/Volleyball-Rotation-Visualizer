@@ -1231,6 +1231,28 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     hiddenViewpoint = viewpoint;
   }
 
+  // Re-enters the R1/R2 first-person view captured by getCameraState (the
+  // camera position/target alone can't express it - first-person drives
+  // the camera from yaw/pitch and hides the referee puck).
+  function restoreFirstPerson(saved) {
+    const viewpoint = selectableViewpoints[saved.viewpointIndex];
+    if (!viewpoint) {
+      return;
+    }
+    viewpoint.group.visible = false;
+    viewpoint.labelDiv.style.display = 'none';
+    hiddenViewpoint = viewpoint;
+    const eye = new THREE.Vector3(saved.eye.x, saved.eye.y, saved.eye.z);
+    enterFirstPersonMode(eye, eye.clone().add(new THREE.Vector3(0, 0, 1)), saved.canWalk);
+    fpBasePosition.set(saved.base.x, saved.base.y, saved.base.z);
+    fpYaw = saved.yaw;
+    fpPitch = saved.pitch;
+    updateFirstPersonCamera();
+  }
+  if (initialCameraState?.firstPerson) {
+    restoreFirstPerson(initialCameraState.firstPerson);
+  }
+
   function updatePointerNDC(event) {
     const rect = renderer.domElement.getBoundingClientRect();
     pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1428,7 +1450,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     labelScaleMode = mode;
     saveLabelScaleMode3D(mode);
   }
-  const labelScaleReferenceDistance = camera.position.distanceTo(new THREE.Vector3(COURT_SIZE / 2, PUCK_HEIGHT / 2, COURT_SIZE / 2));
+  const labelScaleReferenceDistance = DEFAULT_CAMERA_POSITION.distanceTo(new THREE.Vector3(COURT_SIZE / 2, PUCK_HEIGHT / 2, COURT_SIZE / 2));
   function updateLabelScaling() {
     for (const group of draggablePlayers) {
       const player = group.userData.player3d;
@@ -1606,9 +1628,20 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   // right before destroy() when the "Remember Camera Position" setting is
   // on, then passed as the NEXT 3D renderer's `initialCameraState`.
   function getCameraState() {
+    const xyz = (v) => ({ x: v.x, y: v.y, z: v.z });
     return {
-      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-      target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+      position: xyz(camera.position),
+      target: xyz(controls.target),
+      firstPerson: firstPersonMode && hiddenViewpoint
+        ? {
+          viewpointIndex: selectableViewpoints.indexOf(hiddenViewpoint),
+          eye: xyz(fpEyePosition),
+          base: xyz(fpBasePosition),
+          yaw: fpYaw,
+          pitch: fpPitch,
+          canWalk: fpCanWalk,
+        }
+        : null,
     };
   }
 

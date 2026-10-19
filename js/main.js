@@ -88,12 +88,23 @@ const playerLabels = getPlayerLabels();
 // without ever knowing which it is.
 let viewMode = getViewMode();
 
-// The 3D camera's position/orbit-target from right before the LAST time
-// 3D was switched away from, within this session (never persisted to
-// localStorage - only the ON/OFF setting itself is) - restored into the
-// next 3D renderer instance when "Remember Camera Position" is on. Null
-// until 3D has been left at least once.
-let lastCameraState3D = null;
+// The 3D camera's position/orbit-target (and R1/R2 first-person view) from
+// right before the LAST time 3D was left - by a 2D switch or by navigating
+// to the setup/shortcuts pages - within this tab's session (never in
+// localStorage; only the ON/OFF setting is) - restored into the next 3D
+// renderer instance when "Remember Camera Position" is on.
+const CAMERA_SESSION_KEY = 'volleyballViz.sessionCamera3D';
+
+function readSessionCamera3D() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CAMERA_SESSION_KEY));
+    return saved?.position && saved?.target ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+let lastCameraState3D = readSessionCamera3D();
 
 function createRendererForMode(mode, cameraState) {
   return mode === '3d'
@@ -101,7 +112,7 @@ function createRendererForMode(mode, cameraState) {
     : createCourtRenderer(svg);
 }
 
-let renderer = createRendererForMode(viewMode);
+let renderer = createRendererForMode(viewMode, viewMode === '3d' && getRememberCameraPosition3D() ? lastCameraState3D : null);
 
 const rotationState = new RotationState();
 
@@ -1139,6 +1150,10 @@ const pendingSetup = takePendingSetup();
 const SESSION_KEY = 'volleyballViz.sessionState';
 
 window.addEventListener('pagehide', () => {
+  const camera3D = viewMode === '3d' ? renderer.getCameraState?.() : lastCameraState3D;
+  if (camera3D) {
+    sessionStorage.setItem(CAMERA_SESSION_KEY, JSON.stringify(camera3D));
+  }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     state: captureCurrentState(),
     toggles: {
