@@ -650,21 +650,25 @@ button.active {
 /* Setup page: brief confirmation after a setting autosaves. */
 .save-toast {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  top: 16px;
+  left: 50%;
   z-index: 30;
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 10px 22px;
+  border-radius: 8px;
   background: #1e8449;
   color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   opacity: 0;
+  transform: translate(-50%, -12px);
   pointer-events: none;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.2s;
 }
 
 .save-toast.visible {
   opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .full-width {
@@ -1003,6 +1007,13 @@ select {
   border-radius: 6px;
   border: 1px solid #ccc;
   box-sizing: border-box;
+}
+
+/* Decimal factors (e.g. 1.25) plus the spinner need more room than the
+   whole-number pixel inputs above. */
+#footprintScale2D,
+#linkDotScale2D {
+  width: 84px;
 }
 
 .font-family-row {

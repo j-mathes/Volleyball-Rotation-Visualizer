@@ -50,12 +50,12 @@ function showSaved() {
     toast.id = 'saveToast';
     toast.className = 'save-toast';
     toast.setAttribute('role', 'status');
-    toast.textContent = 'Saved';
+    toast.textContent = '\u2713 Saved';
     document.body.appendChild(toast);
   }
   toast.classList.add('visible');
   clearTimeout(savedToastTimer);
-  savedToastTimer = setTimeout(() => toast.classList.remove('visible'), 1200);
+  savedToastTimer = setTimeout(() => toast.classList.remove('visible'), 1750);
 }
 
 function renderForm() {
