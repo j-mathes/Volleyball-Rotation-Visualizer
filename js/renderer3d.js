@@ -385,6 +385,11 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     flyCameraTo(DEFAULT_CAMERA_POSITION, DEFAULT_CONTROLS_TARGET);
   }
 
+  // Lowest camera height (about head height of a ~5'9" player) a preset
+  // snap will use - the polar-angle clamp alone left side-on views a
+  // couple dozen units off the ground, around knee level.
+  const SNAP_MIN_CAMERA_HEIGHT = 160;
+
   // Converts a preset view direction (e.g. "top-endline-right" = (1,1,1))
   // into a camera position at the current orbit distance from `target`,
   // clamped to the same polar-angle limits normal dragging respects (so
@@ -396,7 +401,13 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     const spherical = new THREE.Spherical().setFromVector3(direction.clone().normalize());
     spherical.phi = THREE.MathUtils.clamp(spherical.phi, controls.minPolarAngle, controls.maxPolarAngle);
     spherical.makeSafe();
-    return target.clone().add(new THREE.Vector3().setFromSpherical(spherical).multiplyScalar(distance));
+    const position = target.clone().add(new THREE.Vector3().setFromSpherical(spherical).multiplyScalar(distance));
+    const rise = SNAP_MIN_CAMERA_HEIGHT - target.y;
+    if (position.y < SNAP_MIN_CAMERA_HEIGHT && distance > rise) {
+      const horizontal = new THREE.Vector2(position.x - target.x, position.z - target.z).setLength(Math.sqrt(distance * distance - rise * rise));
+      position.set(target.x + horizontal.x, SNAP_MIN_CAMERA_HEIGHT, target.z + horizontal.y);
+    }
+    return position;
   }
 
   // Snaps to a preset view, orbiting around whichever point is currently
