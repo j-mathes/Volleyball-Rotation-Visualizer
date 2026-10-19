@@ -739,6 +739,16 @@ only the applicable options shown per mode.
       Position" setting. Label-scale reference distance now derives from
       the default camera position, so restored views keep correct label
       sizes.
+      Phone sizing follow-up: on mounts narrower than 900px the 3D label
+      font scales down via a `--mount-scale` CSS var (set in `onResize`),
+      the ViewCube shrinks (floor 65%) via the same preset custom
+      properties, and a `max-width: 600px` block in `style.css` shrinks the
+      header, top bar, rotation badge and quad-menu items. On those
+      phone widths the top bar also moves below the court (the empty
+      space on a tall screen) and wraps instead of scrolling sideways,
+      and the quad-menu becomes a bottom sheet (`.quad-sheet`, toggled by
+      `quadMenu.js` via `matchMedia`) with button groups flowing as
+      wrapped rows plus a close button.
 
 **Bug fix + polish (found/requested after 3.8):** the net-mesh label
 occlusion fix (3.5's `updateLabelOcclusion` follow-up) had wrongly

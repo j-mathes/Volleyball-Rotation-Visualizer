@@ -10,6 +10,10 @@ export function createQuadMenu(menuEl, triggerEl = null) {
   const lineV = menuEl.querySelector('.quad-line-v');
   const sections = menuEl.querySelectorAll('.quad-section');
   const only3DEls = menuEl.querySelectorAll('.quad-3d-only');
+  // Phones don't have room for the radial layout - see `.quad-sheet` in
+  // style.css.
+  const sheetQuery = window.matchMedia('(max-width: 600px), (max-height: 500px) and (pointer: coarse)');
+  menuEl.querySelector('.quad-close')?.addEventListener('click', () => close());
 
   function close() {
     menuEl.hidden = true;
@@ -56,6 +60,17 @@ export function createQuadMenu(menuEl, triggerEl = null) {
   function open(x, y, is3D) {
     only3DEls.forEach((el) => { el.hidden = !is3D; });
     menuEl.hidden = false;
+    const sheet = sheetQuery.matches;
+    menuEl.classList.toggle('quad-sheet', sheet);
+    if (sheet) {
+      menuEl.style.left = '';
+      menuEl.style.top = '';
+      sections.forEach((section) => {
+        section.style.maxHeight = '';
+        section.style.overflowY = '';
+      });
+      return;
+    }
     menuEl.style.left = `${x}px`;
     menuEl.style.top = `${y}px`;
 

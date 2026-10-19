@@ -1207,3 +1207,202 @@ select {
     font-size: 0.75rem;
   }
 }
+
+/* Phone-width layout: the desktop header/top bar sizes overpower a ~400px
+   screen. Placed after the coarse-pointer block so it wins on touch. */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+  h1 {
+    font-size: 1.05rem;
+    margin: 6px 0;
+  }
+  .app-header {
+    align-items: center;
+    gap: 8px;
+  }
+  .setup-link {
+    font-size: 0.8rem;
+  }
+  .header-links {
+    gap: 10px;
+  }
+  .layout {
+    gap: 8px;
+  }
+  .top-bar {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  .rotation-badge {
+    width: 48px;
+    font-size: 1.4rem;
+    border-width: 2px;
+    border-radius: 8px;
+  }
+  .top-bar button {
+    padding: 6px 8px;
+    font-size: 0.72rem;
+  }
+  .status-summary {
+    font-size: 0.68rem;
+    gap: 6px;
+  }
+  /* Controls move below the court (the empty space on a tall phone
+     screen) and wrap instead of scrolling sideways, so every button is
+     visible and within thumb reach. The Libero button's fixed width keeps
+     the bar's height stable as its label changes. */
+  .stage {
+    order: 1;
+  }
+  .top-bar {
+    order: 2;
+  }
+  body {
+    padding-bottom: 72px;
+  }
+  .top-bar-row,
+  .op-group {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  .op-group {
+    flex: 1 1 100%;
+  }
+  .op-group + .op-group {
+    padding-left: 0;
+    border-left: none;
+  }
+  .top-bar button {
+    flex: 1 1 auto;
+  }
+  #liberoSwapBtn {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .status-row {
+    justify-content: flex-start;
+  }
+  .status-summary {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .status-cards {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    justify-content: flex-start;
+  }
+  .quad-menu-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+  .view-cube-wrap {
+    top: 6px;
+    right: 6px;
+    gap: 4px;
+  }
+  .view-cube-home {
+    width: 30px;
+    height: 30px;
+  }
+  .quad-section {
+    padding: 3px 6px;
+  }
+  .quad-items button {
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 0.74rem;
+  }
+}
+
+/* Phone layout of the quad-menu (js/quadMenu.js adds `.quad-sheet` on
+   narrow/short touch screens): the radial 4-corner layout needs more
+   room than a phone has, so it becomes a bottom sheet with each button
+   group flowing as a wrapped row of chips. Specificity deliberately
+   outranks the radial `.quad-tl`/`.quad-group` rules above. */
+.quad-close {
+  display: none;
+}
+
+.quad-menu.quad-sheet {
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  width: auto;
+  height: auto;
+  max-height: 65vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--panel-bg);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.4);
+}
+.quad-menu.quad-sheet[hidden] {
+  display: none;
+}
+.quad-menu.quad-sheet .quad-line {
+  display: none;
+}
+.quad-menu.quad-sheet .quad-close {
+  display: block;
+  position: sticky;
+  top: 0;
+  align-self: flex-end;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  line-height: 1;
+  z-index: 1;
+}
+.quad-menu.quad-sheet .quad-section {
+  position: static;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  gap: 4px;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.72rem;
+}
+.quad-menu.quad-sheet .quad-items {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.quad-menu.quad-sheet .quad-group,
+.quad-menu.quad-sheet #quadShortcutsList {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.quad-menu.quad-sheet .shortcuts-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.quad-menu.quad-sheet .quad-items button,
+.quad-menu.quad-sheet .shortcuts-list button {
+  width: auto;
+  min-height: 30px;
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.quad-menu.quad-sheet .quad-items .text-input {
+  width: 110px;
+}

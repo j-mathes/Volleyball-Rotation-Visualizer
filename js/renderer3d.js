@@ -463,17 +463,22 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   // Applies a size preset's CSS custom properties - called once below
   // with the saved size, and again by the live `setViewCubeSize` setter
   // (ROADMAP Phase 3.3's quad-menu) whenever the user changes it.
+  // `viewCubeScale` shrinks the cube on narrow mounts (phones) - see onResize.
+  let currentViewCubeSize = getViewCubeSize3D();
+  let viewCubeScale = 1;
   function applyViewCubeSizePreset(size) {
+    currentViewCubeSize = size;
     const preset = VIEW_CUBE_SIZE_PRESETS[size];
-    viewCubeWrapEl.style.setProperty('--vc-scene-size', `${preset.sceneSize}px`);
-    viewCubeWrapEl.style.setProperty('--vc-perspective', `${preset.perspective}px`);
-    viewCubeWrapEl.style.setProperty('--vc-half', `${preset.half}px`);
-    viewCubeWrapEl.style.setProperty('--vc-face-size', `${preset.half * 2}px`);
-    viewCubeWrapEl.style.setProperty('--vc-face-font-size', `${preset.faceFontRem}rem`);
-    viewCubeWrapEl.style.setProperty('--vc-edge-half', `${preset.edgeHalf}px`);
-    viewCubeWrapEl.style.setProperty('--vc-edge-size', `${preset.edgeHalf * 2}px`);
-    viewCubeWrapEl.style.setProperty('--vc-corner-half', `${preset.cornerHalf}px`);
-    viewCubeWrapEl.style.setProperty('--vc-corner-size', `${preset.cornerHalf * 2}px`);
+    const k = viewCubeScale;
+    viewCubeWrapEl.style.setProperty('--vc-scene-size', `${preset.sceneSize * k}px`);
+    viewCubeWrapEl.style.setProperty('--vc-perspective', `${preset.perspective * k}px`);
+    viewCubeWrapEl.style.setProperty('--vc-half', `${preset.half * k}px`);
+    viewCubeWrapEl.style.setProperty('--vc-face-size', `${preset.half * 2 * k}px`);
+    viewCubeWrapEl.style.setProperty('--vc-face-font-size', `${Math.max(0.5, preset.faceFontRem * k)}rem`);
+    viewCubeWrapEl.style.setProperty('--vc-edge-half', `${preset.edgeHalf * k}px`);
+    viewCubeWrapEl.style.setProperty('--vc-edge-size', `${preset.edgeHalf * 2 * k}px`);
+    viewCubeWrapEl.style.setProperty('--vc-corner-half', `${preset.cornerHalf * k}px`);
+    viewCubeWrapEl.style.setProperty('--vc-corner-size', `${preset.cornerHalf * 2 * k}px`);
   }
   applyViewCubeSizePreset(getViewCubeSize3D());
   function setViewCubeSize(size) {
@@ -1012,7 +1017,7 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
     labelDiv.textContent = label;
     labelDiv.style.color = cssColor('--line-colour', '#ffffff');
     labelDiv.style.fontFamily = fontSettings.fontFamily;
-    labelDiv.style.fontSize = `${fontSettings.playerLabelSize}px`;
+    labelDiv.style.fontSize = `calc(${fontSettings.playerLabelSize}px * var(--mount-scale, 1))`;
     labelDiv.style.fontWeight = 'bold';
     labelDiv.style.textAlign = 'center';
     labelDiv.style.userSelect = 'none';
@@ -1551,6 +1556,14 @@ export function createCourtRenderer3D(mountEl, viewCubeWrapEl, initialCameraStat
   function onResize() {
     const width = mountEl.clientWidth;
     const height = mountEl.clientHeight;
+    // Pucks shrink with the canvas but label/cube pixel sizes don't, so on
+    // phone-width mounts they'd overpower the scene; full size from 900px up.
+    mountEl.style.setProperty('--mount-scale', String(Math.max(0.4, Math.min(1, width / 900))));
+    const cubeScale = Math.max(0.65, Math.min(1, width / 700));
+    if (cubeScale !== viewCubeScale) {
+      viewCubeScale = cubeScale;
+      applyViewCubeSizePreset(currentViewCubeSize);
+    }
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);

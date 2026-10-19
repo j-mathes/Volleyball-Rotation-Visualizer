@@ -185,7 +185,7 @@ export class Player3D {
     this.labelTextEl.textContent = label;
     this.labelTextEl.style.color = colors.playerOutline;
     this.labelTextEl.style.fontFamily = fontSettings.fontFamily;
-    this.labelTextEl.style.fontSize = `calc(${fontSettings.playerLabelSize}px * var(--puck-size-scale, 1))`;
+    this.labelTextEl.style.fontSize = `calc(${fontSettings.playerLabelSize}px * var(--puck-size-scale, 1) * var(--mount-scale, 1))`;
     this.labelTextEl.style.fontWeight = 'bold';
     this.labelTextEl.style.textAlign = 'center';
     this.labelTextEl.style.userSelect = 'none';
@@ -196,7 +196,7 @@ export class Player3D {
     this.zoneLabelEl = document.createElement('div');
     this.zoneLabelEl.style.color = colors.playerOutline;
     this.zoneLabelEl.style.fontFamily = fontSettings.fontFamily;
-    this.zoneLabelEl.style.fontSize = `calc(${fontSettings.playerLabelSize * 0.55}px * var(--puck-size-scale, 1))`;
+    this.zoneLabelEl.style.fontSize = `calc(${fontSettings.playerLabelSize * 0.55}px * var(--puck-size-scale, 1) * var(--mount-scale, 1))`;
     this.zoneLabelEl.style.textAlign = 'center';
     this.zoneLabelEl.style.userSelect = 'none';
     this.zoneLabelEl.style.display = 'none';
