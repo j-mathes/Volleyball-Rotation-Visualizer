@@ -347,8 +347,12 @@ function runOverlapCheck() {
 
   if (guidesEnabled && selectedZone) {
     for (const result of pairwiseResults) {
-      if (result.ok && (result.zoneA === selectedZone || result.zoneB === selectedZone)) {
-        renderer.drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, false, selectedZone);
+      if (result.zoneA === selectedZone || result.zoneB === selectedZone) {
+        // A violating pair already has its red line drawn above, but its
+        // neighbor should stay highlighted as related regardless.
+        if (result.ok) {
+          renderer.drawSeparatorLine(positions[result.zoneA], positions[result.zoneB], result.zoneA, result.zoneB, result.axis, false, selectedZone);
+        }
         const neighborZone = result.zoneA === selectedZone ? result.zoneB : result.zoneA;
         playersByRole[positions[neighborZone].role].setGuideRelated(true);
       }
